@@ -1,0 +1,1 @@
+/usr/bin/cc -Wl,--dependency-file=CMakeFiles/day2.dir/link.d CMakeFiles/day2.dir/day2/main.c.o -o /home/tsonu/src/advant-code-2025/day2/day2  -lm
