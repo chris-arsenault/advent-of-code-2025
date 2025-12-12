@@ -113,8 +113,7 @@ int main(void) {
     unsigned long long paths_b = partb(svr, dac, fft, target, head, to, next, node_count);
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("Paths to out: %llu\n", paths);
-    printf("Paths svr->out via dac+fft: %llu elapsed_ms=%.3f\n", paths_b, ns_since(&t0, &t1) / 1e6);
+    printf("paths_you_to_out=%llu paths_svr_via_dac_fft=%llu elapsed_ms=%.3f\n", paths, paths_b, ns_since(&t0, &t1) / 1e6);
 
     if (ferror(fp)) {
         perror("read error");

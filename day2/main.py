@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import bisect
-from datetime import datetime
 from pathlib import Path
 import time
 
@@ -86,8 +85,7 @@ def main() -> None:
     t0 = time.perf_counter()
     p1, p2 = solve(text)
     elapsed_ms = (time.perf_counter() - t0) * 1000
-    timestamp = datetime.now().isoformat(timespec="seconds")
-    print(f"[{timestamp}] repeated-halves-sum={p1} repeated-pattern-sum={p2} elapsed_ms={elapsed_ms:.3f}")
+    print(f"repeated-halves-sum={p1} repeated-pattern-sum={p2} elapsed_ms={elapsed_ms:.3f}")
 
 
 if __name__ == "__main__":

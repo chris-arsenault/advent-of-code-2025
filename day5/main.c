@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("Tasty: %lld\nALL FRESH, %lld elapsed_ms=%.3f\n", fresh_count, fresh_total, ns_since(&t0, &t1) / 1e6);
+    printf("available_fresh=%lld total_fresh_ids=%lld elapsed_ms=%.3f\n", fresh_count, fresh_total, ns_since(&t0, &t1) / 1e6);
 
     free(ranges);
     free(ids);

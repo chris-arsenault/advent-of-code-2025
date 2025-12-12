@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 from typing import Iterable
 import time
@@ -90,8 +89,7 @@ def main() -> None:
     p1 = part1(grid, blocks)
     p2 = part2(grid, blocks)
     elapsed_ms = (time.perf_counter() - t0) * 1000
-    timestamp = datetime.now().isoformat(timespec="seconds")
-    print(f"[{timestamp}] grand_total={p1} quantum_total={p2} elapsed_ms={elapsed_ms:.3f}")
+    print(f"grand_total={p1} quantum_total={p2} elapsed_ms={elapsed_ms:.3f}")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import deque
-from datetime import datetime
 from pathlib import Path
 import time
 
@@ -70,8 +69,7 @@ def main() -> None:
     accessible = part1(rolls)
     removed = part2(rolls)
     elapsed_ms = (time.perf_counter() - t0) * 1000
-    timestamp = datetime.now().isoformat(timespec="seconds")
-    print(f"[{timestamp}] accessible={accessible} removable_total={removed} elapsed_ms={elapsed_ms:.3f}")
+    print(f"accessible={accessible} removable_total={removed} elapsed_ms={elapsed_ms:.3f}")
 
 
 if __name__ == "__main__":

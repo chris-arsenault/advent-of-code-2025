@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from datetime import datetime
 from pathlib import Path
 import time
 
@@ -47,8 +46,7 @@ def main() -> None:
     p2 = a1 * a2 * a3 + b1 * b2 * b3
     elapsed_ms = (time.perf_counter() - t0) * 1000
 
-    timestamp = datetime.now().isoformat(timespec="seconds")
-    print(f"[{timestamp}] paths_you_to_out={p1} paths_svr_via_dac_fft={p2} elapsed_ms={elapsed_ms:.3f}")
+    print(f"paths_you_to_out={p1} paths_svr_via_dac_fft={p2} elapsed_ms={elapsed_ms:.3f}")
 
 
 if __name__ == "__main__":

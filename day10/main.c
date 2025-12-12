@@ -448,8 +448,7 @@ int main(void) {
     unsigned long long result_b = partb(lines, line_count);
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("Fewest presses (part 1): %llu\n", result_a);
-    printf("Part 2: %llu elapsed_ms=%.3f\n", result_b, ns_since(&t0, &t1) / 1e6);
+    printf("min_lights_presses=%llu min_counter_presses=%llu elapsed_ms=%.3f\n", result_a, result_b, ns_since(&t0, &t1) / 1e6);
 
     if (ferror(fp)) {
         perror("read error");

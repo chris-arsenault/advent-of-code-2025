@@ -169,8 +169,7 @@ int main(void) {
     unsigned long long result_b = partb(xs, count, ea, eb, built);
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("Circuit product (part 1): %llu\n", result_a);
-    printf("Final join X product (part 2): %llu elapsed_ms=%.3f\n", result_b, ns_since(&t0, &t1) / 1e6);
+    printf("top3_product=%llu final_join_x_product=%llu elapsed_ms=%.3f\n", result_a, result_b, ns_since(&t0, &t1) / 1e6);
 
     if (ferror(fp)) {
         perror("read error");

@@ -314,8 +314,7 @@ int main(void) {
     int b_ans = partb();
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
-    printf("Regions that fit (part 1): %d\n", good);
-    printf("Part 2: %d elapsed_ms=%.3f\n", b_ans, ns_since(&t0, &t1) / 1e6);
+    printf("regions_that_fit=%d part2=%d elapsed_ms=%.3f\n", good, b_ans, ns_since(&t0, &t1) / 1e6);
 
     if (ferror(fp)) {
         perror("read error");

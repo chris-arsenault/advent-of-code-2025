@@ -168,7 +168,7 @@ int main(void) {
     unsigned long long timelines = partb(grid, height, width);
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("Splits: %d \nBurned Paper: %llu elapsed_ms=%.3f", splits, timelines, ns_since(&t0, &t1) / 1e6);
+    printf("splits=%d timelines=%llu elapsed_ms=%.3f\n", splits, timelines, ns_since(&t0, &t1) / 1e6);
 
     if (ferror(fp)) {
         perror("read error");

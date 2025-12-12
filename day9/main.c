@@ -140,8 +140,7 @@ int main(void) {
     unsigned long long result_b = partb(xs, ys, count);
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("Largest rectangle area (part 1): %llu\n", result_a);
-    printf("Part 2: %llu elapsed_ms=%.3f\n", result_b, ns_since(&t0, &t1) / 1e6);
+    printf("max_rect_area=%llu max_green_rect_area=%llu elapsed_ms=%.3f\n", result_a, result_b, ns_since(&t0, &t1) / 1e6);
 
     if (ferror(fp)) {
         perror("read error");

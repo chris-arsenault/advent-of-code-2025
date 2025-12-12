@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 from typing import Iterable, List, Set, Tuple
 
@@ -150,8 +149,7 @@ def main() -> None:
     t0 = time.perf_counter()
     count = solve(lines)
     elapsed_ms = (time.perf_counter() - t0) * 1000
-    timestamp = datetime.now().isoformat(timespec="seconds")
-    print(f"[{timestamp}] regions_that_fit={count} elapsed_ms={elapsed_ms:.3f}")
+    print(f"regions_that_fit={count} elapsed_ms={elapsed_ms:.3f}")
 
 
 if __name__ == "__main__":

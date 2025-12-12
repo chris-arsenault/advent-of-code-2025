@@ -50,7 +50,7 @@ int main(void) {
     clock_gettime(CLOCK_MONOTONIC, &t1);
     double elapsed_ms = ns_since(&t0, &t1) / 1e6;
 
-	printf("ZERO COUNT(end): %d, CROSSES: %d, AT: %d elapsed_ms=%.3f\n", zero_count, crossings, at, elapsed_ms);
+    printf("zero_landings=%d crossings=%d final_pos=%d elapsed_ms=%.3f\n", zero_count, crossings, at, elapsed_ms);
 
     if (ferror(fp)) {
         perror("read error");

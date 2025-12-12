@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime
 from pathlib import Path
 import time
 from typing import List, Tuple
@@ -85,8 +84,7 @@ def main() -> None:
     p1 = part1(machines)
     p2 = part2(machines)
     elapsed_ms = (time.perf_counter() - t0) * 1000
-    timestamp = datetime.now().isoformat(timespec="seconds")
-    print(f"[{timestamp}] min_lights_presses={p1} min_counter_presses={p2} elapsed_ms={elapsed_ms:.3f}")
+    print(f"min_lights_presses={p1} min_counter_presses={p2} elapsed_ms={elapsed_ms:.3f}")
 
 
 if __name__ == "__main__":

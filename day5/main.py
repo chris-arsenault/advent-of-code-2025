@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from bisect import bisect_left
-from datetime import datetime
 from pathlib import Path
 import time
 
@@ -51,8 +50,7 @@ def main() -> None:
     t0 = time.perf_counter()
     p1, p2 = solve(text)
     elapsed_ms = (time.perf_counter() - t0) * 1000
-    timestamp = datetime.now().isoformat(timespec="seconds")
-    print(f"[{timestamp}] available_fresh={p1} total_fresh_ids={p2} elapsed_ms={elapsed_ms:.3f}")
+    print(f"available_fresh={p1} total_fresh_ids={p2} elapsed_ms={elapsed_ms:.3f}")
 
 
 if __name__ == "__main__":

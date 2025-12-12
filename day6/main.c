@@ -80,7 +80,7 @@ int main(void) {
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("OCTO: %llu \nBurned Paper: %llu elapsed_ms=%.3f", a_accum, a_accum, ns_since(&t0, &t1) / 1e6);
+    printf("grand_total=%llu quantum_total=%llu elapsed_ms=%.3f\n", a_accum, a_accum, ns_since(&t0, &t1) / 1e6);
 
     if (ferror(fp)) {
         perror("read error");

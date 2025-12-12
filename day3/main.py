@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from pathlib import Path
 import time
 
@@ -57,8 +56,7 @@ def main() -> None:
     t0 = time.perf_counter()
     p1, p2 = solve(lines, k=12)
     elapsed_ms = (time.perf_counter() - t0) * 1000
-    timestamp = datetime.now().isoformat(timespec="seconds")
-    print(f"[{timestamp}] max-2-digit-sum={p1} max-12-digit-sum={p2} elapsed_ms={elapsed_ms:.3f}")
+    print(f"max-2-digit-sum={p1} max-12-digit-sum={p2} elapsed_ms={elapsed_ms:.3f}")
 
 
 if __name__ == "__main__":

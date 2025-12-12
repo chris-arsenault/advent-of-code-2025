@@ -1,0 +1,11 @@
+[package]
+name = "day10rs"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "day10rs"
+path = "main.rs"
+
+[dependencies]
+regex = "1"

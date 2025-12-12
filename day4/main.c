@@ -108,7 +108,7 @@ int main(void) {
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("Good Paper: %d \nBurned Paper: %d elapsed_ms=%.3f", num_rolls, cul_num_rolls, ns_since(&t0, &t1) / 1e6);
+    printf("accessible=%d removable_total=%d elapsed_ms=%.3f\n", num_rolls, cul_num_rolls, ns_since(&t0, &t1) / 1e6);
 
     if (ferror(fp)) {
         perror("read error");
