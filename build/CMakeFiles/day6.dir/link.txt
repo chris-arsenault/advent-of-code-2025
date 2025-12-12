@@ -1,1 +1,0 @@
-/usr/bin/cc -Wl,--dependency-file=CMakeFiles/day6.dir/link.d CMakeFiles/day6.dir/day6/main.c.o -o /home/tsonu/src/advant-code-2025/day6/day6  -lm
