@@ -62,11 +62,10 @@ end
 function range_sum(v, ps, lo, hi)
     i = searchsortedfirst(v, lo)
     j = searchsortedlast(v, hi)
-    if j < i || j == 0
+    if j < i || j == 0 || i > length(v)
         return 0
     end
-    prev = i == 1 ? 0 : ps[i-1]
-    return ps[j] - prev
+    return ps[j+1] - ps[i]
 end
 
 function parse_ranges(text)
