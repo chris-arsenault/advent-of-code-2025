@@ -72,6 +72,8 @@ Ultimately, the largest rectangle you can make in this example has area 50. One 
 ..............
 Using two red tiles as opposite corners, what is the largest area of any rectangle you can make?
 
+Your puzzle answer was 4738108384.
+
 --- Part Two ---
 The Elves just remembered: they can only switch out tiles that are red or green. So, your rectangle can only include red or green tiles.
 
@@ -137,3 +139,5 @@ The largest rectangle you can make in this example using only red and green tile
 .........#X#..
 ..............
 Using two red tiles as opposite corners, what is the largest area of any rectangle you can make using only red and green tiles?
+
+Your puzzle answer was 1513792010.

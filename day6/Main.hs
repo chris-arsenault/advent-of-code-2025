@@ -75,8 +75,8 @@ main = do
   let grid = loadGrid text
       blocks = splitBlocks grid
   t0 <- getCPUTime
-  let p1 = part1 grid blocks
-      p2 = part2 grid blocks
+  let !p1 = part1 grid blocks
+      !p2 = part2 grid blocks
   t1 <- getCPUTime
   let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
   putStrLn $ "grand_total=" ++ show p1 ++ " quantum_total=" ++ show p2 ++

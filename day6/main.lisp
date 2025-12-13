@@ -81,10 +81,10 @@
   (let* ((text (read-file-string "input.txt"))
          (grid (load-grid text))
          (blocks (split-blocks grid))
-         (t0 (get-internal-real-time))
+         (t0 (get-internal-run-time))
          (p1 (part1 grid blocks))
          (p2 (part2 grid blocks))
-         (t1 (get-internal-real-time))
+         (t1 (get-internal-run-time))
          (elapsed (elapsed-ms t0 t1)))
     (format t "grand_total=~A quantum_total=~A elapsed_ms=~,3f~%" p1 p2 elapsed)))
 

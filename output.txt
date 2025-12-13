@@ -1,0 +1,288 @@
+== Day 1 ==
+[c] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.090
+[py] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=1.095
+[go] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.930
+[rs] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.035
+[ts] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.782
+[rb] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=1.903
+[lisp] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.220
+[jl] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.163
+[hs] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=3.323
+delta_ms (py - c): 1.005
+delta_ms (go - c): 0.840
+delta_ms (rs - c): -0.055
+delta_ms (ts - c): 0.692
+delta_ms (rb - c): 1.813
+delta_ms (lisp - c): 0.130
+delta_ms (jl - c): 0.073
+delta_ms (hs - c): 3.233
+
+== Day 2 ==
+[c] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=109.464
+[py] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=59.169
+[go] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=20.747
+[rs] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=6.894
+[ts] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=39.394
+[rb] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=37.446
+[lisp] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=32.000
+[jl] repeated-halves-sum=19118432629 repeated-pattern-sum=21927715887 elapsed_ms=12.1
+[hs] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=237.471
+[mismatch] day 2 jl output differs from C
+  C:    repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645
+  jl: repeated-halves-sum=19118432629 repeated-pattern-sum=21927715887
+delta_ms (py - c): -50.295
+delta_ms (go - c): -88.717
+delta_ms (rs - c): -102.570
+delta_ms (ts - c): -70.070
+delta_ms (rb - c): -72.018
+delta_ms (lisp - c): -77.464
+delta_ms (hs - c): 128.007
+
+== Day 3 ==
+[c] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=4.991
+[py] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=8.379
+[go] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=0.186
+[rs] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=0.172
+[ts] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=4.611
+[rb] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=9.070
+[lisp] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=2.079
+[jl] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=0.567
+[hs] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=23.944
+delta_ms (py - c): 3.388
+delta_ms (go - c): -4.805
+delta_ms (rs - c): -4.819
+delta_ms (ts - c): -0.380
+delta_ms (rb - c): 4.079
+delta_ms (lisp - c): -2.912
+delta_ms (jl - c): -4.424
+delta_ms (hs - c): 18.953
+
+== Day 4 ==
+[c] accessible=2303 removable_total=2303 elapsed_ms=32.303
+[py] accessible=1424 removable_total=8727 elapsed_ms=25.926
+[go] accessible=1424 removable_total=8727 elapsed_ms=4.768
+[rs] accessible=1424 removable_total=8727 elapsed_ms=1.943
+[ts] accessible=1424 removable_total=8727 elapsed_ms=16.181
+[rb] accessible=1424 removable_total=8727 elapsed_ms=32.941
+[lisp] accessible=1424 removable_total=8727 elapsed_ms=16.000
+[jl] accessible=1424 removable_total=8727 elapsed_ms=5.776
+[hs] accessible=2303 removable_total=2303 elapsed_ms=4011.665
+[mismatch] day 4 py output differs from C
+  C:    accessible=2303 removable_total=2303
+  py: accessible=1424 removable_total=8727
+[mismatch] day 4 go output differs from C
+  C:    accessible=2303 removable_total=2303
+  go: accessible=1424 removable_total=8727
+[mismatch] day 4 rs output differs from C
+  C:    accessible=2303 removable_total=2303
+  rs: accessible=1424 removable_total=8727
+[mismatch] day 4 ts output differs from C
+  C:    accessible=2303 removable_total=2303
+  ts: accessible=1424 removable_total=8727
+[mismatch] day 4 rb output differs from C
+  C:    accessible=2303 removable_total=2303
+  rb: accessible=1424 removable_total=8727
+[mismatch] day 4 lisp output differs from C
+  C:    accessible=2303 removable_total=2303
+  lisp: accessible=1424 removable_total=8727
+[mismatch] day 4 jl output differs from C
+  C:    accessible=2303 removable_total=2303
+  jl: accessible=1424 removable_total=8727
+delta_ms (hs - c): 3979.362
+
+== Day 5 ==
+[c] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.039
+[py] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.603
+[go] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.173
+[rs] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.092
+[ts] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.860
+[rb] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.249
+[lisp] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.675
+[jl] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.246
+[hs] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=2.0e-3
+delta_ms (py - c): 0.564
+delta_ms (go - c): 0.134
+delta_ms (rs - c): 0.053
+delta_ms (ts - c): 0.821
+delta_ms (rb - c): 0.210
+delta_ms (lisp - c): 0.636
+delta_ms (jl - c): 0.207
+delta_ms (hs - c): -0.037
+
+== Day 6 ==
+[c] loaded 1000 problems with 4 digits
+grand_total=5316572080628 quantum_total=5316572080628 elapsed_ms=0.005
+[py] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=2.392
+[go] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=1.180
+[rs] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.117
+[ts] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=2.207
+[rb] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=7.903
+[lisp] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.678
+[jl] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.61
+[hs] grand_total=5316572080628 quantum_total=11472781373773 elapsed_ms=231.353
+[mismatch] day 6 py output differs from C
+  C:    grand_total=5316572080628 quantum_total=5316572080628
+  py: grand_total=5316572080628 quantum_total=11299263623062
+[mismatch] day 6 go output differs from C
+  C:    grand_total=5316572080628 quantum_total=5316572080628
+  go: grand_total=5316572080628 quantum_total=11299263623062
+[mismatch] day 6 rs output differs from C
+  C:    grand_total=5316572080628 quantum_total=5316572080628
+  rs: grand_total=5316572080628 quantum_total=11299263623062
+[mismatch] day 6 ts output differs from C
+  C:    grand_total=5316572080628 quantum_total=5316572080628
+  ts: grand_total=5316572080628 quantum_total=11299263623062
+[mismatch] day 6 rb output differs from C
+  C:    grand_total=5316572080628 quantum_total=5316572080628
+  rb: grand_total=5316572080628 quantum_total=11299263623062
+[mismatch] day 6 lisp output differs from C
+  C:    grand_total=5316572080628 quantum_total=5316572080628
+  lisp: grand_total=5316572080628 quantum_total=11299263623062
+[mismatch] day 6 jl output differs from C
+  C:    grand_total=5316572080628 quantum_total=5316572080628
+  jl: grand_total=5316572080628 quantum_total=11299263623062
+[mismatch] day 6 hs output differs from C
+  C:    grand_total=5316572080628 quantum_total=5316572080628
+  hs: grand_total=5316572080628 quantum_total=11472781373773
+
+== Day 7 ==
+[c] splits=1566 timelines=5921061943075 elapsed_ms=0.093
+[py] splits=1566 timelines=5921061943075 elapsed_ms=1.341
+[go] splits=1566 timelines=5921061943075 elapsed_ms=1.189
+[rs] splits=1566 timelines=5921061943075 elapsed_ms=0.519
+[ts] splits=1566 timelines=5921061943075 elapsed_ms=1.992
+[rb] splits=1566 timelines=5921061943075 elapsed_ms=4.708
+[lisp] splits=1566 timelines=5921061943075 elapsed_ms=2.298
+[jl] splits=1566 timelines=5921061943075 elapsed_ms=0.603
+[hs] splits=1566 timelines=5921061943075 elapsed_ms=4.727
+delta_ms (py - c): 1.248
+delta_ms (go - c): 1.096
+delta_ms (rs - c): 0.426
+delta_ms (ts - c): 1.899
+delta_ms (rb - c): 4.615
+delta_ms (lisp - c): 2.205
+delta_ms (jl - c): 0.510
+delta_ms (hs - c): 4.634
+
+== Day 8 ==
+[c] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=34.163
+[py] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=239.246
+[go] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=0.106
+[rs] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=0.067
+[ts] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=2.192
+[rb] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=1.848
+[lisp] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=52.003
+[jl] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=134.064
+[hs] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=684.389
+delta_ms (py - c): 205.083
+delta_ms (go - c): -34.057
+delta_ms (rs - c): -34.096
+delta_ms (ts - c): -31.971
+delta_ms (rb - c): -32.315
+delta_ms (lisp - c): 17.840
+delta_ms (jl - c): 99.901
+delta_ms (hs - c): 650.226
+
+== Day 9 ==
+[c] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=76.718
+[py] max_rect_area=4737970575 max_green_rect_area=1513685922 elapsed_ms=2962.929
+[go] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=156.142
+[rs] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=165.338
+[ts] max_rect_area=4737970575 max_green_rect_area=4520624632 elapsed_ms=185.956
+[rb] max_rect_area=4737970575 max_green_rect_area=4520624632 elapsed_ms=5699.396
+[lisp] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=1339.994
+[jl] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=171.329
+[hs] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=829.754
+[mismatch] day 9 py output differs from C
+  C:    max_green_rect_area=1513792010 max_rect_area=4738108384
+  py: max_green_rect_area=1513685922 max_rect_area=4737970575
+[mismatch] day 9 ts output differs from C
+  C:    max_green_rect_area=1513792010 max_rect_area=4738108384
+  ts: max_green_rect_area=4520624632 max_rect_area=4737970575
+[mismatch] day 9 rb output differs from C
+  C:    max_green_rect_area=1513792010 max_rect_area=4738108384
+  rb: max_green_rect_area=4520624632 max_rect_area=4737970575
+delta_ms (go - c): 79.424
+delta_ms (rs - c): 88.620
+delta_ms (lisp - c): 1263.276
+delta_ms (jl - c): 94.611
+delta_ms (hs - c): 753.036
+
+== Day 10 ==
+[c] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=202.278
+[py] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=574.971
+[go] min_lights_presses=484 min_counter_presses=27646 elapsed_ms=6.445
+[rs] min_lights_presses=484 min_counter_presses=27646 elapsed_ms=5.315
+[ts] min_lights_presses=484 min_counter_presses=27646 elapsed_ms=17.752
+[rb] min_lights_presses=484 min_counter_presses=27646 elapsed_ms=223.956
+[lisp] min_lights_presses=484 min_counter_presses=15769 elapsed_ms=3359.998
+[jl] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=7284.824
+[hs] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=4534.754
+[mismatch] day 10 go output differs from C
+  C:    min_counter_presses=19210 min_lights_presses=484
+  go: min_counter_presses=27646 min_lights_presses=484
+[mismatch] day 10 rs output differs from C
+  C:    min_counter_presses=19210 min_lights_presses=484
+  rs: min_counter_presses=27646 min_lights_presses=484
+[mismatch] day 10 ts output differs from C
+  C:    min_counter_presses=19210 min_lights_presses=484
+  ts: min_counter_presses=27646 min_lights_presses=484
+[mismatch] day 10 rb output differs from C
+  C:    min_counter_presses=19210 min_lights_presses=484
+  rb: min_counter_presses=27646 min_lights_presses=484
+[mismatch] day 10 lisp output differs from C
+  C:    min_counter_presses=19210 min_lights_presses=484
+  lisp: min_counter_presses=15769 min_lights_presses=484
+delta_ms (py - c): 372.693
+delta_ms (jl - c): 7082.546
+delta_ms (hs - c): 4332.476
+
+== Day 11 ==
+[c] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.032
+[py] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.922
+[go] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.300
+[rs] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.211
+[ts] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.672
+[rb] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=1.061
+[lisp] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.876
+[jl] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=40.151
+[hs] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=4.265
+delta_ms (py - c): 0.890
+delta_ms (go - c): 0.268
+delta_ms (rs - c): 0.179
+delta_ms (ts - c): 0.640
+delta_ms (rb - c): 1.029
+delta_ms (lisp - c): 0.844
+delta_ms (jl - c): 40.119
+delta_ms (hs - c): 4.233
+
+== Day 12 ==
+fopen: No such file or directory
+[py] regions_that_fit=557 elapsed_ms=2.086
+[go] regions_that_fit=557 elapsed_ms=0.009
+[rs] regions_that_fit=557 elapsed_ms=0.008
+[ts] regions_that_fit=557 elapsed_ms=0.560
+[rb] regions_that_fit=557 elapsed_ms=1.230
+[lisp] regions_that_fit=557 elapsed_ms=0.000
+[jl] regions_that_fit=557 elapsed_ms=189.675
+day12_hs: Uncaught exception ghc-internal:GHC.Internal.IO.Exception.IOException:
+
+input.txt: openFile: does not exist (No such file or directory)
+
+HasCallStack backtrace:
+  ioError, called at libraries/ghc-internal/src/GHC/Internal/Foreign/C/Error.hs:291:5 in ghc-internal:GHC.Internal.Foreign.C.Error
+
+== Summary (ms) ==
+         Day             C            PY            GO            RS            TS            RB          LISP            JL            HS
+           1         0.090         1.095         0.930         0.035         0.782         1.903         0.220         0.163         3.323
+           2       109.464        59.169        20.747         6.894        39.394        37.446        32.000        12.100       237.471
+           3         4.991         8.379         0.186         0.172         4.611         9.070         2.079         0.567        23.944
+           4        32.303        25.926         4.768         1.943        16.181        32.941        16.000         5.776      4011.665
+           5         0.039         0.603         0.173         0.092         0.860         0.249         0.675         0.246         0.002
+           6         0.005         2.392         1.180         0.117         2.207         7.903         0.678         0.610       231.353
+           7         0.093         1.341         1.189         0.519         1.992         4.708         2.298         0.603         4.727
+           8        34.163       239.246         0.106         0.067         2.192         1.848        52.003       134.064       684.389
+           9        76.718      2962.929       156.142       165.338       185.956      5699.396      1339.994       171.329       829.754
+          10       202.278       574.971         6.445         5.315        17.752       223.956      3359.998      7284.824      4534.754
+          11         0.032         0.922         0.300         0.211         0.672         1.061         0.876        40.151         4.265
+          12           ERR         2.086         0.009         0.008         0.560         1.230         0.000       189.675           ERR

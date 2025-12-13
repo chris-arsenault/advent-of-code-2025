@@ -1,13 +1,11 @@
 #!/usr/bin/env julia
 
-function read_lines(path)
-    readlines(path)
-end
+using LinearAlgebra
 
 function parse_between(line, a, b)
     lb = findfirst(==(a), line)
     rb = findlast(==(b), line)
-    lb === nothing || rb === nothing || rb <= lb && return nothing
+    (lb === nothing || rb === nothing || rb <= lb) && return nothing
     line[lb+1:rb-1]
 end
 
@@ -21,12 +19,12 @@ function split_numbers(s)
 end
 
 function parse_buttons(line)
-    buttons = []
+    buttons = Vector{Int}[]
     pos = 1
     while true
-        lb = findnext(==( '(' ), line, pos)
+        lb = findnext(==('('), line, pos)
         lb === nothing && break
-        rb = findnext(==( ')' ), line, lb)
+        rb = findnext(==(')'), line, lb)
         rb === nothing && break
         push!(buttons, split_numbers(line[lb+1:rb-1]))
         pos = rb + 1
@@ -34,84 +32,110 @@ function parse_buttons(line)
     buttons
 end
 
-# Part A
-function rref_binary(matrix, target, lights, buttons)
+# Part 1: GF(2) linear system - find minimum weight solution
+function solve_gf2(matrix::BitMatrix, target::BitVector)
+    lights, buttons = size(matrix)
+    mat = copy(matrix)
+    tgt = copy(target)
     pivot_cols = fill(-1, lights)
+
+    # Forward elimination
     rank = 0
     for col in 1:buttons
         rank == lights && break
-        pivot = findfirst(r -> matrix[r,col] == 1, rank+1:lights)
-        pivot === nothing && continue
-        if pivot != rank+1
-            matrix[[rank+1,pivot],:] = matrix[[pivot,rank+1],:]
-            target[[rank+1,pivot]] = target[[pivot,rank+1]]
+        # Find pivot
+        pivot_row = findfirst(i -> mat[i, col], rank+1:lights)
+        pivot_row === nothing && continue
+        pivot_row += rank
+
+        # Swap rows
+        if pivot_row != rank + 1
+            mat[rank+1, :], mat[pivot_row, :] = mat[pivot_row, :], mat[rank+1, :]
+            tgt[rank+1], tgt[pivot_row] = tgt[pivot_row], tgt[rank+1]
         end
-        pivot_cols[rank+1] = col
-        for r in rank+2:lights
-            if matrix[r,col] == 1
-                matrix[r,:] .⊻= matrix[rank+1,:]
-                target[r] ⊻= target[rank+1]
+
+        rank += 1
+        pivot_cols[rank] = col
+
+        # Eliminate below
+        for r in rank+1:lights
+            if mat[r, col]
+                mat[r, :] .⊻= mat[rank, :]
+                tgt[r] ⊻= tgt[rank]
             end
         end
-        rank += 1
     end
+
+    # Back substitution to RREF
     for i in rank:-1:1
         col = pivot_cols[i]
         col < 1 && continue
         for r in 1:i-1
-            if matrix[r,col] == 1
-                matrix[r,:] .⊻= matrix[i,:]
-                target[r] ⊻= target[i]
+            if mat[r, col]
+                mat[r, :] .⊻= mat[i, :]
+                tgt[r] ⊻= tgt[i]
             end
         end
     end
-    rank, pivot_cols
-end
 
-function solve_min_press(matrix, target, lights, buttons, rank, pivot_cols)
-    pivot_set = Set(filter(x -> x >= 1, pivot_cols))
+    # Check consistency
+    for r in rank+1:lights
+        if tgt[r]
+            return -1  # No solution
+        end
+    end
+
+    # Find free variables
+    pivot_set = Set(pivot_cols[1:rank])
     free_cols = [c for c in 1:buttons if !(c in pivot_set)]
     free_count = length(free_cols)
+
+    # Enumerate free variable assignments to find minimum weight
     if free_count > 20
-        sol = zeros(Int, buttons)
+        # Too many free vars - just use one solution
+        sol = falses(buttons)
         for i in rank:-1:1
-            col = pivot_cols[i]; val = target[i]
+            col = pivot_cols[i]
+            val = tgt[i]
             for c in 1:buttons
                 c == col && continue
-                if matrix[i,c] == 1
-                    val ⊻= sol[c]
-                end
+                mat[i, c] && (val ⊻= sol[c])
             end
             sol[col] = val
         end
-        return sum(sol)
-    else
-        best = typemax(Int)
-        combos = 1 << free_count
-        sol = zeros(Int, buttons)
-        for mask in 0:combos-1
-            fill!(sol, 0)
-            weight = 0
-            for (k,col) in enumerate(free_cols)
-                if (mask >> (k-1)) & 1 == 1
-                    sol[col] = 1
-                    weight += 1
-                end
-            end
-            for i in rank:-1:1
-                col = pivot_cols[i]; val = target[i]
-                for c in 1:buttons
-                    c == col && continue
-                    matrix[i,c] == 1 && (val ⊻= sol[c])
-                end
-                sol[col] = val
-                weight += val
-                weight >= best && break
-            end
-            weight < best && (best = weight)
-        end
-        return best
+        return count(sol)
     end
+
+    best = buttons + 1
+    for mask in 0:(1 << free_count) - 1
+        sol = falses(buttons)
+        weight = 0
+
+        # Set free variables
+        for (k, col) in enumerate(free_cols)
+            if (mask >> (k-1)) & 1 == 1
+                sol[col] = true
+                weight += 1
+            end
+        end
+
+        # Back-substitute pivot variables
+        for i in rank:-1:1
+            col = pivot_cols[i]
+            val = tgt[i]
+            for c in 1:buttons
+                c == col && continue
+                mat[i, c] && (val ⊻= sol[c])
+            end
+            sol[col] = val
+            weight += val
+            weight >= best && break
+        end
+
+        weight < best && (best = weight)
+    end
+
+    best
 end
 
 function part1(lines)
@@ -119,92 +143,174 @@ function part1(lines)
     for line in lines
         pattern = parse_between(line, '[', ']')
         pattern === nothing && continue
+
         lights = length(pattern)
         buttons = parse_buttons(line)
         btn_count = length(buttons)
-        matrix = falses(lights, btn_count)
-        target = falses(lights)
-        for i in 1:lights
-            target[i] = pattern[i] == '#'
-        end
-        for (idx,btn) in enumerate(buttons)
+        btn_count == 0 && continue
+
+        # Build matrix: mat[light, button] = 1 if button toggles light
+        mat = falses(lights, btn_count)
+        tgt = BitVector([c == '#' for c in pattern])
+
+        for (idx, btn) in enumerate(buttons)
             for pos in btn
-                pos < lights && (matrix[pos+1, idx] ⊻= true)
+                if pos >= 0 && pos < lights
+                    mat[pos+1, idx] ⊻= true
+                end
             end
         end
-        rank,piv = rref_binary(matrix, target, lights, btn_count)
-        ok = true
-        for r in rank+1:lights
-            if all(matrix[r,c]==false for c in 1:btn_count) && target[r]
-                ok = false; break
-            end
-        end
-        ok || continue
-        total += solve_min_press(matrix, target, lights, btn_count, rank, piv)
+
+        presses = solve_gf2(mat, tgt)
+        presses >= 0 && (total += presses)
     end
     total
 end
 
-# Part B simple integer search with free vars brute force cap
-function integer_solution(buttons, targets)
-    counters = length(targets)
-    btn_count = length(buttons)
-    # build matrix counters x buttons
-    mat = zeros(Int, counters, btn_count)
-    for (c,btn) in enumerate(buttons)
-        for idx in btn
-            idx < counters && (mat[idx+1,c] += 1)
+# Part 2: Non-negative integer linear system using Rational arithmetic
+function solve_integer_system(matrix::Matrix{Rational{Int}}, targets::Vector{Rational{Int}}, buttons::Int)
+    counters = size(matrix, 1)
+    aug = hcat(matrix, targets)
+    pivot_cols = fill(-1, counters)
+
+    # Gaussian elimination to RREF
+    rank = 0
+    for col in 1:buttons
+        rank == counters && break
+
+        # Find pivot (largest absolute value for numerical stability)
+        pivot_row = -1
+        best_val = 0 // 1
+        for r in rank+1:counters
+            v = abs(aug[r, col])
+            if v > 0 && v > best_val
+                best_val = v
+                pivot_row = r
+            end
+        end
+        pivot_row == -1 && continue
+
+        # Swap rows
+        if pivot_row != rank + 1
+            aug[rank+1, :], aug[pivot_row, :] = aug[pivot_row, :], aug[rank+1, :]
+        end
+
+        rank += 1
+        pivot_cols[rank] = col
+
+        # Scale pivot row
+        piv = aug[rank, col]
+        aug[rank, :] ./= piv
+
+        # Eliminate all other rows
+        for r in 1:counters
+            r == rank && continue
+            factor = aug[r, col]
+            factor == 0 && continue
+            aug[r, :] .-= factor .* aug[rank, :]
         end
     end
-    # naive search limited: try up to cap per button
-    cap = 12
+
+    # Check consistency
+    for r in rank+1:counters
+        row_zero = all(aug[r, 1:buttons] .== 0)
+        if row_zero && aug[r, buttons+1] != 0
+            return -1  # Inconsistent
+        end
+    end
+
+    # Find free variables
+    pivot_set = Set(pivot_cols[1:rank])
+    free_cols = [c for c in 1:buttons if !(c in pivot_set)]
+    free_count = length(free_cols)
+
+    # Extract coefficients for free variables
+    # For pivot row i: x[pivot_cols[i]] = rhs[i] - sum(coef[i,f] * x[free_cols[f]])
+    rhs = [aug[r, buttons+1] for r in 1:rank]
+    coef = zeros(Rational{Int}, rank, free_count)
+    for r in 1:rank
+        for (f, fc) in enumerate(free_cols)
+            coef[r, f] = aug[r, fc]
+        end
+    end
+
+    # DFS to find minimum sum non-negative integer solution
     best = typemax(Int)
-    assigns = zeros(Int, btn_count)
-    function dfs(i)
-        nonlocal best
-        if i > btn_count
-            # check
-            totals = zeros(Int, counters)
-            for c in 1:btn_count
-                if assigns[c] != 0
-                    totals .+= assigns[c] .* mat[:,c]
+    free_vals = zeros(Int, free_count)
+
+    # Estimate max value for free variables
+    max_rhs = maximum(rhs; init=0//1)
+    cap = max(200, Int(ceil(max_rhs)) + 50)
+
+    function dfs(fidx, current_sum)
+        current_sum >= best && return
+
+        if fidx > free_count
+            total_press = current_sum
+            for r in 1:rank
+                v = rhs[r]
+                for f in 1:free_count
+                    v -= coef[r, f] * free_vals[f]
                 end
+                # Must be non-negative integer
+                v < 0 && return
+                denom = denominator(v)
+                denom != 1 && return
+                iv = Int(numerator(v))
+                total_press += iv
+                total_press >= best && return
             end
-            totals == targets || return
-            presses = sum(assigns)
-            presses < best && (best = presses)
+            total_press < best && (best = total_press)
             return
         end
-        presses_so_far = sum(assigns[1:i-1])
-        presses_so_far >= best && return
-        for v in 0:cap
-            assigns[i] = v
-            dfs(i+1)
+
+        max_v = min(cap, best - current_sum - 1)
+        for v in 0:max_v
+            free_vals[fidx] = v
+            dfs(fidx + 1, current_sum + v)
         end
     end
-    dfs(1)
+
+    dfs(1, 0)
     best == typemax(Int) ? 0 : best
 end
 
 function part2(lines)
     total = 0
     for line in lines
-        targets = parse_between(line, '{', '}')
-        targets === nothing && continue
-        tgt = split_numbers(targets)
+        tgt_str = parse_between(line, '{', '}')
+        tgt_str === nothing && continue
+
+        targets = split_numbers(tgt_str)
         buttons = parse_buttons(line)
-        presses = integer_solution(buttons, tgt)
-        total += presses
+        btn_count = length(buttons)
+        counters = length(targets)
+
+        (btn_count == 0 || counters == 0) && continue
+
+        # Build matrix: mat[counter, button] = 1 if button increments counter
+        mat = zeros(Rational{Int}, counters, btn_count)
+        for (idx, btn) in enumerate(buttons)
+            for pos in btn
+                if pos >= 0 && pos < counters
+                    mat[pos+1, idx] = 1 // 1
+                end
+            end
+        end
+
+        tgt_vec = Rational{Int}.(targets)
+        presses = solve_integer_system(mat, tgt_vec, btn_count)
+        presses >= 0 && (total += presses)
     end
     total
 end
 
 function main()
-    lines = read_lines("input.txt")
+    lines = readlines("input.txt")
     t0 = time_ns()
     p1 = part1(lines)
     p2 = part2(lines)
-    elapsed_ms = (time_ns() - t0)/1e6
+    elapsed_ms = (time_ns() - t0) / 1e6
     println("min_lights_presses=$(p1) min_counter_presses=$(p2) elapsed_ms=$(round(elapsed_ms; digits=3))")
 end
 

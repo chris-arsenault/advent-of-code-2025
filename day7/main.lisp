@@ -72,10 +72,10 @@
 (defun main ()
   (let ((lines (read-lines "input.txt")))
     (multiple-value-bind (grid sr sc) (load-grid lines)
-      (let* ((t0 (get-internal-real-time))
+      (let* ((t0 (get-internal-run-time))
              (p1 (part1 grid sr sc))
              (p2 (part2 grid sr sc))
-             (t1 (get-internal-real-time))
+             (t1 (get-internal-run-time))
              (elapsed (elapsed-ms t0 t1)))
         (format t "splits=~A timelines=~A elapsed_ms=~,3f~%" p1 p2 elapsed)))))
 

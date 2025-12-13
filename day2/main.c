@@ -100,7 +100,7 @@ int main(void) {
     clock_gettime(CLOCK_MONOTONIC, &t1);
     double elapsed_ms = ns_since(&t0, &t1) / 1e6;
 
-    printf("part1_sum=%llu part2_sum=%llu elapsed_ms=%.3f\n", part_1_total, part_2_total, elapsed_ms);
+    printf("repeated-halves-sum=%llu repeated-pattern-sum=%llu elapsed_ms=%.3f\n", part_1_total, part_2_total, elapsed_ms);
     }
 
     if (ferror(fp)) {

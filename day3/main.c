@@ -85,7 +85,7 @@ int main(void) {
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("max_2_digit_sum=%ld max_12_digit_sum=%llu elapsed_ms=%.3f\n", two_jolts, twelve_jolts, ns_since(&t0, &t1) / 1e6);
+    printf("max-2-digit-sum=%ld max-12-digit-sum=%llu elapsed_ms=%.3f\n", two_jolts, twelve_jolts, ns_since(&t0, &t1) / 1e6);
 
     if (ferror(fp)) {
         perror("read error");

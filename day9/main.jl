@@ -1,7 +1,7 @@
 #!/usr/bin/env julia
 
 function load_points(lines)
-    pts = []
+    pts = Tuple{Int,Int}[]
     for line in lines
         t = strip(line)
         isempty(t) && continue
@@ -18,61 +18,79 @@ function max_rectangle_any(pts)
         x1,y1 = pts[i]
         for j in i+1:n
             x2,y2 = pts[j]
-            x1 == x2 || y1 == y2 && continue
-            area = abs(x1 - x2) * abs(y1 - y2)
+            dx = abs(x1 - x2)
+            dy = abs(y1 - y2)
+            area = (dx + 1) * (dy + 1)
             area > best && (best = area)
         end
     end
     best
 end
 
-function orientation(p,q,r)
-    val = (q[2]-p[2])*(r[1]-q[1]) - (q[1]-p[1])*(r[2]-q[2])
-    val > 0 ? 1 : (val < 0 ? -1 : 0)
-end
-
-function on_segment(p,q,r)
-    min(p[1],r[1]) <= q[1] <= max(p[1],r[1]) &&
-    min(p[2],r[2]) <= q[2] <= max(p[2],r[2])
-end
-
-function seg_intersect(p1,q1,p2,q2)
-    o1=orientation(p1,q1,p2); o2=orientation(p1,q1,q2)
-    o3=orientation(p2,q2,p1); o4=orientation(p2,q2,q1)
-    if o1 != o2 && o3 != o4
-        return true
+function point_on_edge(px, py, x1, y1, x2, y2)
+    if x1 == x2
+        return px == x1 && py >= min(y1, y2) && py <= max(y1, y2)
+    elseif y1 == y2
+        return py == y1 && px >= min(x1, x2) && px <= max(x1, x2)
     end
-    (o1==0 && on_segment(p1,p2,q1)) || (o2==0 && on_segment(p1,q2,q1)) ||
-    (o3==0 && on_segment(p2,p1,q2)) || (o4==0 && on_segment(p2,q1,q2))
+    false
 end
 
-function point_in_poly(poly, p)
-    x,y = p
+function point_inside(px, py, poly)
     inside = false
     n = length(poly)
+    j = n
     for i in 1:n
-        j = i==1 ? n : i-1
-        xi,yi = poly[i]; xj,yj = poly[j]
-        if (yi != yj) && (min(yi,yj) <= y < max(yi,yj))
-            xint = xi + (y - yi) * (xj - xi) / (yj - yi)
-            if xint < x
+        x1, y1 = poly[j]
+        x2, y2 = poly[i]
+        if point_on_edge(px, py, x1, y1, x2, y2)
+            return true
+        end
+        if (y1 > py) != (y2 > py) && y1 != y2
+            x_int = div((x2 - x1) * (py - y1), (y2 - y1)) + x1
+            if px < x_int
                 inside = !inside
             end
         end
+        j = i
     end
     inside
 end
 
-function rectangle_inside(poly, corners)
-    for c in corners
-        point_in_poly(poly, c) || return false
+function edge_crosses_interior(xlo, xhi, ylo, yhi, x1, y1, x2, y2)
+    if x1 == x2  # vertical edge
+        # strictly between left and right
+        x1 > xlo && x1 < xhi || return false
+        ya = min(y1, y2)
+        yb = max(y1, y2)
+        # overlaps y range
+        return yb > ylo && ya < yhi
+    elseif y1 == y2  # horizontal edge
+        # strictly between bottom and top
+        y1 > ylo && y1 < yhi || return false
+        xa = min(x1, x2)
+        xb = max(x1, x2)
+        # overlaps x range
+        return xb > xlo && xa < xhi
     end
-    edges = [(poly[i], poly[i==length(poly) ? 1 : i+1]) for i in 1:length(poly)]
-    rect_edges = [(corners[i], corners[i%4+1]) for i in 1:4]
-    for (a,b) in rect_edges
-        for (p,q) in edges
-            seg_intersect(a,b,p,q) && return false
+    false
+end
+
+function rect_inside_polygon(xlo, xhi, ylo, yhi, poly)
+    point_inside(xlo, ylo, poly) || return false
+    point_inside(xlo, yhi, poly) || return false
+    point_inside(xhi, ylo, poly) || return false
+    point_inside(xhi, yhi, poly) || return false
+
+    n = length(poly)
+    j = n
+    for i in 1:n
+        x1, y1 = poly[j]
+        x2, y2 = poly[i]
+        if edge_crosses_interior(xlo, xhi, ylo, yhi, x1, y1, x2, y2)
+            return false
         end
+        j = i
     end
     true
 end
@@ -84,12 +102,11 @@ function max_rectangle_inside(pts, poly)
         x1,y1 = pts[i]
         for j in i+1:n
             x2,y2 = pts[j]
-            x1 == x2 || y1 == y2 && continue
-            xmin,xmax = min(x1,x2), max(x1,x2)
-            ymin,ymax = min(y1,y2), max(y1,y2)
-            corners = [(xmin,ymin),(xmin,ymax),(xmax,ymax),(xmax,ymin)]
-            if rectangle_inside(poly, corners)
-                area = (xmax-xmin)*(ymax-ymin)
+            (x1 == x2 || y1 == y2) && continue
+            xlo, xhi = min(x1,x2), max(x1,x2)
+            ylo, yhi = min(y1,y2), max(y1,y2)
+            if rect_inside_polygon(xlo, xhi, ylo, yhi, poly)
+                area = (xhi - xlo + 1) * (yhi - ylo + 1)
                 area > best && (best = area)
             end
         end

@@ -44,6 +44,8 @@ So, the fewest button presses required to correctly configure the indicator ligh
 
 Analyze each machine's indicator light diagram and button wiring schematics. What is the fewest button presses required to correctly configure the indicator lights on all of the machines?
 
+Your puzzle answer was 484.
+
 --- Part Two ---
 All of the machines are starting to come online! Now, it's time to worry about the joltage requirements.
 
@@ -74,4 +76,4 @@ So, the fewest button presses required to correctly configure the joltage level 
 
 Analyze each machine's joltage requirements and button wiring schematics. What is the fewest button presses required to correctly configure the joltage level counters on all of the machines?
 
-Answer:
+Your puzzle answer was 19210.

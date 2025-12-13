@@ -2,6 +2,18 @@
 /CMakeFiles/
 /build/
 .idea/
+
+# Compiled artifacts
+*.o
+*.hi
+*.pyc
+__pycache__/
+
 # Generated executables
+day*/main
+day*/main_asm
+day*/main_c
+day*/main_ref
 day*/day*
 day*/day*_rs
+day*/target/

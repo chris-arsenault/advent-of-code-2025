@@ -58,7 +58,7 @@ main :: IO ()
 main = do
   linesIn <- lines <$> readFile "input.txt"
   t0 <- getCPUTime
-  let (p1,p2) = solve linesIn 12
+  let !(p1,p2) = solve linesIn 12
   t1 <- getCPUTime
   let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
   putStrLn $ "max-2-digit-sum=" ++ show p1 ++ " max-12-digit-sum=" ++ show p2 ++

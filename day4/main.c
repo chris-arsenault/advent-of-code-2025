@@ -69,7 +69,7 @@ static inline long long ns_since(const struct timespec *start, const struct time
 }
 
 int main(void) {
-    FILE *fp = fopen("inputl.txt", "r");
+    FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
         return EXIT_FAILURE;

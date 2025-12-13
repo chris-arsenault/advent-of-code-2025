@@ -19,9 +19,6 @@ input_file:    db "input.txt", 0
 fmt_out:       db "min_lights_presses=%d min_counter_presses=%d elapsed_ms=%.3f", 10, 0
 err_open:      db "open", 0
 one_million:   dq 1000000.0
-dbg_sol:       db "p2: n=%d sol[0]=%d sol[1]=%d sol[2]=%d sum=%d", 10, 0
-dbg_mat:       db "n_btns=%d n_cnt=%d tgt[0]=%d tgt[1]=%d A[0][0]=%d A[0][n]=%d", 10, 0
-dbg_btn:       db "found button, r15=%d at char '%c'", 10, 0
 
 section .bss
 file_buf:      resb BUF_SIZE
@@ -303,15 +300,17 @@ solve_p1_machine:
 ; Parse a single machine and solve Part 2 using floating-point Gaussian elim
 ; Input: rdi = start of line, rsi = end of file
 ; Output: rax = min presses for counters, rdi = next line
-; Stack layout:
+; Stack layout (non-overlapping):
 ;   rbp-64:  targets[16] (64 bytes, int)
 ;   rbp-128: solution[16] (64 bytes, int)
 ;   rbp-132: n_counters (4 bytes)
 ;   rbp-136: n_buttons (4 bytes)
 ;   rbp-144: temp storage (8 bytes)
-;   rbp-400: button_lists[16][16] (256 bytes)
-;   rbp-464: button_lens[16] (64 bytes)
-;   rbp-2640: matrix[16][17] as doubles (2176 bytes)
+;   rbp-152: temp for debug (8 bytes)
+;   rbp-216: pivot_cols[16] (64 bytes, int)
+;   rbp-472: button_lists[16][16] (256 bytes)
+;   rbp-536: button_lens[16] (64 bytes)
+;   rbp-2712: matrix[16][17] as doubles (2176 bytes)
 ;------------------------------------------------------------------------------
 solve_p2_machine:
     push    rbx
@@ -321,7 +320,7 @@ solve_p2_machine:
     push    r15
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 2656                       ; Enough for all variables
+    sub     rsp, 2880                       ; Enough for all variables
 
     mov     r12, rdi
     mov     r13, rsi
@@ -356,8 +355,8 @@ solve_p2_machine:
 
     ; Parse buttons and store their indices
     xor     r15d, r15d                  ; button count
-    lea     rbx, [rbp-400]              ; button_lists array
-    lea     r14, [rbp-464]              ; button_lens array
+    lea     rbx, [rbp-472]              ; button_lists array
+    lea     r14, [rbp-536]              ; button_lens array
 
 .p2_parse_buttons:
     cmp     r12, r13
@@ -479,14 +478,14 @@ solve_p2_machine:
 
 .p2_targets_done:
     ; Build and solve using floating-point Gaussian elimination
-    ; Matrix is 16 rows x 17 cols of doubles at rbp-2640
+    ; Matrix is 16 rows x 17 cols of doubles at rbp-2712
     ; Matrix layout: row r, col c at offset (r*17 + c)*8
 
     mov     ecx, [rbp-132]              ; n = n_counters
     mov     [rbp-140], ecx
 
     ; Zero the matrix (doubles)
-    lea     rdi, [rbp-2640]
+    lea     rdi, [rbp-2712]
     mov     ecx, 17*16                  ; 17 cols * 16 rows
     xorpd   xmm0, xmm0
 .p2_zero_matrix:
@@ -503,9 +502,9 @@ solve_p2_machine:
 
     mov     r9, r8
     shl     r9, 4
-    lea     r10, [rbp-400]
+    lea     r10, [rbp-472]
     add     r10, r9
-    mov     ecx, [rbp-464 + r8*4]
+    mov     ecx, [rbp-536 + r8*4]
 
     xor     edx, edx
 .p2_fill_row:
@@ -515,7 +514,7 @@ solve_p2_machine:
     ; A[c][b] at offset (c*17 + b)*8
     imul    r9d, eax, 17
     add     r9d, r8d
-    lea     rdi, [rbp-2640]
+    lea     rdi, [rbp-2712]
     mov     rax, 0x3FF0000000000000     ; 1.0 as double
     mov     [rdi + r9*8], rax
     inc     edx
@@ -527,9 +526,11 @@ solve_p2_machine:
 
 .p2_fill_b:
     ; Fill augmented column with targets (as doubles)
-    lea     rdi, [rbp-2640]
+    ; Augmented column is at position n_buttons (after all button columns)
+    lea     rdi, [rbp-2712]
     lea     rsi, [rbp-64]
-    mov     ecx, [rbp-140]              ; n
+    mov     ecx, [rbp-140]              ; n_counters (number of rows)
+    mov     r9d, [rbp-136]              ; n_buttons (augmented column index)
     xor     edx, edx
 .p2_fill_augment:
     cmp     edx, ecx
@@ -537,130 +538,155 @@ solve_p2_machine:
     cvtsi2sd xmm0, dword [rsi + rdx*4]  ; target as double
     mov     r8d, edx
     imul    r8d, 17
-    add     r8d, ecx                    ; row*17 + n
+    add     r8d, r9d                    ; row*17 + n_buttons
     movsd   [rdi + r8*8], xmm0
     inc     edx
     jmp     .p2_fill_augment
 
 .p2_gauss_start:
     ; Gaussian elimination with partial pivoting (floating-point)
-    mov     ecx, [rbp-140]              ; n
-    xor     r8d, r8d                    ; col (pivot)
+    ; Track pivot columns: pivot_cols[row] stored at rbp-216
+    ; Initialize all to -1
+    lea     rdi, [rbp-216]
+    mov     ecx, 16
+    mov     eax, -1
+.p2_init_pivots:
+    mov     [rdi + rcx*4 - 4], eax
+    dec     ecx
+    jnz     .p2_init_pivots
+
+    mov     r14d, [rbp-136]             ; n_buttons
+    xor     r8d, r8d                    ; current row
+    xor     r9d, r9d                    ; current column
 
 .p2_gauss_col:
+    ; For each column, find pivot and eliminate
+    mov     ecx, [rbp-140]              ; n_counters
     cmp     r8d, ecx
     jge     .p2_back_sub
+    cmp     r9d, r14d
+    jge     .p2_back_sub
 
-    ; Find pivot (largest abs value in column)
-    mov     r9d, r8d
+    ; Find pivot (largest abs value in column r9, rows r8 to n-1)
+    mov     r10d, r8d                   ; search row
     xorpd   xmm1, xmm1                  ; best = 0
     mov     r11d, -1                    ; best_row = -1
 
 .p2_find_pivot:
-    cmp     r9d, ecx
+    mov     ecx, [rbp-140]
+    cmp     r10d, ecx
     jge     .p2_check_pivot
 
-    mov     eax, r9d
+    mov     eax, r10d
     imul    eax, 17
-    add     eax, r8d
-    lea     rdi, [rbp-2640]
+    add     eax, r9d
+    lea     rdi, [rbp-2712]
     movsd   xmm0, [rdi + rax*8]
     ; abs(xmm0)
     movsd   xmm2, xmm0
     xorpd   xmm3, xmm3
-    subsd   xmm3, xmm2                  ; -val
-    maxsd   xmm2, xmm3                  ; abs(val)
+    subsd   xmm3, xmm2
+    maxsd   xmm2, xmm3
 
     ucomisd xmm2, xmm1
     jbe     .p2_next_pivot_check
     movsd   xmm1, xmm2
-    mov     r11d, r9d
+    mov     r11d, r10d
 
 .p2_next_pivot_check:
-    inc     r9d
+    inc     r10d
     jmp     .p2_find_pivot
 
 .p2_check_pivot:
-    ; Check if we found a pivot
-    cmp     r11d, -1
-    je      .p2_next_col
+    ; Check if pivot is too small (skip this column)
+    mov     rax, 0x3EB0C6F7A0B5ED8D     ; 1e-6
+    movq    xmm2, rax
+    ucomisd xmm1, xmm2
+    jbe     .p2_skip_col                ; no pivot in this column
 
-    ; Swap rows if needed
+    ; Swap rows r8 and r11 if needed
     cmp     r8d, r11d
     je      .p2_do_eliminate
 
-    ; Swap rows r8 and r11
-    mov     r10d, [rbp-140]
-    inc     r10d                        ; n+1 columns
-    xor     r9d, r9d
+    mov     r10d, r14d
+    inc     r10d                        ; n_buttons+1 columns
+    xor     eax, eax
 .p2_swap_col:
-    cmp     r9d, r10d
+    cmp     eax, r10d
     jge     .p2_do_eliminate
 
-    mov     eax, r8d
-    imul    eax, 17
-    add     eax, r9d
-    mov     edx, r11d
+    push    rax
+    mov     edx, r8d
     imul    edx, 17
-    add     edx, r9d
+    add     edx, eax
+    mov     ecx, r11d
+    imul    ecx, 17
+    add     ecx, eax
 
-    lea     rdi, [rbp-2640]
-    movsd   xmm0, [rdi + rax*8]
-    movsd   xmm1, [rdi + rdx*8]
-    movsd   [rdi + rax*8], xmm1
-    movsd   [rdi + rdx*8], xmm0
+    lea     rdi, [rbp-2712]
+    movsd   xmm0, [rdi + rdx*8]
+    movsd   xmm1, [rdi + rcx*8]
+    movsd   [rdi + rdx*8], xmm1
+    movsd   [rdi + rcx*8], xmm0
 
-    inc     r9d
+    pop     rax
+    inc     eax
     jmp     .p2_swap_col
 
 .p2_do_eliminate:
+    ; Store pivot column for this row
+    lea     rdi, [rbp-216]
+    mov     [rdi + r8*4], r9d
+
     ; Normalize pivot row: divide by pivot
     mov     eax, r8d
     imul    eax, 17
-    add     eax, r8d
-    lea     rdi, [rbp-2640]
+    add     eax, r9d
+    lea     rdi, [rbp-2712]
     movsd   xmm1, [rdi + rax*8]         ; pivot
 
-    mov     r10d, [rbp-140]
-    inc     r10d                        ; n+1 cols
-    xor     r9d, r9d
+    mov     r10d, r14d
+    inc     r10d                        ; n_buttons+1 cols
+    xor     eax, eax
 .p2_norm_row:
-    cmp     r9d, r10d
+    cmp     eax, r10d
     jge     .p2_elim_rows
 
-    mov     eax, r8d
-    imul    eax, 17
-    add     eax, r9d
-    movsd   xmm0, [rdi + rax*8]
+    push    rax
+    mov     edx, r8d
+    imul    edx, 17
+    add     edx, eax
+    movsd   xmm0, [rdi + rdx*8]
     divsd   xmm0, xmm1
-    movsd   [rdi + rax*8], xmm0
+    movsd   [rdi + rdx*8], xmm0
+    pop     rax
 
-    inc     r9d
+    inc     eax
     jmp     .p2_norm_row
 
 .p2_elim_rows:
-    ; Eliminate in all other rows
-    xor     r9d, r9d                    ; row
+    ; Eliminate in all other rows (above and below)
+    xor     r10d, r10d                  ; row
 .p2_elim_row:
     mov     ecx, [rbp-140]
-    cmp     r9d, ecx
+    cmp     r10d, ecx
     jge     .p2_next_col
 
-    cmp     r9d, r8d
+    cmp     r10d, r8d
     je      .p2_next_elim_row           ; skip pivot row
 
-    mov     eax, r9d
+    mov     eax, r10d
     imul    eax, 17
-    add     eax, r8d
-    lea     rdi, [rbp-2640]
+    add     eax, r9d
+    lea     rdi, [rbp-2712]
     movsd   xmm1, [rdi + rax*8]         ; factor
 
-    ; Row r9 -= factor * Row r8
-    mov     r10d, [rbp-140]
-    inc     r10d
+    ; Row r10 -= factor * Row r8
+    mov     ecx, r14d
+    inc     ecx                         ; n_buttons+1
     xor     r11d, r11d
 .p2_elim_col:
-    cmp     r11d, r10d
+    cmp     r11d, ecx
     jge     .p2_next_elim_row
 
     ; A[r8][col]
@@ -668,10 +694,10 @@ solve_p2_machine:
     imul    eax, 17
     add     eax, r11d
     movsd   xmm0, [rdi + rax*8]
-    mulsd   xmm0, xmm1                  ; factor * A[r8][col]
+    mulsd   xmm0, xmm1
 
-    ; A[r9][col] -= factor * A[r8][col]
-    mov     eax, r9d
+    ; A[r10][col] -= factor * A[r8][col]
+    mov     eax, r10d
     imul    eax, 17
     add     eax, r11d
     movsd   xmm2, [rdi + rax*8]
@@ -682,95 +708,251 @@ solve_p2_machine:
     jmp     .p2_elim_col
 
 .p2_next_elim_row:
-    inc     r9d
+    inc     r10d
     jmp     .p2_elim_row
 
 .p2_next_col:
-    inc     r8d
-    mov     ecx, [rbp-140]
+    ; After processing a pivot, move to next row AND next column
+    inc     r8d                         ; next row
+    inc     r9d                         ; next column
+    jmp     .p2_gauss_col
+
+.p2_skip_col:
+    ; No pivot in this column, try next column (SAME row)
+    inc     r9d
     jmp     .p2_gauss_col
 
 .p2_back_sub:
-    ; After RREF, solution is in augmented column
-    ; For row i, if A[i][i] == 1, then x[i] = A[i][n]
-    lea     rdi, [rbp-128]              ; solution array (int)
-    lea     rsi, [rbp-2640]             ; matrix (double)
-    mov     ecx, [rbp-140]              ; n
+    ; Find free columns (columns without pivots)
+    ; Store at rbp-2720: n_free, rbp-2736: free_cols[4]
+    lea     rdi, [rbp-2736]
+    xor     ecx, ecx                    ; n_free = 0
+    xor     edx, edx                    ; column index
+    mov     r10d, [rbp-136]             ; n_buttons
+.p2_find_free:
+    cmp     edx, r10d
+    jge     .p2_free_done
+    ; Check if column edx has a pivot
+    xor     eax, eax                    ; row
+    mov     r9d, [rbp-140]              ; n_counters
+.p2_check_pivot_col:
+    cmp     eax, r9d
+    jge     .p2_is_free                 ; no pivot found
+    lea     r8, [rbp-216]
+    cmp     [r8 + rax*4], edx
+    je      .p2_not_free
+    inc     eax
+    jmp     .p2_check_pivot_col
+.p2_is_free:
+    cmp     ecx, 4                      ; max 4 free vars
+    jge     .p2_not_free
+    mov     [rdi + rcx*4], edx
+    inc     ecx
+.p2_not_free:
+    inc     edx
+    jmp     .p2_find_free
 
-    ; Zero solution first
+.p2_free_done:
+    mov     [rbp-2720], ecx             ; n_free
+
+    ; Initialize best_sum to large value
+    mov     dword [rbp-2740], 999999
+
+    ; Initialize free variable values to 0
+    xor     eax, eax
+    mov     [rbp-2756], eax             ; free_val[0]
+    mov     [rbp-2752], eax             ; free_val[1]
+    mov     [rbp-2748], eax             ; free_val[2]
+    mov     [rbp-2744], eax             ; free_val[3]
+
+.p2_enum_loop:
+    ; Compute solution for current free variable values
+    ; x[free_col[i]] = free_val[i]
+    ; x[pivot_col[row]] = A[row][n] - sum(A[row][free_col[j]] * free_val[j])
+    lea     rdi, [rbp-128]              ; solution array
+    lea     rsi, [rbp-2712]             ; matrix
+    mov     r10d, [rbp-136]             ; n_buttons
+
+    ; Zero solution
     xor     eax, eax
     xor     edx, edx
-.p2_zero_sol:
-    cmp     edx, ecx
-    jge     .p2_read_sol
+.p2_zero_sol2:
+    cmp     edx, r10d
+    jge     .p2_set_free
     mov     [rdi + rdx*4], eax
     inc     edx
-    jmp     .p2_zero_sol
+    jmp     .p2_zero_sol2
 
-.p2_read_sol:
+.p2_set_free:
+    ; Set free variable values
+    mov     ecx, [rbp-2720]             ; n_free
+    test    ecx, ecx
+    jz      .p2_compute_deps
+    lea     r8, [rbp-2736]              ; free_cols
+    lea     r9, [rbp-2756]              ; free_vals
+    xor     edx, edx
+.p2_set_free_loop:
+    cmp     edx, ecx
+    jge     .p2_compute_deps
+    mov     eax, [r8 + rdx*4]           ; free_col[i]
+    mov     r11d, [r9 + rdx*4]          ; free_val[i]
+    mov     [rdi + rax*4], r11d
+    inc     edx
+    jmp     .p2_set_free_loop
+
+.p2_compute_deps:
+    ; For each row with pivot, compute dependent variable
     xor     r8d, r8d                    ; row
-.p2_read_row:
-    mov     ecx, [rbp-140]
+.p2_comp_row:
+    mov     ecx, [rbp-140]              ; n_counters
     cmp     r8d, ecx
-    jge     .p2_calc_total
+    jge     .p2_check_valid
 
-    ; Get A[row][row]
+    ; Get pivot column for this row
+    lea     r10, [rbp-216]
+    mov     r9d, [r10 + r8*4]
+    cmp     r9d, -1
+    je      .p2_next_comp_row
+
+    ; x[pivot_col] = A[row][n_buttons] - sum(A[row][free_col[j]] * free_val[j])
     mov     eax, r8d
     imul    eax, 17
-    add     eax, r8d
-    movsd   xmm0, [rsi + rax*8]
+    add     eax, [rbp-136]              ; row*17 + n_buttons
+    movsd   xmm0, [rsi + rax*8]         ; start with augmented value
 
-    ; Check if ~= 1.0
-    mov     rax, 0x3FEFAE147AE147AE     ; 0.99
-    movq    xmm1, rax
-    ucomisd xmm0, xmm1
-    jb      .p2_next_read_row           ; skip if < 0.99
+    ; Subtract contributions from free variables
+    mov     ecx, [rbp-2720]             ; n_free
+    test    ecx, ecx
+    jz      .p2_round_dep
+    lea     r10, [rbp-2736]             ; free_cols
+    lea     r11, [rbp-2756]             ; free_vals
+    xor     edx, edx
+.p2_sub_free:
+    cmp     edx, ecx
+    jge     .p2_round_dep
+    mov     eax, [r10 + rdx*4]          ; free_col[j]
+    push    rdx
+    mov     edx, r8d
+    imul    edx, 17
+    add     edx, eax                    ; row*17 + free_col[j]
+    movsd   xmm1, [rsi + rdx*8]         ; A[row][free_col[j]]
+    pop     rdx
+    cvtsi2sd xmm2, dword [r11 + rdx*4]  ; free_val[j]
+    mulsd   xmm1, xmm2
+    subsd   xmm0, xmm1
+    inc     edx
+    jmp     .p2_sub_free
 
-    ; x[row] = round(A[row][n])
-    mov     eax, r8d
-    imul    eax, 17
-    add     eax, ecx                    ; row*17 + n
-    movsd   xmm0, [rsi + rax*8]
-
-    ; Round to nearest int: add 0.5 and truncate (for positive)
-    ; For negative: subtract 0.5
+.p2_round_dep:
+    ; Round to nearest int
     xorpd   xmm2, xmm2
     ucomisd xmm0, xmm2
-    jb      .p2_round_neg
-
+    jb      .p2_round_neg2
     mov     rax, 0x3FE0000000000000     ; 0.5
     movq    xmm1, rax
     addsd   xmm0, xmm1
     cvttsd2si eax, xmm0
-    jmp     .p2_store_sol
+    jmp     .p2_store_dep
 
-.p2_round_neg:
+.p2_round_neg2:
     mov     rax, 0x3FE0000000000000     ; 0.5
     movq    xmm1, rax
     subsd   xmm0, xmm1
     cvttsd2si eax, xmm0
 
-.p2_store_sol:
-    mov     [rdi + r8*4], eax
+.p2_store_dep:
+    mov     [rdi + r9*4], eax
 
-.p2_next_read_row:
+.p2_next_comp_row:
     inc     r8d
-    jmp     .p2_read_row
+    jmp     .p2_comp_row
+
+.p2_check_valid:
+    ; Check if all values are non-negative and compute sum
+    xor     eax, eax                    ; sum
+    xor     ecx, ecx
+    mov     r10d, [rbp-136]             ; n_buttons
+.p2_valid_loop:
+    cmp     ecx, r10d
+    jge     .p2_update_best
+    mov     edx, [rdi + rcx*4]
+    cmp     edx, 0
+    jl      .p2_next_enum               ; invalid, skip
+    add     eax, edx
+    inc     ecx
+    jmp     .p2_valid_loop
+
+.p2_update_best:
+    cmp     eax, [rbp-2740]
+    jge     .p2_next_enum
+    mov     [rbp-2740], eax             ; new best sum
+    ; Copy solution to best_sol at rbp-2820
+    lea     r8, [rbp-2820]
+    xor     ecx, ecx
+.p2_copy_best:
+    cmp     ecx, r10d
+    jge     .p2_next_enum
+    mov     edx, [rdi + rcx*4]
+    mov     [r8 + rcx*4], edx
+    inc     ecx
+    jmp     .p2_copy_best
+
+.p2_next_enum:
+    ; Increment free variable values (like counting in base MAX_FREE_VAL)
+    ; free_val[0]++, if >= MAX, reset and carry
+    mov     ecx, [rbp-2720]             ; n_free
+    test    ecx, ecx
+    jz      .p2_enum_done               ; no free vars, done after one iteration
+
+    lea     r8, [rbp-2756]              ; free_vals
+    xor     edx, edx                    ; index
+.p2_inc_free:
+    cmp     edx, ecx
+    jge     .p2_enum_done               ; all overflowed, done
+    mov     eax, [r8 + rdx*4]
+    inc     eax
+    cmp     eax, 200                    ; MAX_FREE_VAL
+    jl      .p2_store_inc
+    ; Overflow, reset and carry
+    mov     dword [r8 + rdx*4], 0
+    inc     edx
+    jmp     .p2_inc_free
+
+.p2_store_inc:
+    mov     [r8 + rdx*4], eax
+    jmp     .p2_enum_loop
+
+.p2_enum_done:
+    ; Use best solution if found
+    cmp     dword [rbp-2740], 999999
+    je      .p2_no_solution
+
+    ; Copy best_sol to solution
+    lea     rdi, [rbp-128]
+    lea     r8, [rbp-2820]
+    mov     r10d, [rbp-136]
+    xor     ecx, ecx
+.p2_copy_final:
+    cmp     ecx, r10d
+    jge     .p2_calc_total
+    mov     edx, [r8 + rcx*4]
+    mov     [rdi + rcx*4], edx
+    inc     ecx
+    jmp     .p2_copy_final
 
 .p2_calc_total:
-    ; Sum solution values
+    ; Sum all button press values (validate non-negative)
     xor     eax, eax
     xor     ecx, ecx
     lea     rdi, [rbp-128]
     mov     r10d, [rbp-136]             ; n_buttons
-    mov     r11d, [rbp-140]             ; n
-    cmp     r10d, r11d
-    jle     .p2_sum_solution
-    mov     r10d, r11d
 .p2_sum_solution:
     cmp     ecx, r10d
     jge     .p2_skip_eol
-    add     eax, [rdi + rcx*4]
+    mov     edx, [rdi + rcx*4]
+    cmp     edx, 0
+    jl      .p2_no_solution             ; negative = invalid
+    add     eax, edx
     inc     ecx
     jmp     .p2_sum_solution
 
@@ -788,7 +970,7 @@ solve_p2_machine:
     mov     eax, [rbp-24]
     mov     rdi, r12
 
-    add     rsp, 2656
+    add     rsp, 2880
     pop     rbp
     pop     r15
     pop     r14
@@ -800,7 +982,7 @@ solve_p2_machine:
 .p2_no_solution:
     mov     rdi, r13
     xor     eax, eax
-    add     rsp, 2656
+    add     rsp, 2880
     pop     rbp
     pop     r15
     pop     r14

@@ -53,9 +53,9 @@
 (defun main ()
   (let* ((path (or (probe-file "input_eric.txt") (probe-file "input.txt")))
          (lines (read-lines path))
-         (t0 (get-internal-real-time))
+         (t0 (get-internal-run-time))
          (res (multiple-value-list (solve lines :k 12)))
-         (t1 (get-internal-real-time))
+         (t1 (get-internal-run-time))
          (elapsed (elapsed-ms t0 t1)))
     (destructuring-bind (p1 p2) res
       (format t "max-2-digit-sum=~A max-12-digit-sum=~A elapsed_ms=~,3f~%"

@@ -3,32 +3,10 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
+#include <ctype.h>
 
-#define LINE_BUF 4096
-#define MAX_HEIGHT 10
-
-static inline unsigned long long parta(int nums[LINE_BUF][MAX_HEIGHT], char ops[LINE_BUF], int height, int problem ) {
-    unsigned long long accum = 0;
-    if (ops[problem] == '*') accum = 1;
-
-    for (int h = 0; h < height; h++) {
-        if (ops[problem] == '+') {
-            //printf("add %d for %llu\n", nums[problem][h], accum);
-            accum += nums[problem][h];
-        } else if (ops[problem] == '*') {
-            //printf("mult %d for %llu\n", nums[problem][h], accum);
-            accum *= nums[problem][h];
-        } else {
-            printf("Unrecognized op: %c\n", ops[problem]);
-        }
-    }
-
-    return accum;
-}
-
-static inline int partb(int nums[LINE_BUF][MAX_HEIGHT] ) {
-
-}
+#define MAX_LINES 100
+#define MAX_WIDTH 65536
 
 static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
     return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
@@ -41,53 +19,136 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
-    char buf[LINE_BUF];
-    bool ending = false;
-    int width = -1;
+    // Read entire file as character grid
+    char grid[MAX_LINES][MAX_WIDTH];
     int height = 0;
-    int nums[LINE_BUF][MAX_HEIGHT];
-    char ops[LINE_BUF];
-    const char *sep = " \t";
+    int width = 0;
 
-    while (fgets(buf, sizeof(buf), fp)) {
-        width = 0;
-        char *tok = strtok(buf, sep);
-        while(tok != NULL) {
-            if (tok[0] == '+' || tok[0] == '*') {
-                ops[width] = tok[0];
-                ending = true;
-            } else {
-                nums[width][height] = atoi(tok);
-            }
-            width++;
-            tok = strtok(NULL, sep);
+    while (fgets(grid[height], sizeof(grid[height]), fp)) {
+        int len = strlen(grid[height]);
+        // Remove trailing newline
+        while (len > 0 && (grid[height][len-1] == '\n' || grid[height][len-1] == '\r')) {
+            grid[height][len-1] = '\0';
+            len--;
         }
-        if (ending) break;
+        if (len > width) width = len;
         height++;
     }
-    printf("loaded %d problems with %d digits\n", width, height);
+    fclose(fp);
+
+    // Pad all lines to same width with spaces
+    for (int h = 0; h < height; h++) {
+        int len = strlen(grid[h]);
+        for (int c = len; c < width; c++) {
+            grid[h][c] = ' ';
+        }
+        grid[h][width] = '\0';
+    }
+
+    // Last row contains operators
+    int op_row = height - 1;
+    int num_rows = height - 1;
 
     struct timespec t0, t1;
     clock_gettime(CLOCK_MONOTONIC, &t0);
 
-    unsigned long long a_accum = 0;
-    for (int problem = 0; problem < width; problem++) {
-        a_accum += parta(nums, ops, height, problem);
-        //printf("ACCU=%llu at problem %d\n", a_accum, problem);
-       // break;
-    }
+    unsigned long long part1 = 0;
+    unsigned long long part2 = 0;
 
+    // Find problem boundaries (columns that are all spaces in number rows)
+    // Process each problem
+    int col = 0;
+    while (col < width) {
+        // Skip separator columns (all spaces)
+        while (col < width) {
+            bool all_space = true;
+            for (int r = 0; r < num_rows; r++) {
+                if (grid[r][col] != ' ') {
+                    all_space = false;
+                    break;
+                }
+            }
+            if (!all_space) break;
+            col++;
+        }
+
+        if (col >= width) break;
+
+        // Find end of this problem (next all-space column or end)
+        int prob_start = col;
+        while (col < width) {
+            bool all_space = true;
+            for (int r = 0; r < num_rows; r++) {
+                if (grid[r][col] != ' ') {
+                    all_space = false;
+                    break;
+                }
+            }
+            if (all_space) break;
+            col++;
+        }
+        int prob_end = col;
+
+        // Find operator for this problem
+        char op = ' ';
+        for (int c = prob_start; c < prob_end; c++) {
+            if (grid[op_row][c] == '+' || grid[op_row][c] == '*') {
+                op = grid[op_row][c];
+                break;
+            }
+        }
+
+        if (op == ' ') continue;  // No valid operator found
+
+        // Part 1: Parse numbers horizontally from each row
+        unsigned long long p1_result = (op == '+') ? 0 : 1;
+        for (int r = 0; r < num_rows; r++) {
+            // Extract number from this row within problem bounds
+            unsigned long long num = 0;
+            bool has_digit = false;
+            for (int c = prob_start; c < prob_end; c++) {
+                if (isdigit(grid[r][c])) {
+                    num = num * 10 + (grid[r][c] - '0');
+                    has_digit = true;
+                }
+            }
+            if (has_digit) {
+                if (op == '+') {
+                    p1_result += num;
+                } else {
+                    p1_result *= num;
+                }
+            }
+        }
+        part1 += p1_result;
+
+        // Part 2: Parse numbers vertically from each column (right to left)
+        unsigned long long p2_result = (op == '+') ? 0 : 1;
+        for (int c = prob_end - 1; c >= prob_start; c--) {
+            // Extract number from this column (top to bottom)
+            unsigned long long num = 0;
+            bool has_digit = false;
+            for (int r = 0; r < num_rows; r++) {
+                if (isdigit(grid[r][c])) {
+                    num = num * 10 + (grid[r][c] - '0');
+                    has_digit = true;
+                }
+            }
+            if (has_digit) {
+                if (op == '+') {
+                    p2_result += num;
+                } else {
+                    p2_result *= num;
+                }
+            }
+        }
+        part2 += p2_result;
+    }
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("grand_total=%llu quantum_total=%llu elapsed_ms=%.3f\n", a_accum, a_accum, ns_since(&t0, &t1) / 1e6);
+    printf("grand_total=%llu quantum_total=%llu elapsed_ms=%.3f\n",
+           part1, part2, ns_since(&t0, &t1) / 1e6);
 
-    if (ferror(fp)) {
-        perror("read error");
-        fclose(fp);
-        return EXIT_FAILURE;
-    }
-
-    fclose(fp);
     return EXIT_SUCCESS;
 }

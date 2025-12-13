@@ -29,7 +29,7 @@ main :: IO ()
 main = do
   input <- lines <$> readFile "input.txt"
   t0 <- getCPUTime
-  let (z,c,p) = simulate input
+  let !(z,c,p) = simulate input
   t1 <- getCPUTime
   let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
   putStrLn $ "zero_landings=" ++ show z ++ " crossings=" ++ show c ++ " final_pos=" ++ show p

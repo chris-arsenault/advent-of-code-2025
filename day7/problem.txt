@@ -121,6 +121,8 @@ To repair the teleporter, you first need to understand the beam-splitting proper
 
 Analyze your manifold diagram. How many times will the beam be split?
 
+Your puzzle answer was 1566.
+
 --- Part Two ---
 With your analysis of the manifold complete, you begin fixing the teleporter. However, as you open the side of the teleporter to replace the broken manifold, you are surprised to discover that it isn't a classical tachyon manifold - it's a quantum tachyon manifold.
 
@@ -187,3 +189,5 @@ Or, there's the timeline where the particle ends up at the same point as the alt
 In this example, in total, the particle ends up on 40 different timelines.
 
 Apply the many-worlds interpretation of quantum tachyon splitting to your manifold diagram. In total, how many different timelines would a single tachyon particle end up on?
+
+Your puzzle answer was 5921061943075.

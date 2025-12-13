@@ -48,14 +48,14 @@
          (regions '()))
     ;; parse shapes
     (let ((current '())
-          (collecting nil))
+          (is-collecting nil))
       (dolist (ln shape-lines)
         (let ((trim (string-trim '(#\Space #\Tab #\Return #\Newline) ln)))
           (cond
             ((string= trim "") nil)
             ((and (> (length trim) 0)
                   (char= (char trim (1- (length trim))) #\:))
-             (when collecting
+             (when is-collecting
                (let ((cells '()))
                  (loop for y from 0
                        for row in (nreverse current) do
@@ -66,11 +66,11 @@
                         (forms (orientations norm))
                         (area (length norm))
                         (parity (reduce #'+ norm :key (lambda (p) (if (evenp (+ (car p) (cdr p))) 1 -1)))))
-                   (push (list forms area parity) shapes)))
+                   (push (list forms area parity) shapes))))
              (setf current '())
-             (setf collecting t))
-            (collecting
-             (push trim current))))))
+             (setf is-collecting t))
+            (is-collecting
+             (push trim current)))))
     (when current
       (let ((cells '()))
         (loop for y from 0
@@ -82,7 +82,7 @@
                (forms (orientations norm))
                (area (length norm))
                (parity (reduce #'+ norm :key (lambda (p) (if (evenp (+ (car p) (cdr p))) 1 -1)))))
-          (push (list forms area parity) shapes))))
+          (push (list forms area parity) shapes)))))
     (setf shapes (nreverse shapes))
     ;; parse regions
     (dolist (ln region-lines)
@@ -103,7 +103,7 @@
                     (push (parse-integer part) counts)))
                 (setf start (1+ i))))
             (push (list w h (nreverse counts)) regions)))))
-    (values shapes (nreverse regions)))))
+    (values shapes (nreverse regions))))
 
 (defun exact-cover? (columns rows)
   (labels ((choose-col (cols rows)
@@ -179,9 +179,9 @@
 
 (defun main ()
   (let* ((lines (read-lines "input.xt"))
-         (t0 (get-internal-real-time))
+         (t0 (get-internal-run-time))
          (ans (solve lines))
-         (t1 (get-internal-real-time))
+         (t1 (get-internal-run-time))
          (elapsed (elapsed-ms t0 t1)))
     (format t "regions_that_fit=~A elapsed_ms=~,3f~%" ans elapsed)))
 

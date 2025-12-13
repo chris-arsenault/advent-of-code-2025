@@ -40,6 +40,13 @@ def extract_elapsed(text: str) -> float | None:
     return None
 
 
+def extract_answers(text: str) -> str:
+    """Extract answer key=value pairs, excluding elapsed_ms for comparison."""
+    tokens = text.replace("\n", " ").split()
+    answer_parts = [t for t in tokens if "=" in t and not t.startswith("elapsed_ms=")]
+    return " ".join(sorted(answer_parts))
+
+
 def ensure_built(day_dir: Path, day: str) -> None:
     main_c = day_dir / "main.c"
     if main_c.exists():
@@ -141,16 +148,20 @@ def main(do_install: bool) -> None:
 
         base_out = day_results.get("c", {}).get("out")
         base_elapsed = day_results.get("c", {}).get("elapsed")
-        # validate outputs match C
+        base_answers = extract_answers(base_out) if base_out else None
+        # validate outputs match C (compare answers only, not elapsed_ms)
         for lang, res in day_results.items():
             if lang == "c":
                 continue
-            if base_out is None or not res["ok"]:
+            if base_answers is None or not res["ok"]:
                 res["ok"] = False
                 res["elapsed"] = None
                 continue
-            if res["out"] != base_out:
+            lang_answers = extract_answers(res["out"])
+            if lang_answers != base_answers:
                 print(f"[mismatch] day {day} {lang} output differs from C")
+                print(f"  C:    {base_answers}")
+                print(f"  {lang}: {lang_answers}")
                 res["ok"] = False
                 res["elapsed"] = None
         base = base_elapsed

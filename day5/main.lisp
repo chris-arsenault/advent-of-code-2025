@@ -70,9 +70,9 @@
 
 (defun main ()
   (let* ((text (read-file-string "input.txt"))
-         (t0 (get-internal-real-time))
+         (t0 (get-internal-run-time))
          (res (multiple-value-list (solve text)))
-         (t1 (get-internal-real-time))
+         (t1 (get-internal-run-time))
          (elapsed (elapsed-ms t0 t1)))
     (destructuring-bind (p1 p2) res
       (format t "available_fresh=~A total_fresh_ids=~A elapsed_ms=~,3f~%" p1 p2 elapsed))))

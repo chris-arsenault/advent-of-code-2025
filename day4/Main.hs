@@ -73,8 +73,8 @@ main = do
   ls <- lines <$> readFile "inputl.txt"
   let (grid,h,w) = parseGrid ls
   t0 <- getCPUTime
-  let p1 = part1 grid h w
-  let p2 = part2 grid h w
+  let !p1 = part1 grid h w
+  let !p2 = part2 grid h w
   t1 <- getCPUTime
   let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
   putStrLn $ "accessible=" ++ show p1 ++ " removable_total=" ++ show p2 ++
