@@ -2,70 +2,72 @@
 module Main where
 
 import Data.Char (isDigit)
-import Data.List (transpose)
 import System.CPUTime (getCPUTime)
+import qualified Data.Vector as V
 
-loadGrid :: String -> [String]
+loadGrid :: String -> V.Vector (V.Vector Char)
 loadGrid text =
   let ls = filter (not . null) (lines text)
       w = maximum (map length ls)
-  in map (\l -> l ++ replicate (w - length l) ' ') ls
+      padded = map (\l -> l ++ replicate (w - length l) ' ') ls
+  in V.fromList (map V.fromList padded)
 
-splitBlocks :: [String] -> [(Int,Int)]
+splitBlocks :: V.Vector (V.Vector Char) -> [(Int,Int)]
 splitBlocks grid =
-  let h = length grid
-      w = length (head grid)
-      emptyCol c = all (\r -> (grid !! r) !! c == ' ') [0..h-1]
-      cols = map emptyCol [0..w-1]
+  let h = V.length grid
+      w = if h > 0 then V.length (grid V.! 0) else 0
+      emptyCol c = all (\r -> (grid V.! r) V.! c == ' ') [0..h-1]
+      cols = V.fromList $ map emptyCol [0..w-1]
   in collect cols 0 w
   where
     collect cols c w
       | c >= w = []
-      | cols !! c = collect cols (c+1) w
+      | cols V.! c = collect cols (c+1) w
       | otherwise =
           let start = c
               end = findEnd cols c w
           in (start,end):collect cols end w
     findEnd cols c w
       | c >= w = w
-      | cols !! c = c
+      | cols V.! c = c
       | otherwise = findEnd cols (c+1) w
 
-problemOp :: String -> Int -> Int -> Char
+problemOp :: V.Vector Char -> Int -> Int -> Char
 problemOp row s e =
-  case filter (`elem` "+*") (take (e-s) (drop s row)) of
+  case filter (`elem` "+*") (V.toList (V.slice s (e-s) row)) of
     (x:_) -> x
     _ -> '+'
 
-evalNums :: [Int] -> Char -> Int
+evalNums :: [Integer] -> Char -> Integer
 evalNums nums op = case op of
   '+' -> sum nums
   _   -> product nums
 
-part1 :: [String] -> [(Int,Int)] -> Int
+part1 :: V.Vector (V.Vector Char) -> [(Int,Int)] -> Integer
 part1 grid blocks =
-  let opRow = last grid
-      rows = init grid
+  let opRow = grid V.! (V.length grid - 1)
+      numRows = V.length grid - 1
   in sum [ let op = problemOp opRow s e
-               nums = [ read t | row <- rows
-                               , let t = dropWhile (==' ') (take (e-s) (drop s row))
-                               , not (null t) ]
+               nums = [ read (filter (/=' ') $ V.toList (V.slice s (e-s) (grid V.! r)))
+                      | r <- [0..numRows-1]
+                      , let slice = V.toList (V.slice s (e-s) (grid V.! r))
+                      , any isDigit slice ]
            in evalNums nums op
          | (s,e) <- blocks ]
 
-part2 :: [String] -> [(Int,Int)] -> Int
+part2 :: V.Vector (V.Vector Char) -> [(Int,Int)] -> Integer
 part2 grid blocks =
-  let h = length grid - 1
-      opRow = last grid
+  let h = V.length grid - 1
+      opRow = grid V.! (V.length grid - 1)
   in sum [ let op = problemOp opRow s e
                nums = collectNums h s e
            in evalNums nums op
          | (s,e) <- blocks ]
   where
     collectNums h s e =
-      [ read (reverse digits)
+      [ read digits  -- No reverse: top-to-bottom = most significant first
       | c <- reverse [s..e-1]
-      , let digits = [ grid !! r !! c | r <- [0..h-1], isDigit (grid !! r !! c) ]
+      , let digits = [ (grid V.! r) V.! c | r <- [0..h-1], isDigit ((grid V.! r) V.! c) ]
       , not (null digits)
       ]
 

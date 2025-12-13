@@ -187,45 +187,64 @@ merge_ranges_fn:
 
 ;------------------------------------------------------------------------------
 ; bool in_any(uint64_t *merged, int count, uint64_t x)
-; Linear search to check if x is in any range
+; Binary search to check if x is in any range
 ;------------------------------------------------------------------------------
 in_any:
     push    rbx
     push    r12
+    push    r13
+    push    r14
 
     mov     r12, rdi            ; merged
-    mov     ecx, esi            ; count
-    mov     r8, rdx             ; x
+    mov     r13d, esi           ; count
+    mov     r14, rdx            ; x
 
-    test    ecx, ecx
+    test    r13d, r13d
     jz      .not_found
 
-    xor     ebx, ebx            ; i = 0
-.search_loop:
-    cmp     ebx, ecx
+    xor     eax, eax            ; lo = 0
+    mov     ecx, r13d           ; hi = count
+
+.bsearch_loop:
+    cmp     eax, ecx
     jge     .not_found
 
-    mov     rax, rbx
-    shl     rax, 4              ; i * 16
-    mov     r9, [r12 + rax]     ; start
-    mov     r10, [r12 + rax + 8]; end
+    ; mid = (lo + hi) / 2
+    lea     ebx, [eax + ecx]
+    shr     ebx, 1
 
-    cmp     r8, r9
-    jb      .next_search
-    cmp     r8, r10
-    ja      .next_search
+    ; Get merged[mid]
+    mov     rdx, rbx
+    shl     rdx, 4              ; mid * 16
+    mov     r8, [r12 + rdx]     ; start
+    mov     r9, [r12 + rdx + 8] ; end
+
+    ; if x < start: hi = mid
+    cmp     r14, r8
+    jb      .go_left
+    ; if x > end: lo = mid + 1
+    cmp     r14, r9
+    ja      .go_right
     ; Found: start <= x <= end
     mov     eax, 1
+    pop     r14
+    pop     r13
     pop     r12
     pop     rbx
     ret
 
-.next_search:
-    inc     ebx
-    jmp     .search_loop
+.go_left:
+    mov     ecx, ebx            ; hi = mid
+    jmp     .bsearch_loop
+
+.go_right:
+    lea     eax, [ebx + 1]      ; lo = mid + 1
+    jmp     .bsearch_loop
 
 .not_found:
     xor     eax, eax
+    pop     r14
+    pop     r13
     pop     r12
     pop     rbx
     ret

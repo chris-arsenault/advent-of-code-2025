@@ -8,14 +8,19 @@ ranges = ranges_txt.split("\n").filter_map do |line|
   [a, b]
 end
 
+# Merge overlapping intervals using sort_by + each_cons(2) for pairwise comparison
 def merge_ranges(ranges)
-  ranges.sort_by! { |a, b| [a, b] }
-  merged = []
-  ranges.each do |a, b|
-    if merged.empty? || a > merged[-1][1] + 1
-      merged << [a, b]
+  sorted = ranges.sort_by { |a, _| a }
+  return [] if sorted.empty?
+
+  merged = [sorted.first.dup]
+  sorted.each_cons(2) do |(_, _), (a2, b2)|
+    if a2 <= merged.last[1] + 1
+      # Overlapping or adjacent: extend current interval
+      merged.last[1] = [merged.last[1], b2].max
     else
-      merged[-1][1] = b if b > merged[-1][1]
+      # Non-overlapping: start new interval
+      merged << [a2, b2]
     end
   end
   merged

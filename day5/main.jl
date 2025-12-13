@@ -1,5 +1,7 @@
 #!/usr/bin/env julia
 
+using IntervalSets
+
 function parse_input(text)
     parts = split(text, r"\n\s*\n")
     top = split(parts[1], "\n")
@@ -19,40 +21,46 @@ function parse_input(text)
     ranges, ids
 end
 
-function merge_ranges(ranges)
-    rs = sort(ranges, by=x->x[1])
-    merged = Tuple{Int,Int}[]
-    for (a,b) in rs
-        if isempty(merged) || a > merged[end][2] + 1
-            push!(merged, (a,b))
+# Merge overlapping intervals using IntervalSets union
+function merge_intervals(ranges)
+    isempty(ranges) && return ClosedInterval{Int}[]
+    # Sort by start
+    sorted = sort(ranges, by=x->x[1])
+    merged = ClosedInterval{Int}[]
+    for (a,b) in sorted
+        iv = ClosedInterval(a, b)
+        if isempty(merged) || leftendpoint(merged[end]) > b + 1 || rightendpoint(merged[end]) < a - 1
+            # Check if can merge with last
+            if !isempty(merged) && a <= rightendpoint(merged[end]) + 1
+                merged[end] = ClosedInterval(leftendpoint(merged[end]), max(rightendpoint(merged[end]), b))
+            else
+                push!(merged, iv)
+            end
         else
-            merged[end] = (merged[end][1], max(merged[end][2], b))
+            merged[end] = ClosedInterval(leftendpoint(merged[end]), max(rightendpoint(merged[end]), b))
         end
     end
     merged
 end
 
-function in_any(ranges, x)
-    lo, hi = 1, length(ranges)
-    while lo <= hi
-        mid = (lo+hi)>>>1
-        a,b = ranges[mid]
-        if x < a
-            hi = mid-1
-        elseif x > b
-            lo = mid+1
-        else
-            return true
-        end
+# Check if point is in any interval
+function in_any(intervals, x)
+    for iv in intervals
+        x in iv && return true
     end
     false
 end
 
 function solve(text)
     ranges, ids = parse_input(text)
-    merged = merge_ranges(ranges)
-    fresh = count(id->in_any(merged,id), ids)
-    total = sum(b-a+1 for (a,b) in merged)
+    merged = merge_intervals(ranges)
+
+    # Part 1: Count IDs in any interval
+    fresh = count(id -> in_any(merged, id), ids)
+
+    # Part 2: Total span of merged intervals
+    total = sum(rightendpoint(iv) - leftendpoint(iv) + 1 for iv in merged)
+
     fresh, total
 end
 

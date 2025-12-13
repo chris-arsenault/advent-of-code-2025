@@ -1,35 +1,6 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::time::Instant;
-
-fn merge_ranges(mut ranges: Vec<(i64, i64)>) -> Vec<(i64, i64)> {
-    ranges.sort_by_key(|r| (r.0, r.1));
-    let mut merged: Vec<(i64, i64)> = Vec::new();
-    for (a, b) in ranges {
-        if merged.is_empty() || a > merged.last().unwrap().1 + 1 {
-            merged.push((a, b));
-        } else {
-            let last = merged.last_mut().unwrap();
-            if b > last.1 {
-                last.1 = b;
-            }
-        }
-    }
-    merged
-}
-
-fn in_any(ranges: &[(i64, i64)], x: i64) -> bool {
-    match ranges.binary_search_by_key(&(x + 1), |r| r.0) {
-        Ok(idx) => ranges[idx].0 <= x && x <= ranges[idx].1,
-        Err(idx) => {
-            if idx == 0 {
-                false
-            } else {
-                let (a, b) = ranges[idx - 1];
-                a <= x && x <= b
-            }
-        }
-    }
-}
 
 fn parse(path: &str) -> (Vec<(i64, i64)>, Vec<i64>) {
     let raw = fs::read_to_string(path).expect("input");
@@ -63,19 +34,51 @@ fn parse(path: &str) -> (Vec<(i64, i64)>, Vec<i64>) {
     (ranges, ids)
 }
 
-fn solve(path: &str) -> (i64, i64) {
-    let (ranges, ids) = parse(path);
-    let merged = merge_ranges(ranges);
-    let mut fresh = 0;
-    for id in ids {
-        if in_any(&merged, id) {
-            fresh += 1;
+// Build a BTreeMap of merged intervals: start -> end
+fn build_interval_map(ranges: Vec<(i64, i64)>) -> BTreeMap<i64, i64> {
+    let mut sorted = ranges;
+    sorted.sort_by_key(|r| (r.0, r.1));
+
+    let mut map: BTreeMap<i64, i64> = BTreeMap::new();
+    for (a, b) in sorted {
+        // Find if we can merge with existing intervals
+        // Get the interval that starts at or before 'a'
+        let mut merged = false;
+        if let Some((&start, &end)) = map.range(..=a).next_back() {
+            if a <= end + 1 {
+                // Can merge: extend the existing interval
+                let new_end = end.max(b);
+                map.insert(start, new_end);
+                merged = true;
+            }
+        }
+        if !merged {
+            map.insert(a, b);
         }
     }
-    let mut total = 0;
-    for (a, b) in merged {
-        total += b - a + 1;
+    map
+}
+
+// Check if a point is contained in any interval using BTreeMap range queries
+fn contains_point(map: &BTreeMap<i64, i64>, x: i64) -> bool {
+    // Find the interval with the largest start <= x
+    if let Some((&_start, &end)) = map.range(..=x).next_back() {
+        x <= end
+    } else {
+        false
     }
+}
+
+fn solve(path: &str) -> (i64, i64) {
+    let (ranges, ids) = parse(path);
+    let interval_map = build_interval_map(ranges);
+
+    // Part 1: Count IDs in any interval
+    let fresh = ids.iter().filter(|&&id| contains_point(&interval_map, id)).count() as i64;
+
+    // Part 2: Total span of merged intervals
+    let total: i64 = interval_map.iter().map(|(a, b)| b - a + 1).sum();
+
     (fresh, total)
 }
 

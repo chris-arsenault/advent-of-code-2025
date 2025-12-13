@@ -3,13 +3,21 @@
 function load_grid(text)
     lines = [rstrip(l, '\n') for l in split(text, "\n") if !isempty(l)]
     width = maximum(length, lines)
-    [l * repeat(" ", width - length(l)) for l in lines]
+    padded = [l * repeat(" ", width - length(l)) for l in lines]
+    # Convert to matrix for eachcol support
+    height = length(padded)
+    mat = Matrix{Char}(undef, height, width)
+    for (r, line) in enumerate(padded)
+        for (c, ch) in enumerate(line)
+            mat[r, c] = ch
+        end
+    end
+    mat
 end
 
 function split_blocks(grid)
-    h = length(grid)
-    w = length(grid[1])
-    empty_col = [all(grid[r][c] == ' ' for r in 1:h) for c in 1:w]
+    h, w = size(grid)
+    empty_col = [all(grid[r, c] == ' ' for r in 1:h) for c in 1:w]
     blocks = Tuple{Int,Int}[]
     c = 1
     while c <= w
@@ -35,14 +43,14 @@ function eval_numbers(nums, op)
 end
 
 function part1(grid, blocks)
-    op_row = grid[end]
-    rows = grid[1:end-1]
+    h, w = size(grid)
+    op_row = grid[h, :]
     total = 0
-    for (s,e) in blocks
+    for (s, e) in blocks
         op = problem_operator(op_row, s, e)
         nums = Int[]
-        for row in rows
-            token = strip(row[s:e-1])
+        for r in 1:h-1
+            token = strip(String(grid[r, s:e-1]))
             isempty(token) || push!(nums, parse(Int, token))
         end
         total += eval_numbers(nums, op)
@@ -50,20 +58,18 @@ function part1(grid, blocks)
     total
 end
 
+# Part 2: Use eachcol for idiomatic column iteration
 function part2(grid, blocks)
-    h = length(grid)-1
-    w = length(grid[1])
-    op_row = grid[end]
+    h, w = size(grid)
+    op_row = grid[h, :]
     total = 0
-    for (s,e) in blocks
+    for (s, e) in blocks
         op = problem_operator(op_row, s, e)
         nums = Int[]
-        for c in e-1:-1:s
-            digits = Char[]
-            for r in 1:h
-                ch = grid[r][c]
-                isdigit(ch) && push!(digits, ch)
-            end
+        # Iterate columns right-to-left using eachcol on submatrix
+        block_cols = @view grid[1:h-1, s:e-1]
+        for col in Iterators.reverse(eachcol(block_cols))
+            digits = filter(isdigit, col)
             if !isempty(digits)
                 push!(nums, parse(Int, String(digits)))
             end

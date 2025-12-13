@@ -1,28 +1,8 @@
 from __future__ import annotations
 
-from bisect import bisect_left
 from pathlib import Path
 import time
-
-
-def merge_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
-    ranges = sorted(ranges)
-    merged: list[tuple[int, int]] = []
-    for a, b in ranges:
-        if not merged or a > merged[-1][1] + 1:
-            merged.append((a, b))
-        else:
-            merged[-1] = (merged[-1][0], max(merged[-1][1], b))
-    return merged
-
-
-def in_any(merged: list[tuple[int, int]], x: int) -> bool:
-    i = bisect_left(merged, (x, -10**18))
-    if i < len(merged) and merged[i][0] <= x <= merged[i][1]:
-        return True
-    if i > 0 and merged[i - 1][0] <= x <= merged[i - 1][1]:
-        return True
-    return False
+from intervaltree import IntervalTree
 
 
 def parse(text: str) -> tuple[list[tuple[int, int]], list[int]]:
@@ -37,10 +17,19 @@ def parse(text: str) -> tuple[list[tuple[int, int]], list[int]]:
 
 def solve(text: str) -> tuple[int, int]:
     ranges, ids = parse(text)
-    merged = merge_ranges(ranges)
 
-    fresh_count = sum(1 for x in ids if in_any(merged, x))
-    total_fresh = sum(b - a + 1 for a, b in merged)
+    # Build interval tree with merged intervals
+    tree = IntervalTree()
+    for a, b in ranges:
+        tree.addi(a, b + 1)  # intervaltree uses half-open intervals [a, b)
+    tree.merge_overlaps()
+
+    # Part 1: Count IDs that fall within any interval
+    fresh_count = sum(1 for x in ids if tree.overlaps(x))
+
+    # Part 2: Total span of merged intervals
+    total_fresh = sum(iv.end - iv.begin for iv in tree)
+
     return fresh_count, total_fresh
 
 
