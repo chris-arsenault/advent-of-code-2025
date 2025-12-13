@@ -122,11 +122,11 @@ find_node:
     ret
 
 ;------------------------------------------------------------------------------
-; uint64 dfs_count(int node, int target)
-; Recursive DFS with memoization
-; Uses memo array (caller must clear and set memo[target]=1)
+; uint64 count_paths_iterative(int from, int to)
+; Iterative DFS with explicit stack - avoids recursion overhead
+; Uses level-synchronous style: processes nodes as dependencies resolve
 ;------------------------------------------------------------------------------
-dfs_count:
+count_paths:
     push    rbx
     push    r12
     push    r13
@@ -134,73 +134,10 @@ dfs_count:
     push    r15
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 16
-
-    mov     r12d, edi                   ; node
-    mov     r13d, esi                   ; target (saved for recursive calls)
-
-    ; Check memo
-    lea     rdi, [rel memo]
-    mov     rax, [rdi + r12*8]
-    cmp     rax, -1
-    jne     .dfs_return                 ; already computed
-
-    ; Get adjacency range
-    lea     r8, [rel adj_ptr]
-    mov     r14d, [r8 + r12*4]          ; start
-    mov     r15d, [r8 + r12*4 + 4]      ; end
-
-    xor     ebx, ebx                    ; sum = 0
-    lea     r9, [rel adj_list]
-
-.dfs_loop:
-    cmp     r14d, r15d
-    jge     .dfs_done
-
-    ; Recursive call for neighbor
-    mov     edi, [r9 + r14*4]           ; neighbor
-    mov     esi, r13d                   ; target
-    mov     [rbp-8], r14d               ; save loop state
-    mov     [rbp-12], r15d
-    call    dfs_count
-    mov     r14d, [rbp-8]               ; restore loop state
-    mov     r15d, [rbp-12]
-    lea     r9, [rel adj_list]
-
-    add     rbx, rax                    ; sum += result
-
-    inc     r14d
-    jmp     .dfs_loop
-
-.dfs_done:
-    ; Store in memo
-    lea     rdi, [rel memo]
-    mov     [rdi + r12*8], rbx
-    mov     rax, rbx
-
-.dfs_return:
-    add     rsp, 16
-    pop     rbp
-    pop     r15
-    pop     r14
-    pop     r13
-    pop     r12
-    pop     rbx
-    ret
-
-;------------------------------------------------------------------------------
-; uint64 count_paths(int from, int to)
-; Clears memo, sets memo[to]=1, then calls dfs_count
-;------------------------------------------------------------------------------
-count_paths:
-    push    rbx
-    push    r12
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 16
+    sub     rsp, 32
 
     mov     [rbp-4], edi                ; from
-    mov     [rbp-8], esi                ; to
+    mov     [rbp-8], esi                ; to (target)
 
     ; Clear memo array to -1
     lea     rdi, [rel memo]
@@ -215,18 +152,93 @@ count_paths:
     jmp     .clear_memo
 .memo_cleared:
 
-    ; Set memo[to] = 1
+    ; Set memo[target] = 1
     mov     eax, [rbp-8]
     lea     rdi, [rel memo]
     mov     qword [rdi + rax*8], 1
 
-    ; Call DFS
-    mov     edi, [rbp-4]
-    mov     esi, [rbp-8]
-    call    dfs_count
+    ; Initialize stack with start node
+    lea     r12, [rel dfs_stack]
+    mov     eax, [rbp-4]
+    mov     [r12], eax                  ; push start node
+    mov     dword [rel dfs_top], 1      ; stack size = 1
 
-    add     rsp, 16
+    lea     r13, [rel memo]
+    lea     r14, [rel adj_ptr]
+    lea     r15, [rel adj_list]
+
+.stack_loop:
+    mov     ecx, [rel dfs_top]
+    test    ecx, ecx
+    jz      .stack_done
+
+    ; Peek top of stack
+    dec     ecx
+    mov     ebx, [r12 + rcx*4]          ; current node
+
+    ; Check if already computed
+    mov     rax, [r13 + rbx*8]
+    cmp     rax, -1
+    jne     .pop_and_continue           ; already done, pop
+
+    ; Check if all children are computed
+    mov     r8d, [r14 + rbx*4]          ; adj start
+    mov     r9d, [r14 + rbx*4 + 4]      ; adj end
+    xor     r10d, r10d                  ; all_done = true
+    mov     r11d, r8d                   ; iterator
+
+.check_children:
+    cmp     r11d, r9d
+    jge     .children_checked
+    mov     eax, [r15 + r11*4]          ; child node
+    mov     rax, [r13 + rax*8]          ; memo[child]
+    cmp     rax, -1
+    jne     .child_ok
+    ; Child not computed - push it
+    mov     eax, [r15 + r11*4]
+    mov     edx, [rel dfs_top]
+    mov     [r12 + rdx*4], eax
+    inc     dword [rel dfs_top]
+    mov     r10d, 1                     ; mark not all done
+.child_ok:
+    inc     r11d
+    jmp     .check_children
+
+.children_checked:
+    test    r10d, r10d
+    jnz     .stack_loop                 ; some children pushed, loop again
+
+    ; All children computed - sum their values
+    xor     rax, rax                    ; sum = 0
+    mov     r8d, [r14 + rbx*4]
+    mov     r9d, [r14 + rbx*4 + 4]
+
+.sum_children:
+    cmp     r8d, r9d
+    jge     .sum_done
+    mov     ecx, [r15 + r8*4]           ; child node
+    add     rax, [r13 + rcx*8]          ; sum += memo[child]
+    inc     r8d
+    jmp     .sum_children
+
+.sum_done:
+    ; Store result and pop
+    mov     [r13 + rbx*8], rax
+
+.pop_and_continue:
+    dec     dword [rel dfs_top]
+    jmp     .stack_loop
+
+.stack_done:
+    ; Return memo[from]
+    mov     eax, [rbp-4]
+    mov     rax, [r13 + rax*8]
+
+    add     rsp, 32
     pop     rbp
+    pop     r15
+    pop     r14
+    pop     r13
     pop     r12
     pop     rbx
     ret

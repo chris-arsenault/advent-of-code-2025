@@ -5,14 +5,15 @@ File.read('input.txt').split("\n").each do |line|
   g[from.strip] = rest.strip.split(/\s+/)
 end
 
-def count_paths(g, start, target, memo = {})
-  return memo[start] if memo.key?(start)
-  return memo[start] = 1 if start == target
-  total = 0
-  (g[start] || []).each do |nxt|
-    total += count_paths(g, nxt, target, memo)
+def count_paths(g, start, target)
+  memo = Hash.new do |h, node|
+    h[node] = if node == target
+                1
+              else
+                (g[node] || []).sum { |nxt| h[nxt] }
+              end
   end
-  memo[start] = total
+  memo[start]
 end
 
 t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
