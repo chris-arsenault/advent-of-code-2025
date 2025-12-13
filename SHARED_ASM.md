@@ -281,6 +281,104 @@ Additional commonly used syscalls:
 
 ---
 
+### `lower_bound_u64`
+
+Binary search for first element >= value in sorted array.
+
+```asm
+; size_t lower_bound_u64(const uint64_t *arr, size_t n, uint64_t value)
+```
+
+| Parameter | Register | Description |
+|-----------|----------|-------------|
+| `arr` | `rdi` | Pointer to sorted uint64 array |
+| `n` | `rsi` | Number of elements |
+| `value` | `rdx` | Value to search for |
+| **Return** | `rax` | Index of first element >= value, or n if none |
+
+**Example:**
+```asm
+    lea     rdi, [sorted_array]
+    mov     rsi, array_count
+    mov     rdx, 1000           ; find first >= 1000
+    call    lower_bound_u64
+    ; rax = index of first element >= 1000
+```
+
+---
+
+### `upper_bound_u64`
+
+Binary search for first element > value in sorted array.
+
+```asm
+; size_t upper_bound_u64(const uint64_t *arr, size_t n, uint64_t value)
+```
+
+| Parameter | Register | Description |
+|-----------|----------|-------------|
+| `arr` | `rdi` | Pointer to sorted uint64 array |
+| `n` | `rsi` | Number of elements |
+| `value` | `rdx` | Value to search for |
+| **Return** | `rax` | Index of first element > value, or n if none |
+
+**Range Query Pattern:**
+```asm
+    ; Sum elements in range [lo, hi] using prefix sums
+    ; i = lower_bound(arr, n, lo)
+    ; j = upper_bound(arr, n, hi)
+    ; sum = prefix[j] - prefix[i]
+
+    lea     rdi, [sorted_array]
+    mov     rsi, array_count
+    mov     rdx, range_lo
+    call    lower_bound_u64
+    mov     r12, rax            ; i = lower_bound result
+
+    lea     rdi, [sorted_array]
+    mov     rsi, array_count
+    mov     rdx, range_hi
+    call    upper_bound_u64
+    ; j = rax (upper_bound result)
+
+    ; sum = prefix[j] - prefix[i]
+    mov     rcx, [prefix_sums + rax*8]
+    sub     rcx, [prefix_sums + r12*8]
+```
+
+---
+
+### `sort_u64`
+
+In-place hybrid quicksort for uint64 array.
+
+```asm
+; void sort_u64(uint64_t *arr, size_t n)
+```
+
+| Parameter | Register | Description |
+|-----------|----------|-------------|
+| `arr` | `rdi` | Pointer to uint64 array |
+| `n` | `rsi` | Number of elements |
+
+**Behavior:**
+- Sorts array in ascending order
+- In-place (no additional memory allocation)
+- Uses iterative quicksort with stack-based recursion simulation
+- **Median-of-three** pivot selection to avoid O(n²) worst case
+- **Insertion sort** for subarrays ≤ 16 elements (cache-friendly)
+- Expected O(n log n) performance
+
+**Example:**
+```asm
+    lea     rdi, [my_array]
+    mov     rsi, 1000           ; sort 1000 elements
+    call    sort_u64
+    ; my_array is now sorted ascending
+```
+
+---
+
 ## Future Additions
 
 Candidates for extraction from day solutions:
@@ -292,8 +390,8 @@ Candidates for extraction from day solutions:
 - [ ] `skip_line` - Advance to next line
 - [ ] `count_lines` - Count newlines in buffer
 - [ ] `hash_string` - Simple string hashing
-- [ ] `sort_uint64` - In-place quicksort/radix sort
-- [ ] `binary_search` - Binary search in sorted array
+- [x] `sort_uint64` - In-place quicksort/radix sort (implemented as `sort_u64`)
+- [x] `binary_search` - Binary search in sorted array (implemented as `lower_bound_u64`, `upper_bound_u64`)
 - [ ] `gcd` / `lcm` - Math utilities
 
 ---

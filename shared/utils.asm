@@ -7,6 +7,9 @@ global skip_non_digits
 global uint64_digit_count
 global uint64_to_digits
 global pow10
+global lower_bound_u64
+global upper_bound_u64
+global sort_u64
 
 section .text
 
@@ -268,6 +271,247 @@ read_file_all:
     pop     r14
     pop     r13
     pop     r12
+    pop     rbp
+    ret
+
+;------------------------------------------------------------------------------
+; size_t lower_bound_u64(const uint64_t *arr, size_t n, uint64_t value)
+; Binary search for first element >= value in sorted array.
+; Input:  rdi = array pointer
+;         rsi = array size (number of elements)
+;         rdx = value to search for
+; Output: rax = index of first element >= value, or n if none
+;------------------------------------------------------------------------------
+lower_bound_u64:
+    xor     eax, eax            ; lo = 0
+    mov     rcx, rsi            ; hi = n
+.lb_loop:
+    cmp     rax, rcx
+    jge     .lb_done
+    ; mid = (lo + hi) / 2
+    lea     r8, [rax + rcx]
+    shr     r8, 1               ; mid
+    ; if arr[mid] < value: lo = mid + 1
+    mov     r9, [rdi + r8*8]
+    cmp     r9, rdx
+    jae     .lb_not_less
+    lea     rax, [r8 + 1]       ; lo = mid + 1
+    jmp     .lb_loop
+.lb_not_less:
+    mov     rcx, r8             ; hi = mid
+    jmp     .lb_loop
+.lb_done:
+    ret
+
+;------------------------------------------------------------------------------
+; size_t upper_bound_u64(const uint64_t *arr, size_t n, uint64_t value)
+; Binary search for first element > value in sorted array.
+; Input:  rdi = array pointer
+;         rsi = array size (number of elements)
+;         rdx = value to search for
+; Output: rax = index of first element > value, or n if none
+;------------------------------------------------------------------------------
+upper_bound_u64:
+    xor     eax, eax            ; lo = 0
+    mov     rcx, rsi            ; hi = n
+.ub_loop:
+    cmp     rax, rcx
+    jge     .ub_done
+    ; mid = (lo + hi) / 2
+    lea     r8, [rax + rcx]
+    shr     r8, 1               ; mid
+    ; if arr[mid] <= value: lo = mid + 1
+    mov     r9, [rdi + r8*8]
+    cmp     r9, rdx
+    ja      .ub_greater
+    lea     rax, [r8 + 1]       ; lo = mid + 1
+    jmp     .ub_loop
+.ub_greater:
+    mov     rcx, r8             ; hi = mid
+    jmp     .ub_loop
+.ub_done:
+    ret
+
+;------------------------------------------------------------------------------
+; void sort_u64(uint64_t *arr, size_t n)
+; In-place quicksort for uint64 array with median-of-three pivot selection.
+; Falls back to insertion sort for small subarrays.
+; Input:  rdi = array pointer
+;         rsi = array size (number of elements)
+; Uses stack for recursion simulation.
+;------------------------------------------------------------------------------
+sort_u64:
+    push    rbp
+    mov     rbp, rsp
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    sub     rsp, 8              ; align stack
+
+    ; Use stack to simulate recursion: push (lo, hi) pairs
+    ; Initial: lo=0, hi=n-1
+    test    rsi, rsi
+    jz      .sort_done
+    cmp     rsi, 1
+    je      .sort_done
+
+    mov     r12, rdi            ; arr base pointer
+    ; Push initial range (0, n-1)
+    xor     eax, eax            ; lo = 0
+    lea     rcx, [rsi - 1]      ; hi = n - 1
+    push    rcx                 ; push hi
+    push    rax                 ; push lo
+
+.sort_stack_loop:
+    ; Check if stack is empty (back to original rsp+8 after alignment)
+    lea     rax, [rbp - 48]     ; original rsp after pushes
+    cmp     rsp, rax
+    jge     .sort_done
+
+    ; Pop lo, hi
+    pop     r13                 ; lo
+    pop     r14                 ; hi
+
+    ; If lo >= hi, skip this range
+    cmp     r13, r14
+    jge     .sort_stack_loop
+
+    ; For small ranges, use insertion sort
+    mov     rax, r14
+    sub     rax, r13
+    cmp     rax, 16
+    jle     .insertion_sort
+
+    ; Median-of-three pivot selection: median of arr[lo], arr[mid], arr[hi]
+    lea     rax, [r13 + r14]
+    shr     rax, 1              ; mid = (lo + hi) / 2
+
+    mov     r8, [r12 + r13*8]   ; a = arr[lo]
+    mov     r9, [r12 + rax*8]   ; b = arr[mid]
+    mov     r10, [r12 + r14*8]  ; c = arr[hi]
+
+    ; Find median and swap it to arr[hi]
+    ; if a <= b <= c or c <= b <= a: median = b (mid)
+    ; if b <= a <= c or c <= a <= b: median = a (lo)
+    ; if a <= c <= b or b <= c <= a: median = c (hi) - already there
+
+    cmp     r8, r9
+    jg      .med_a_gt_b
+    ; a <= b
+    cmp     r9, r10
+    jle     .med_use_mid        ; a <= b <= c, median = b
+    cmp     r8, r10
+    jg      .med_use_hi         ; c < a <= b, median = a? No wait...
+    jmp     .med_use_hi         ; a <= c < b, median = c (already at hi)
+
+.med_a_gt_b:
+    ; a > b
+    cmp     r8, r10
+    jle     .med_use_lo         ; b < a <= c, median = a
+    cmp     r9, r10
+    jg      .med_use_hi         ; c < b < a, median = c
+    jmp     .med_use_mid        ; b <= c < a, median = c? No, b
+
+.med_use_mid:
+    ; Swap arr[mid] with arr[hi]
+    mov     [r12 + rax*8], r10
+    mov     [r12 + r14*8], r9
+    jmp     .do_partition
+
+.med_use_lo:
+    ; Swap arr[lo] with arr[hi]
+    mov     [r12 + r13*8], r10
+    mov     [r12 + r14*8], r8
+    jmp     .do_partition
+
+.med_use_hi:
+    ; Pivot already at hi, nothing to do
+
+.do_partition:
+    ; Partition: pivot = arr[hi]
+    mov     r15, [r12 + r14*8]  ; pivot = arr[hi]
+    mov     rbx, r13            ; i = lo
+    mov     rcx, r13            ; j = lo
+
+.partition_loop:
+    cmp     rcx, r14
+    jge     .partition_done
+    ; if arr[j] < pivot: swap arr[i] and arr[j], i++
+    mov     rax, [r12 + rcx*8]
+    cmp     rax, r15
+    jge     .partition_next
+    ; swap arr[i] and arr[j]
+    mov     rdx, [r12 + rbx*8]
+    mov     [r12 + rbx*8], rax
+    mov     [r12 + rcx*8], rdx
+    inc     rbx                 ; i++
+.partition_next:
+    inc     rcx                 ; j++
+    jmp     .partition_loop
+
+.partition_done:
+    ; swap arr[i] and arr[hi] (put pivot in place)
+    mov     rax, [r12 + rbx*8]
+    mov     rdx, [r12 + r14*8]
+    mov     [r12 + rbx*8], rdx
+    mov     [r12 + r14*8], rax
+    ; pivot is now at index rbx
+
+    ; Push right partition (i+1, hi) if non-empty
+    lea     rax, [rbx + 1]
+    cmp     rax, r14
+    jg      .skip_right
+    push    r14                 ; hi
+    push    rax                 ; i+1
+.skip_right:
+
+    ; Push left partition (lo, i-1) if non-empty
+    lea     rax, [rbx - 1]
+    cmp     r13, rax
+    jg      .skip_left
+    push    rax                 ; i-1
+    push    r13                 ; lo
+.skip_left:
+
+    jmp     .sort_stack_loop
+
+.insertion_sort:
+    ; Insertion sort for small range [lo, hi]
+    lea     rcx, [r13 + 1]      ; i = lo + 1
+.ins_outer:
+    cmp     rcx, r14
+    jg      .sort_stack_loop    ; done with this range
+
+    mov     rax, [r12 + rcx*8]  ; key = arr[i]
+    mov     rbx, rcx
+    dec     rbx                 ; j = i - 1
+
+.ins_inner:
+    cmp     rbx, r13
+    jl      .ins_place          ; j < lo
+    mov     rdx, [r12 + rbx*8]  ; arr[j]
+    cmp     rdx, rax
+    jle     .ins_place          ; arr[j] <= key
+    ; arr[j+1] = arr[j]
+    mov     [r12 + rbx*8 + 8], rdx
+    dec     rbx
+    jmp     .ins_inner
+
+.ins_place:
+    ; arr[j+1] = key
+    mov     [r12 + rbx*8 + 8], rax
+    inc     rcx
+    jmp     .ins_outer
+
+.sort_done:
+    add     rsp, 8
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
     pop     rbp
     ret
 

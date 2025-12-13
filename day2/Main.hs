@@ -2,87 +2,132 @@
 module Main where
 
 import Data.Char (isDigit, isSpace)
+import Data.List (sort)
+import qualified Data.Set as Set
+import qualified Data.Vector as V
 import System.CPUTime (getCPUTime)
 
 trim :: String -> String
 trim = f . f where f = reverse . dropWhile isSpace
 
--- Check if a number has its first half equal to second half (even length only)
--- e.g., 1212 -> 12 == 12 -> True
-isRepeatedHalf :: Integer -> Bool
-isRepeatedHalf n
-  | n <= 0 = False
-  | otherwise =
-      let s = show n
-          len = length s
-      in len >= 2 && even len &&
-         let half = len `div` 2
-             (first, second) = splitAt half s
-         in first == second
-
--- Check if a number is composed of a repeated substring pattern
--- e.g., 123123 -> "123" repeated 2 times -> True
--- e.g., 1111 -> "1" repeated 4 times -> True
-isRepeatedPattern :: Integer -> Bool
-isRepeatedPattern n
-  | n <= 0 = False
-  | otherwise =
-      let s = show n
-          len = length s
-      in any (checkPattern s len) [1 .. len - 1]
+-- Generate all even-half numbers up to maxN
+-- These are numbers like 1212, 123123 where first half equals second half
+generateEvenHalf :: Integer -> [Integer]
+generateEvenHalf maxN =
+    [ n
+    | halfLen <- [1 .. maxLen `div` 2]
+    , let start = 10 ^ (halfLen - 1)
+    , let end = 10 ^ halfLen
+    , t <- [start .. end - 1]
+    , let n = t * (10 ^ halfLen) + t
+    , n <= maxN
+    ]
   where
-    checkPattern s len subLen
-      | len `mod` subLen /= 0 = False
-      | otherwise =
-          let pat = take subLen s
-              reps = len `div` subLen
-          in concat (replicate reps pat) == s
+    maxLen = length (show maxN)
 
--- Parse ranges from input, handling both comma and newline separators
+-- Generate all periodic numbers up to maxN
+-- These are numbers where a base pattern repeats k >= 2 times
+generatePeriodic :: Integer -> [Integer]
+generatePeriodic maxN =
+    Set.toList $ Set.fromList
+        [ n
+        | baseLen <- [1 .. (maxLen + 1) `div` 2]
+        , let start = 10 ^ (baseLen - 1)
+        , let end = 10 ^ baseLen
+        , base <- [start .. end - 1]
+        , reps <- [2 .. maxLen `div` baseLen]
+        , let n = buildRepeated base baseLen reps
+        , n <= maxN
+        ]
+  where
+    maxLen = length (show maxN)
+
+-- Build a number by repeating base `reps` times
+buildRepeated :: Integer -> Int -> Int -> Integer
+buildRepeated base baseLen reps = go reps 0
+  where
+    multiplier = 10 ^ baseLen
+    go 0 !acc = acc
+    go !r !acc = go (r - 1) (acc * multiplier + base)
+
+-- Parse ranges from input
 parseRanges :: String -> [(Integer, Integer)]
 parseRanges text =
-  [ (read a, read (tail b))
-  | part <- splitOn ",\n" text
-  , let trimmed = trim part
-  , not (null trimmed)
-  , let (a, b) = break (== '-') trimmed
-  , not (null a)
-  , not (null b)
-  ]
+    [ (read a, read (tail b))
+    | part <- splitOn ",\n" text
+    , let trimmed = trim part
+    , not (null trimmed)
+    , let (a, b) = break (== '-') trimmed
+    , not (null a)
+    , not (null b)
+    ]
 
--- Split string on any of the given delimiter characters
 splitOn :: String -> String -> [String]
 splitOn _ [] = [""]
 splitOn delims (c:cs)
-  | c `elem` delims = "" : rest
-  | otherwise = let (w:ws) = rest in (c:w) : ws
+    | c `elem` delims = "" : rest
+    | otherwise = let (w:ws) = rest in (c:w) : ws
   where rest = splitOn delims cs
 
--- Sum numbers in range that satisfy a predicate
-sumInRange :: (Integer -> Bool) -> Integer -> Integer -> Integer
-sumInRange pred lo hi = go lo 0
+-- Binary search helpers on sorted Vector
+lowerBound :: V.Vector Integer -> Integer -> Int
+lowerBound vec val = go 0 (V.length vec)
   where
-    go !i !acc
-      | i > hi = acc
-      | pred i = go (i + 1) (acc + i)
-      | otherwise = go (i + 1) acc
+    go !lo !hi
+        | lo >= hi = lo
+        | V.unsafeIndex vec mid < val = go (mid + 1) hi
+        | otherwise = go lo mid
+      where mid = (lo + hi) `div` 2
+
+upperBound :: V.Vector Integer -> Integer -> Int
+upperBound vec val = go 0 (V.length vec)
+  where
+    go !lo !hi
+        | lo >= hi = lo
+        | V.unsafeIndex vec mid <= val = go (mid + 1) hi
+        | otherwise = go lo mid
+      where mid = (lo + hi) `div` 2
+
+-- Compute prefix sums
+prefixSums :: V.Vector Integer -> V.Vector Integer
+prefixSums vec = V.scanl' (+) 0 vec
+
+-- Range sum using binary search and prefix sums
+rangeSum :: V.Vector Integer -> V.Vector Integer -> Integer -> Integer -> Integer
+rangeSum arr prefix lo hi =
+    let i = lowerBound arr lo
+        j = upperBound arr hi
+    in V.unsafeIndex prefix j - V.unsafeIndex prefix i
 
 solve :: String -> (Integer, Integer)
 solve text =
-  let ranges = parseRanges text
-      !p1 = sum [sumInRange isRepeatedHalf lo hi | (lo, hi) <- ranges]
-      !p2 = sum [sumInRange isRepeatedPattern lo hi | (lo, hi) <- ranges]
-  in (p1, p2)
+    let ranges = parseRanges text
+        maxN = maximum (map snd ranges)
+
+        -- Generate and sort even-half numbers
+        evenList = sort $ generateEvenHalf maxN
+        evenArr = V.fromList evenList
+        evenPrefix = prefixSums evenArr
+
+        -- Generate, deduplicate, and sort periodic numbers
+        periodicList = sort $ generatePeriodic maxN
+        periodicArr = V.fromList periodicList
+        periodicPrefix = prefixSums periodicArr
+
+        -- Compute sums for each range
+        !p1 = sum [rangeSum evenArr evenPrefix lo hi | (lo, hi) <- ranges]
+        !p2 = sum [rangeSum periodicArr periodicPrefix lo hi | (lo, hi) <- ranges]
+    in (p1, p2)
 
 main :: IO ()
 main = do
-  text <- readFile "input.txt"
-  t0 <- getCPUTime
-  let !(p1, p2) = solve text
-  t1 <- getCPUTime
-  let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-  putStrLn $ "repeated-halves-sum=" ++ show p1 ++ " repeated-pattern-sum=" ++ show p2 ++
-             " elapsed_ms=" ++ showFF elapsed
+    text <- readFile "input.txt"
+    t0 <- getCPUTime
+    let !(p1, p2) = solve text
+    t1 <- getCPUTime
+    let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
+    putStrLn $ "repeated-halves-sum=" ++ show p1 ++ " repeated-pattern-sum=" ++ show p2 ++
+               " elapsed_ms=" ++ showFF elapsed
 
 showFF :: Double -> String
 showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)

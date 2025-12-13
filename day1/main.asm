@@ -1,4 +1,5 @@
 ; Day 1 solution in x86-64 assembly (SysV ABI)
+; Uses branchless techniques where beneficial.
 ; Uses C stdio/stdlib for file IO and parsing.
 
 global main
@@ -63,22 +64,22 @@ main:
     cmp     rsi, r15
     je      .after_read
 
-    ; sign
+    ; Check for whitespace (newline/carriage return)
     mov     al, [rsi]
     cmp     al, 10                  ; newline -> skip
     je      .skip_line
     cmp     al, 13                  ; carriage -> skip
     je      .skip_line
+
+    ; Branchless sign extraction: sign = (char == 'R') ? 1 : -1
+    ; Uses cmov instead of conditional jump
+    mov     r8d, 1                  ; assume 'R' (sign = 1)
+    mov     ecx, -1                 ; alternative (sign = -1)
     cmp     al, 'R'
-    jne     .sign_neg
-    mov     r8d, 1
-    jmp     .sign_done
-.sign_neg:
-    mov     r8d, -1
-.sign_done:
+    cmovne  r8d, ecx                ; if not 'R', sign = -1
     inc     rsi
 
-    ; parse magnitude
+    ; parse magnitude (must be sequential - digit by digit)
     xor     eax, eax                ; mag
 .mag_loop:
     cmp     rsi, r15
@@ -97,26 +98,25 @@ main:
 .mag_done:
     mov     ebx, eax                ; mag in ebx
 
-    ; first = sign==1 ? 100 - at : at
+    ; Branchless first calculation: first = (sign==1) ? 100-at : at
+    mov     eax, [at_var]           ; eax = at (for sign == -1)
+    mov     ecx, 100
+    sub     ecx, eax                ; ecx = 100 - at (for sign == 1)
     cmp     r8d, 1
-    jne     .first_neg
-    mov     eax, 100
-    sub     eax, [at_var]
-    jmp     .first_done
-.first_neg:
-    mov     eax, [at_var]
-.first_done:
-    cmp     eax, 0
-    jne     .first_nz
-    mov     eax, 100
-.first_nz:
+    cmove   eax, ecx                ; if sign==1, eax = 100-at
 
-    ; hits
+    ; Branchless: if first == 0, first = 100
+    mov     ecx, 100
+    test    eax, eax
+    cmovz   eax, ecx                ; if first==0, first = 100
+    mov     r9d, eax                ; save first in r9d
+
+    ; Crossing hits calculation (keep branch - division is expensive)
     xor     edx, edx
-    cmp     ebx, eax
+    cmp     ebx, r9d                ; mag >= first?
     jl      .hits_skip
     mov     ecx, ebx
-    sub     ecx, eax
+    sub     ecx, r9d                ; ecx = mag - first
     xor     edx, edx
     mov     eax, ecx
     mov     ecx, 100
@@ -126,22 +126,26 @@ main:
 .hits_skip:
     add     [cross_var], edx
 
-    ; sum = at + sign*mag
+    ; Position update: pos = (at + sign*mag) % 100
     mov     eax, [at_var]
-    imul    ebx, r8d
-    add     eax, ebx
+    imul    ebx, r8d                ; ebx = sign * mag
+    add     eax, ebx                ; eax = at + sign*mag
     cdq
     mov     ecx, 100
-    idiv    ecx                     ; edx = remainder
+    idiv    ecx                     ; edx = remainder (may be negative)
+
+    ; Branchless negative modulo fix: if edx < 0, edx += 100
     mov     eax, edx
-    cmp     eax, 0
-    jge     .rem_ok
-    add     eax, 100
-.rem_ok:
-    mov     [at_var], eax
-    cmp     eax, 0
-    jne     .line_loop
-    inc     dword [zero_var]
+    add     edx, 100                ; edx = remainder + 100
+    test    eax, eax
+    cmovns  edx, eax                ; if original >= 0, use original
+    mov     [at_var], edx
+
+    ; Branchless zero counting: zero_var += (pos == 0)
+    xor     eax, eax
+    test    edx, edx
+    setz    al                      ; al = 1 if pos==0, else 0
+    add     [zero_var], eax
     jmp     .line_loop
 
 .skip_line:

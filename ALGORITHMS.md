@@ -19,21 +19,29 @@ A dial points at numbers 0-99 in a circle. Follow rotation instructions (L/R wit
 
 ### Idiomatic Suggestions
 
-| Language | Approach |
-|----------|----------|
-| **Python** | Use `itertools.accumulate` with modular reduction; `sum(1 for p in positions if p == 0)` |
-| **Go** | Straightforward loop; no special idioms needed |
-| **Rust** | Use `Iterator::scan` to track state; `filter(|&p| p == 0).count()` |
-| **TypeScript** | `reduce` with accumulator tracking position and count |
-| **Ruby** | `inject` with running position; `count { |p| p.zero? }` |
-| **Lisp** | `loop` with `count` clause; `mod` for wrapping |
-| **Julia** | Broadcasting with `mod.(cumsum(deltas), 100)`; `count(==(0), positions)` |
-| **Haskell** | `scanl` for positions; `length . filter (== 0)` |
+**Note:** Part 2's crossing calculation requires tracking position BEFORE each move plus direction/magnitude. This sequential dependency makes pure functional patterns (`accumulate`, `scan`, `reduce`) awkward. All implementations use explicit loops, which is appropriate.
+
+| Language | Actual Approach |
+|----------|-----------------|
+| **Python** | Explicit loop with `(pos + sign * mag) % 100`; crossing formula inline |
+| **Go** | Straightforward loop; manual negative modulo fix |
+| **Rust** | Explicit loop with `rem_euclid()` for correct negative modulo |
+| **TypeScript** | `for-of` loop; double-modulo trick `((x % 100) + 100) % 100` |
+| **Ruby** | `each` with manual counting; Ruby's `%` handles negatives correctly |
+| **Lisp** | `dolist` with `incf`; `mod` handles negatives correctly |
+| **Julia** | Explicit `for` loop; `mod()` handles negatives correctly |
+| **Haskell** | Worker pattern with explicit tail recursion; bang patterns for strictness |
 
 ### Assembly Optimization
-- Use SIMD to process multiple rotations in parallel (AVX2/AVX-512)
-- Branchless zero-counting with `vpcmpeqd` + `vpmovmskb` + `popcnt`
-- Unroll the main loop 4-8x for better ILP
+
+**Note:** SIMD parallelism is limited because each position depends on the previous. The implementation uses branchless scalar techniques instead:
+
+- **Branchless sign extraction:** `cmovne` to select 1 or -1 without branching
+- **Branchless first calculation:** `cmove` for conditional `100 - pos` vs `pos`
+- **Branchless zero-at-boundary:** `cmovz` to replace 0 with 100
+- **Branchless negative modulo:** `cmovns` to conditionally add 100
+- **Branchless zero counting:** `setz` + `add` instead of conditional increment
+- Division for crossing count kept as branch (division is expensive; skip when possible)
 
 ---
 
@@ -69,21 +77,34 @@ This is especially effective when ranges are large or queries are repeated.
 
 ### Idiomatic Suggestions
 
-| Language | Approach |
-|----------|----------|
-| **Python** | Use regex: `re.fullmatch(r'(.+)\1+', str(n))` for Part 2 |
-| **Go** | String slicing with `strings.Repeat` comparison |
-| **Rust** | `str.repeat(k) == original` pattern matching |
-| **TypeScript** | Regex `/^(.+)\1+$/` matches repeated patterns |
-| **Ruby** | `n.to_s.match?(/^(.+)\1+$/)` - Ruby's regex is elegant here |
-| **Lisp** | `(string= s (concatenate 'string prefix prefix))` |
-| **Julia** | `repeat(s[1:k], length(s)÷k) == s` |
-| **Haskell** | `concat (replicate k prefix) == s` with list comprehension for divisors |
+**Note:** Most high-level language implementations use the precomputation strategy from Algorithm Notes above, generating all valid patterns upfront and using binary search for range queries. This is O(patterns) + O(queries × log(patterns)) vs the C reference's O(range_size × digit_checks).
+
+| Language | Actual Approach |
+|----------|-----------------|
+| **Python** | Precomputation: generate patterns with `base_str * k`, binary search with `bisect` |
+| **Go** | Precomputation: generate with `strings.Repeat`, binary search with `sort.Search` |
+| **Rust** | Precomputation: generate with `str.repeat(k)`, binary search with `partition_point` |
+| **TypeScript** | Precomputation: generate with `str.repeat(k)`, linear search (could use binary) |
+| **Ruby** | Precomputation: generate with `str * k`, binary search with `bsearch_index` |
+| **Lisp** | Precomputation: generate with string concatenation, manual binary search |
+| **Julia** | Precomputation: generate with `repeat(s, k)`, binary search with `searchsortedfirst` |
+| **Haskell** | Precomputation: generate with list comprehension, `Data.Set` for dedup, `Data.Vector` + binary search |
+
+**Alternative per-number approaches** (for checking individual numbers):
+- **Regex:** `re.fullmatch(r'(.+)\1+', str(n))` in Python, `/^(.+)\1+$/` in JS/Ruby
+- **String repeat:** `str.repeat(k) == original` pattern comparison
 
 ### Assembly Optimization
-- Use `rep cmpsb` for fast string comparison
-- Precompute all repeated-pattern numbers up to max range value
-- Use SIMD for parallel range checking with `vpcmpgtd`
+
+The ASM uses the precomputation strategy with:
+- **Pattern generation:** Generate all even-half and periodic patterns up to max range value
+- **Hybrid quicksort:** Median-of-three pivot + insertion sort for small subarrays
+- **Binary search:** `lower_bound_u64`, `upper_bound_u64` from shared utils
+- **Prefix sums:** O(1) range sum queries after O(n) preprocessing
+
+**Shared utilities used:** `pow10`, `lower_bound_u64`, `upper_bound_u64`, `sort_u64`
+
+**Performance:** ~1.5ms vs C's ~118ms (per-number checking) - 80x faster
 
 ---
 

@@ -1,4 +1,5 @@
-; Day 2 pure x86-64 assembly using syscalls via shared helper.
+; Day 2 x86-64 assembly - Precomputation Strategy
+; Generates all repeated-pattern numbers, sorts, uses binary search for range queries.
 ; SysV ABI, x86_64, Linux/WSL2.
 
 global main
@@ -11,16 +12,19 @@ extern ns_since
 extern read_file_all
 extern parse_uint64
 extern skip_non_digits
-extern uint64_digit_count
-extern uint64_to_digits
 extern pow10
+extern lower_bound_u64
+extern upper_bound_u64
+extern sort_u64
 
 %define CLOCK_MONOTONIC 1
 %define BUF_SIZE 1048576
+%define MAX_PATTERNS 200000      ; max number of patterns we might generate
+%define MAX_RANGES 1000          ; max number of input ranges
 
 section .data
 input_file:    db "input.txt", 0
-fmt_out:       db "part1_sum=%llu part2_sum=%llu elapsed_ms=%.3f", 10, 0
+fmt_out:       db "repeated-halves-sum=%llu repeated-pattern-sum=%llu elapsed_ms=%.3f", 10, 0
 err_open:      db "open", 0
 one_million:   dq 1000000.0
 
@@ -28,61 +32,30 @@ section .bss
 file_buf:      resb BUF_SIZE
 ts0:           resq 2
 ts1:           resq 2
-digit_buf:     resb 24          ; buffer for digit extraction
+
+; Arrays for precomputed patterns
+even_arr:      resq MAX_PATTERNS          ; even-half numbers
+even_prefix:   resq MAX_PATTERNS + 1      ; prefix sums
+periodic_arr:  resq MAX_PATTERNS          ; periodic numbers
+periodic_prefix: resq MAX_PATTERNS + 1    ; prefix sums
+
+; Input ranges
+ranges:        resq MAX_RANGES * 2        ; pairs of (lo, hi)
+range_count:   resq 1
+max_value:     resq 1
+
+; Counters
+even_count:    resq 1
+periodic_count: resq 1
 
 section .text
 
 ;------------------------------------------------------------------------------
-; bool is_even_half(uint64_t n)
-; Returns 1 if n has even digit count and first half equals second half.
-; Uses shared: uint64_digit_count, pow10
+; void generate_even_half(uint64_t max_n)
+; Generates all numbers where first half equals second half (even digit count).
+; Stores in even_arr, updates even_count.
 ;------------------------------------------------------------------------------
-is_even_half:
-    push    rbp
-    mov     rbp, rsp
-    push    rbx
-    push    r12
-
-    mov     rbx, rdi            ; save n
-
-    ; Get digit count
-    call    uint64_digit_count
-    mov     r12d, eax           ; digit_count
-
-    ; Check if even
-    test    r12d, 1
-    jnz     .eh_ret_zero
-
-    ; half_exp = digit_count / 2
-    mov     edi, r12d
-    shr     edi, 1
-    call    pow10               ; rax = 10^(digit_count/2)
-
-    ; first_half = n / 10^half, second_half = n % 10^half
-    mov     rcx, rax            ; divisor
-    mov     rax, rbx            ; n
-    xor     edx, edx
-    div     rcx                 ; rax = first_half, rdx = second_half
-
-    cmp     rax, rdx
-    jne     .eh_ret_zero
-    mov     eax, 1
-    jmp     .eh_ret
-
-.eh_ret_zero:
-    xor     eax, eax
-.eh_ret:
-    pop     r12
-    pop     rbx
-    pop     rbp
-    ret
-
-;------------------------------------------------------------------------------
-; bool is_periodic(uint64_t n)
-; Returns 1 if decimal digits form a repeating pattern.
-; Uses shared: uint64_to_digits
-;------------------------------------------------------------------------------
-is_periodic:
+generate_even_half:
     push    rbp
     mov     rbp, rsp
     push    rbx
@@ -90,72 +63,64 @@ is_periodic:
     push    r13
     push    r14
     push    r15
-    sub     rsp, 8              ; align stack to 16 bytes
 
-    mov     rbx, rdi            ; save n
+    mov     r15, rdi                ; max_n
+    xor     r14d, r14d              ; count = 0
+    lea     r13, [rel even_arr]     ; output array
 
-    ; Extract digits to buffer
-    lea     rsi, [rel digit_buf]
-    call    uint64_to_digits
-    mov     r8, rax             ; r8 = digit count
-    lea     r9, [rel digit_buf] ; r9 = buffer pointer
+    ; Find max_len (number of digits in max_n)
+    mov     rdi, r15
+    call    get_digit_count
+    mov     r12d, eax               ; max_len
 
-    ; Need at least 2 digits to have a pattern
-    cmp     r8, 2
-    jb      .per_not_periodic
+    ; For half_len from 1 to max_len/2
+    mov     ebx, 1                  ; half_len = 1
+.half_len_loop:
+    mov     eax, r12d
+    shr     eax, 1                  ; max_len / 2
+    cmp     ebx, eax
+    jg      .gen_even_done
 
-    ; Try each possible pattern length from 1 to len-1
-    mov     r10, 1              ; substr_len = 1
-.per_substr_loop:
-    cmp     r10, r8
-    jge     .per_not_periodic
+    ; start = 10^(half_len-1), end = 10^half_len
+    lea     edi, [ebx - 1]
+    call    pow10
+    mov     r8, rax                 ; start
 
-    ; Check if len % substr_len == 0
-    mov     rax, r8
-    xor     edx, edx
-    div     r10                 ; rax = len / substr_len, rdx = len % substr_len
-    test    rdx, rdx
-    jnz     .per_next_substr
-    mov     r11, rax            ; reps = len / substr_len
+    mov     edi, ebx
+    call    pow10
+    mov     r9, rax                 ; end (also multiplier)
 
-    ; Check if pattern repeats
-    xor     r12d, r12d          ; idx = 0
-.per_idx_loop:
-    cmp     r12, r10
-    jge     .per_found_periodic
+    ; For t from start to end-1
+    mov     r10, r8                 ; t = start
+.t_loop:
+    cmp     r10, r9
+    jge     .next_half_len
 
-    ; first = buf[idx]
-    movzx   r13d, byte [r9 + r12]
-    mov     r14, 1              ; rep = 1
-.per_rep_loop:
-    cmp     r14, r11
-    jge     .per_next_idx
-    mov     rax, r14
-    imul    rax, r10            ; rep * substr_len
-    add     rax, r12            ; pos = rep * substr_len + idx
-    movzx   r15d, byte [r9 + rax]
-    cmp     r15d, r13d
-    jne     .per_next_substr
+    ; n = t * 10^half_len + t = t * (end + 1) ... no wait
+    ; n = t * 10^half_len + t
+    mov     rax, r10
+    imul    rax, r9                 ; t * 10^half_len
+    add     rax, r10                ; + t
+    mov     r11, rax                ; n
+
+    ; if n > max_n, we're done with this half_len
+    cmp     r11, r15
+    ja      .next_half_len
+
+    ; Store n
+    mov     [r13 + r14*8], r11
     inc     r14
-    jmp     .per_rep_loop
 
-.per_next_idx:
-    inc     r12
-    jmp     .per_idx_loop
-
-.per_found_periodic:
-    mov     eax, 1
-    jmp     .per_ret
-
-.per_next_substr:
     inc     r10
-    jmp     .per_substr_loop
+    jmp     .t_loop
 
-.per_not_periodic:
-    xor     eax, eax
+.next_half_len:
+    inc     ebx
+    jmp     .half_len_loop
 
-.per_ret:
-    add     rsp, 8
+.gen_even_done:
+    mov     [rel even_count], r14
+
     pop     r15
     pop     r14
     pop     r13
@@ -165,17 +130,281 @@ is_periodic:
     ret
 
 ;------------------------------------------------------------------------------
-; main: parse input and compute sums
-; Register allocation for parse loop (callee-saved registers survive function calls):
-;   rbx = current value in range loop
-;   r12 = current parse position (ptr)
-;   r13 = end pointer
-;   r14 = first value of pair
-;   r15 = second value of pair
-; Stack locals:
-;   [rbp-56] = part1 sum
-;   [rbp-48] = part2 sum
-;   [rbp-40] = state (0=need first, 1=need second)
+; void generate_periodic(uint64_t max_n)
+; Generates all numbers that are a base pattern repeated k>=2 times.
+; Stores in periodic_arr, updates periodic_count.
+; Uses simple deduplication by sorting and removing duplicates.
+; Register allocation:
+;   r15 = max_n
+;   r14 = output count
+;   r13 = output array pointer
+;   r12 = max_len (digit count of max_n)
+;   rbx = base_len
+;   [rbp-56] = start (10^(base_len-1))
+;   [rbp-64] = end (10^base_len)
+;   [rbp-72] = base (current base value)
+;   [rbp-80] = reps (current repetition count)
+;------------------------------------------------------------------------------
+generate_periodic:
+    push    rbp
+    mov     rbp, rsp
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    sub     rsp, 48                 ; local space
+
+    mov     r15, rdi                ; max_n
+    xor     r14d, r14d              ; count = 0
+    lea     r13, [rel periodic_arr] ; output array
+
+    ; Find max_len
+    mov     rdi, r15
+    call    get_digit_count
+    mov     r12d, eax               ; max_len
+
+    ; For base_len from 1 to ceil(max_len/2)
+    mov     ebx, 1                  ; base_len = 1
+.base_len_loop:
+    mov     eax, r12d
+    inc     eax
+    shr     eax, 1                  ; ceil(max_len / 2)
+    cmp     ebx, eax
+    jg      .gen_periodic_done
+
+    ; start = 10^(base_len-1), end = 10^base_len
+    lea     edi, [ebx - 1]
+    call    pow10
+    mov     [rbp - 56], rax         ; start
+
+    mov     edi, ebx
+    call    pow10
+    mov     [rbp - 64], rax         ; end
+
+    ; For base from start to end-1
+    mov     rax, [rbp - 56]
+    mov     [rbp - 72], rax         ; base = start
+.base_loop:
+    mov     rax, [rbp - 72]
+    cmp     rax, [rbp - 64]
+    jge     .next_base_len
+
+    ; For reps from 2 to max_len/base_len
+    mov     dword [rbp - 80], 2     ; reps = 2
+.reps_loop:
+    mov     eax, r12d
+    xor     edx, edx
+    div     ebx                     ; eax = max_len / base_len
+    cmp     [rbp - 80], eax
+    jg      .next_base
+
+    ; Build number: base repeated reps times
+    mov     rdi, [rbp - 72]         ; base
+    mov     esi, ebx                ; base_len
+    mov     edx, [rbp - 80]         ; reps
+    call    build_repeated_number
+    mov     r11, rax                ; n
+
+    ; if n > max_n, done with this base
+    cmp     r11, r15
+    ja      .next_base
+
+    ; Store n (may have duplicates, we'll sort and dedup later)
+    mov     [r13 + r14*8], r11
+    inc     r14
+
+    inc     dword [rbp - 80]        ; reps++
+    jmp     .reps_loop
+
+.next_base:
+    inc     qword [rbp - 72]        ; base++
+    jmp     .base_loop
+
+.next_base_len:
+    inc     ebx
+    jmp     .base_len_loop
+
+.gen_periodic_done:
+    mov     [rel periodic_count], r14
+
+    add     rsp, 48
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    pop     rbp
+    ret
+
+;------------------------------------------------------------------------------
+; uint64_t build_repeated_number(uint64_t base, uint32_t base_len, uint32_t reps)
+; Returns base repeated reps times as a single number.
+; Input:  rdi = base value
+;         esi = number of digits in base
+;         edx = number of repetitions
+; Output: rax = repeated number
+;------------------------------------------------------------------------------
+build_repeated_number:
+    push    rbx
+    push    r12
+
+    mov     rbx, rdi                ; base
+    mov     r12d, edx               ; reps
+
+    ; multiplier = 10^base_len
+    mov     edi, esi
+    call    pow10
+    mov     rcx, rax                ; multiplier
+
+    ; result = 0
+    xor     eax, eax
+    mov     edx, r12d               ; remaining reps
+.build_loop:
+    test    edx, edx
+    jz      .build_done
+    imul    rax, rcx                ; result *= multiplier
+    add     rax, rbx                ; result += base
+    dec     edx
+    jmp     .build_loop
+
+.build_done:
+    pop     r12
+    pop     rbx
+    ret
+
+;------------------------------------------------------------------------------
+; uint32_t get_digit_count(uint64_t n)
+; Returns number of decimal digits.
+;------------------------------------------------------------------------------
+get_digit_count:
+    mov     rax, rdi
+    xor     ecx, ecx
+    test    rax, rax
+    jnz     .gdc_loop
+    mov     eax, 1
+    ret
+.gdc_loop:
+    test    rax, rax
+    jz      .gdc_done
+    inc     ecx
+    xor     edx, edx
+    mov     r8, 10
+    div     r8
+    jmp     .gdc_loop
+.gdc_done:
+    mov     eax, ecx
+    ret
+
+;------------------------------------------------------------------------------
+; void remove_duplicates(uint64_t *arr, size_t *count)
+; Removes duplicates from sorted array in-place.
+; Input:  rdi = array pointer
+;         rsi = pointer to count (updated in place)
+;------------------------------------------------------------------------------
+remove_duplicates:
+    push    rbx
+    push    r12
+
+    mov     r12, rsi                ; pointer to count
+    mov     rcx, [r12]              ; n = *count
+    test    rcx, rcx
+    jz      .dedup_done
+    cmp     rcx, 1
+    je      .dedup_done
+
+    ; write_idx = 1, read_idx = 1
+    mov     rax, 1                  ; write_idx
+    mov     rbx, 1                  ; read_idx
+    mov     r8, [rdi]               ; prev = arr[0]
+
+.dedup_loop:
+    cmp     rbx, rcx
+    jge     .dedup_finish
+    mov     r9, [rdi + rbx*8]       ; curr = arr[read_idx]
+    cmp     r9, r8
+    je      .dedup_skip             ; duplicate, skip
+    ; Not duplicate, write it
+    mov     [rdi + rax*8], r9
+    mov     r8, r9                  ; prev = curr
+    inc     rax                     ; write_idx++
+.dedup_skip:
+    inc     rbx                     ; read_idx++
+    jmp     .dedup_loop
+
+.dedup_finish:
+    mov     [r12], rax              ; *count = write_idx
+
+.dedup_done:
+    pop     r12
+    pop     rbx
+    ret
+
+;------------------------------------------------------------------------------
+; void compute_prefix_sums(uint64_t *arr, size_t n, uint64_t *prefix)
+; Computes prefix sums: prefix[i] = sum of arr[0..i-1]
+; prefix[0] = 0, prefix[n] = total sum
+;------------------------------------------------------------------------------
+compute_prefix_sums:
+    mov     qword [rdx], 0          ; prefix[0] = 0
+    xor     ecx, ecx                ; i = 0
+    xor     r8, r8                  ; running sum = 0
+.prefix_loop:
+    cmp     rcx, rsi
+    jge     .prefix_done
+    add     r8, [rdi + rcx*8]       ; sum += arr[i]
+    mov     [rdx + rcx*8 + 8], r8   ; prefix[i+1] = sum
+    inc     rcx
+    jmp     .prefix_loop
+.prefix_done:
+    ret
+
+;------------------------------------------------------------------------------
+; uint64_t range_sum(uint64_t *arr, size_t n, uint64_t *prefix, uint64_t lo, uint64_t hi)
+; Returns sum of elements in arr where lo <= element <= hi.
+; Uses binary search on sorted array with prefix sums.
+;------------------------------------------------------------------------------
+range_sum:
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+
+    mov     rbx, rdi                ; arr
+    mov     r12, rsi                ; n
+    mov     r13, rdx                ; prefix
+    mov     r14, rcx                ; lo
+    mov     r15, r8                 ; hi (save before calls clobber r8)
+
+    ; i = lower_bound(arr, n, lo)
+    mov     rdi, rbx
+    mov     rsi, r12
+    mov     rdx, r14
+    call    lower_bound_u64
+    mov     r14, rax                ; i (reuse r14, don't need lo anymore)
+
+    ; j = upper_bound(arr, n, hi)
+    mov     rdi, rbx
+    mov     rsi, r12
+    mov     rdx, r15                ; hi
+    call    upper_bound_u64
+    ; rax = j
+
+    ; sum = prefix[j] - prefix[i]
+    mov     rdx, [r13 + rax*8]      ; prefix[j]
+    sub     rdx, [r13 + r14*8]      ; - prefix[i]
+    mov     rax, rdx
+
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+;------------------------------------------------------------------------------
+; main
 ;------------------------------------------------------------------------------
 main:
     push    rbp
@@ -185,9 +414,9 @@ main:
     push    r13
     push    r14
     push    r15
-    sub     rsp, 56             ; align 16
+    sub     rsp, 24                 ; align + locals
 
-    ; Read entire file into buffer using shared helper
+    ; Read file
     lea     rdi, [rel input_file]
     lea     rsi, [rel file_buf]
     mov     rdx, BUF_SIZE
@@ -200,81 +429,149 @@ main:
     jmp     .exit
 
 .file_ok:
-    mov     r14, rax            ; save bytes read
-    mov     qword [rbp-56], 0   ; part1 sum
-    mov     qword [rbp-48], 0   ; part2 sum
-    mov     qword [rbp-40], 0   ; state = 0 (need first)
+    mov     r15, rax                ; file size
 
+    ; Parse ranges, find max value
+    lea     r12, [rel file_buf]     ; ptr
+    lea     r13, [rel file_buf]
+    add     r13, r15                ; end
+    lea     r14, [rel ranges]       ; ranges array
+    xor     ebx, ebx                ; range_count = 0
+    mov     qword [rel max_value], 0
+
+.parse_loop:
+    ; Skip to first number
+    mov     rdi, r12
+    mov     rsi, r13
+    call    skip_non_digits
+    mov     r12, rax
+    cmp     r12, r13
+    jge     .parse_done
+
+    ; Parse first number (lo)
+    lea     rdi, [rbp - 64]
+    mov     [rbp - 64], r12
+    mov     rsi, r13
+    call    parse_uint64
+    mov     r8, rax                 ; lo
+    mov     r12, [rbp - 64]
+
+    ; Skip to second number
+    mov     rdi, r12
+    mov     rsi, r13
+    call    skip_non_digits
+    mov     r12, rax
+    cmp     r12, r13
+    jge     .parse_done
+
+    ; Parse second number (hi)
+    lea     rdi, [rbp - 64]
+    mov     [rbp - 64], r12
+    mov     rsi, r13
+    call    parse_uint64
+    mov     r9, rax                 ; hi
+    mov     r12, [rbp - 64]
+
+    ; Store range
+    mov     [r14 + rbx*8], r8       ; ranges[count*2] = lo
+    mov     [r14 + rbx*8 + 8], r9   ; ranges[count*2 + 1] = hi
+    add     rbx, 2
+
+    ; Update max_value
+    cmp     r9, [rel max_value]
+    jbe     .parse_loop
+    mov     [rel max_value], r9
+    jmp     .parse_loop
+
+.parse_done:
+    shr     rbx, 1                  ; range_count = rbx / 2
+    mov     [rel range_count], rbx
+
+    ; Start timing
     mov     edi, CLOCK_MONOTONIC
     lea     rsi, [rel ts0]
     call    clock_gettime
 
-    ; Set up buffer pointers (use callee-saved registers)
-    lea     r12, [rel file_buf] ; current position
-    lea     r13, [rel file_buf]
-    add     r13, r14            ; end pointer
+    ; Generate even-half numbers
+    mov     rdi, [rel max_value]
+    call    generate_even_half
 
-    xor     r14, r14            ; first value
+    ; Generate periodic numbers
+    mov     rdi, [rel max_value]
+    call    generate_periodic
 
-.parse_loop:
-    cmp     r12, r13
-    jge     .after_read
+    ; even_arr is generated in sorted order (by half_len, then by t within each)
+    ; Skip sorting, but still remove duplicates for safety
+    lea     rdi, [rel even_arr]
+    lea     rsi, [rel even_count]
+    call    remove_duplicates
 
-    ; Skip non-digit characters using shared function
-    mov     rdi, r12
-    mov     rsi, r13
-    call    skip_non_digits
-    mov     r12, rax            ; update position
+    ; Compute prefix sums for even
+    lea     rdi, [rel even_arr]
+    mov     rsi, [rel even_count]
+    lea     rdx, [rel even_prefix]
+    call    compute_prefix_sums
 
-    cmp     r12, r13
-    jge     .after_read
+    ; Sort periodic array (already generated above)
+    lea     rdi, [rel periodic_arr]
+    mov     rsi, [rel periodic_count]
+    call    sort_u64
 
-    ; Parse number using shared function
-    lea     rdi, [rbp-64]       ; temporary pointer storage
-    mov     [rbp-64], r12       ; store current position
-    mov     rsi, r13            ; end pointer
-    call    parse_uint64
-    mov     r15, rax            ; parsed number
-    mov     r12, [rbp-64]       ; updated position
+    ; Remove duplicates from periodic
+    lea     rdi, [rel periodic_arr]
+    lea     rsi, [rel periodic_count]
+    call    remove_duplicates
 
-    ; Check state
-    cmp     qword [rbp-40], 0
-    jne     .have_second
-    mov     r14, r15            ; first value
-    mov     qword [rbp-40], 1   ; state = need second
-    jmp     .parse_loop
+    ; Compute prefix sums for periodic
+    lea     rdi, [rel periodic_arr]
+    mov     rsi, [rel periodic_count]
+    lea     rdx, [rel periodic_prefix]
+    call    compute_prefix_sums
 
-.have_second:
-    ; Process range [r14, r15]
-    mov     rbx, r14
+    ; Process ranges, compute sums
+    xor     r12d, r12d              ; part1 sum
+    xor     r13d, r13d              ; part2 sum
+    xor     ebx, ebx                ; range index
+
 .range_loop:
-    cmp     rbx, r15
-    ja      .range_done
+    cmp     rbx, [rel range_count]
+    jge     .ranges_done
 
-    mov     rdi, rbx
-    call    is_even_half
-    test    al, al
-    jz      .skip_p1
-    add     [rbp-56], rbx
-.skip_p1:
-    mov     rdi, rbx
-    call    is_periodic
-    test    al, al
-    jz      .skip_p2
-    add     [rbp-48], rbx
-.skip_p2:
+    ; Get lo, hi for this range
+    lea     rax, [rel ranges]
+    mov     rcx, rbx
+    shl     rcx, 4                  ; rcx = rbx * 16
+    mov     r14, [rax + rcx]        ; lo
+    mov     r15, [rax + rcx + 8]    ; hi
+
+    ; Part 1: sum even-half numbers in range
+    lea     rdi, [rel even_arr]
+    mov     rsi, [rel even_count]
+    lea     rdx, [rel even_prefix]
+    mov     rcx, r14                ; lo
+    mov     r8, r15                 ; hi
+    call    range_sum
+    add     r12, rax
+
+    ; Part 2: sum periodic numbers in range
+    lea     rdi, [rel periodic_arr]
+    mov     rsi, [rel periodic_count]
+    lea     rdx, [rel periodic_prefix]
+    mov     rcx, r14                ; lo
+    mov     r8, r15                 ; hi
+    call    range_sum
+    add     r13, rax
+
     inc     rbx
     jmp     .range_loop
 
-.range_done:
-    mov     qword [rbp-40], 0   ; reset state for next pair
-    jmp     .parse_loop
-
-.after_read:
+.ranges_done:
+    ; End timing
     mov     edi, CLOCK_MONOTONIC
     lea     rsi, [rel ts1]
     call    clock_gettime
 
+    ; Calculate elapsed ms
     lea     rdi, [rel ts0]
     lea     rsi, [rel ts1]
     call    ns_since
@@ -282,14 +579,16 @@ main:
     movsd   xmm1, [rel one_million]
     divsd   xmm0, xmm1
 
-    mov     rsi, [rbp-56]       ; part1
-    mov     rdx, [rbp-48]       ; part2
+    ; Print results
     lea     rdi, [rel fmt_out]
+    mov     rsi, r12                ; part1
+    mov     rdx, r13                ; part2
     call    printf
+
     xor     eax, eax
 
 .exit:
-    add     rsp, 56
+    add     rsp, 24
     pop     r15
     pop     r14
     pop     r13
