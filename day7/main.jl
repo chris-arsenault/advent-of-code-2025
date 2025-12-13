@@ -1,5 +1,7 @@
 #!/usr/bin/env julia
 
+using DataStructures: Queue, enqueue!, dequeue!
+
 function load_grid(lines)
     grid = String[]
     sr = -1; sc = -1
@@ -16,20 +18,24 @@ end
 
 function part1(grid, sr, sc)
     h = length(grid); w = lastindex(grid[1])
-    active = [sc]
+    active = Set{Int}([sc])
     splits = 0
     for r in sr:h
-        next = Int[]
+        next = Set{Int}()
         seen = Set{Int}()
-        while !isempty(active)
-            c = pop!(active)
+        queue = Queue{Int}()
+        for c in active
+            enqueue!(queue, c)
+        end
+        while !isempty(queue)
+            c = dequeue!(queue)
             c in seen && continue
             push!(seen, c)
             cell = grid[r][c]
             if cell == '^'
                 splits += 1
-                c > 1 && push!(active, c-1)
-                c < w && push!(active, c+1)
+                c > 1 && enqueue!(queue, c-1)
+                c < w && enqueue!(queue, c+1)
             else
                 push!(next, c)
             end

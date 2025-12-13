@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from pathlib import Path
 import time
 
@@ -26,9 +27,9 @@ def part1(grid: list[str], start_r: int, start_c: int) -> int:
     for r in range(start_r, height):
         next_active: set[int] = set()
         seen: set[int] = set()
-        stack = list(active)
-        while stack:
-            c = stack.pop()
+        queue = deque(active)
+        while queue:
+            c = queue.popleft()
             if c in seen:
                 continue
             seen.add(c)
@@ -36,9 +37,9 @@ def part1(grid: list[str], start_r: int, start_c: int) -> int:
             if cell == "^":
                 splits += 1
                 if c > 0:
-                    stack.append(c - 1)
+                    queue.append(c - 1)
                 if c + 1 < width:
-                    stack.append(c + 1)
+                    queue.append(c + 1)
             else:
                 next_active.add(c)
         active = next_active

@@ -1,3 +1,5 @@
+require 'set'
+
 lines = File.read('input.txt').split("\n")
 sr = sc = nil
 lines.each_with_index do |line, r|
@@ -12,23 +14,23 @@ end
 def part1(lines, sr, sc)
   h = lines.size
   w = lines.first.size
-  active = { sc => true }
+  active = Set[sc]
   splits = 0
   (sr...h).each do |r|
-    next_active = {}
-    queue = active.keys
-    seen = {}
+    next_active = Set.new
+    queue = active.to_a
+    seen = Set.new
     until queue.empty?
-      c = queue.pop
-      next if seen[c]
-      seen[c] = true
+      c = queue.shift
+      next if seen.include?(c)
+      seen.add(c)
       cell = lines[r][c]
       if cell == '^'
         splits += 1
         queue << c - 1 if c > 0
         queue << c + 1 if c + 1 < w
       else
-        next_active[c] = true
+        next_active.add(c)
       end
     end
     active = next_active

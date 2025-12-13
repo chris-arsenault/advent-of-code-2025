@@ -4,6 +4,7 @@ module Main where
 import Data.Maybe (fromJust)
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
+import qualified Data.Sequence as Seq
 import System.CPUTime (getCPUTime)
 
 loadGrid :: [String] -> ([String], Int, Int)
@@ -35,18 +36,22 @@ part1 grid sr sc =
         | r >= h = splits
         | S.null active = splits
         | otherwise =
-            let (next,s') = step r splits active
+            let (next,s') = bfs r splits (Seq.fromList (S.toList active)) S.empty S.empty
             in go (r+1) s' next
-      step r splits act =
-        S.foldl' (\(acc,spl) c ->
-                    let cell = grid !! r !! c
-                    in if cell == '^'
-                         then let spl' = spl + 1
-                                  acc' = (if c > 0 then S.insert (c-1) acc else acc)
-                                  acc''= if c+1 < w then S.insert (c+1) acc' else acc'
-                              in (acc'', spl')
-                         else (S.insert c acc, spl)
-                 ) (S.empty, splits) act
+      bfs r splits queue seen next
+        | Seq.null queue = (next, splits)
+        | otherwise =
+            let (c Seq.:< rest) = Seq.viewl queue
+            in if S.member c seen
+                 then bfs r splits rest seen next
+                 else let seen' = S.insert c seen
+                          cell = grid !! r !! c
+                      in if cell == '^'
+                           then let splits' = splits + 1
+                                    rest' = (if c > 0 then rest Seq.|> (c-1) else rest)
+                                    rest''= if c+1 < w then rest' Seq.|> (c+1) else rest'
+                                in bfs r splits' rest'' seen' next
+                           else bfs r splits rest seen' (S.insert c next)
   in go sr 0 (S.singleton sc)
 
 part2 :: [String] -> Int -> Int -> Int

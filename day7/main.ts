@@ -24,11 +24,11 @@ function part1(g: Grid): number {
   for (let r = g.sr; r < h; r++) {
     const next = new Set<number>();
     const queue: number[] = Array.from(active);
-    const seen = new Set<number>();
+    const seen = new Map<number, boolean>();
     while (queue.length) {
-      const c = queue.pop()!;
+      const c = queue.shift()!;
       if (seen.has(c)) continue;
-      seen.add(c);
+      seen.set(c, true);
       const cell = g.rows[r][c];
       if (cell === "^") {
         splits++;
