@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 import argparse
+import glob
 
 DAYS = [str(i) for i in range(1, 13)]
 ROOT = Path(__file__).parent
@@ -16,7 +17,7 @@ LANGS = {
     "rs": {"exe": "./day{day}_rs", "build": True},
     "ts": {"exe": "ts-node main.ts", "build": False},
     "rb": {"exe": "ruby main.rb", "build": False},
-    # "asm": {"exe": "./day{day}_asm", "build": True},
+    "asm": {"exe": "./day{day}_asm", "build": True},
     "lisp": {"exe": "sbcl --script main.lisp", "build": False},
     "jl": {"exe": "julia main.jl", "build": False},
     "hs": {"exe": "./day{day}_hs", "build": True},
@@ -86,9 +87,13 @@ def ensure_built(day_dir: Path, day: str) -> None:
         subprocess.run(cmd, shell=True, cwd=day_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     main_hs = day_dir / "Main.hs"
     if main_hs.exists():
-        exe = day_dir / f"day{day}_hs"
-        cmd = f"ghc -O2 -o {exe} Main.hs"
-        subprocess.run(cmd, shell=True, cwd=day_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cabal_file = day_dir / f"day{day}.cabal"
+        if cabal_file.exists():
+            subprocess.run("cabal build", shell=True, cwd=day_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        else:
+            exe = day_dir / f"day{day}_hs"
+            cmd = f"ghc -O2 -o {exe} Main.hs"
+            subprocess.run(cmd, shell=True, cwd=day_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 def install_requirements(day_dir: Path) -> None:
@@ -133,6 +138,14 @@ def main(do_install: bool) -> None:
                 cargo_exe = day_dir / "target" / "release" / f"day{day}rs"
                 if cargo_exe.exists():
                     cmd = str(cargo_exe)
+            if lang == "hs":
+                cabal_exe = day_dir / "dist-newstyle" / "build" / "x86_64-linux"
+                if cabal_exe.exists():
+                    # Find the executable in the cabal build directory
+                    pattern = str(day_dir / "dist-newstyle" / "build" / "*" / f"ghc-*" / f"day{day}-*" / "x" / f"day{day}hs" / "build" / f"day{day}hs" / f"day{day}hs")
+                    matches = glob.glob(pattern)
+                    if matches:
+                        cmd = matches[0]
             code, out, err = run_cmd(cmd, day_dir)
             if out:
                 print(f"[{lang}] {out}")

@@ -1,82 +1,7 @@
+use petgraph::graph::UnGraph;
+use petgraph::unionfind::UnionFind;
 use std::fs;
 use std::time::Instant;
-
-#[derive(Clone, Copy)]
-struct Edge {
-    dist: i64,
-    a: usize,
-    b: usize,
-}
-
-struct DSU {
-    p: Vec<usize>,
-    s: Vec<usize>,
-}
-
-impl DSU {
-    fn new(n: usize) -> Self {
-        DSU {
-            p: (0..n).collect(),
-            s: vec![1; n],
-        }
-    }
-    fn find(&mut self, x: usize) -> usize {
-        if self.p[x] != x {
-            self.p[x] = self.find(self.p[x]);
-        }
-        self.p[x]
-    }
-    fn unite(&mut self, a: usize, b: usize) -> bool {
-        let ra = self.find(a);
-        let rb = self.find(b);
-        if ra == rb {
-            return false;
-        }
-        let (mut ra, mut rb) = if self.s[ra] < self.s[rb] {
-            (rb, ra)
-        } else {
-            (ra, rb)
-        };
-        self.p[rb] = ra;
-        self.s[ra] += self.s[rb];
-        true
-    }
-}
-
-fn part1(n: usize, edges: &[Edge]) -> u64 {
-    let mut dsu = DSU::new(n);
-    let limit = edges.len().min(1000);
-    for i in 0..limit {
-        dsu.unite(edges[i].a, edges[i].b);
-    }
-    let mut comps = Vec::new();
-    for i in 0..n {
-        if dsu.find(i) == i {
-            comps.push(dsu.s[i] as u64);
-        }
-    }
-    comps.sort_by(|a, b| b.cmp(a));
-    while comps.len() < 3 {
-        comps.push(1);
-    }
-    comps[0] * comps[1] * comps[2]
-}
-
-fn part2(xs: &[i64], edges: &[Edge], n: usize) -> u64 {
-    let mut dsu = DSU::new(n);
-    let mut components = n;
-    let mut last = 0u64;
-    for e in edges {
-        if dsu.unite(e.a, e.b) {
-            components -= 1;
-            last = (xs[e.a] as u64) * (xs[e.b] as u64);
-            if components == 1 {
-                break;
-            }
-        }
-    }
-    last
-}
 
 fn main() {
     let text = fs::read_to_string("input.txt").expect("input");
@@ -90,24 +15,59 @@ fn main() {
         zs.push(parts[2].parse::<i64>().unwrap());
     }
     let n = xs.len();
-    let mut edges = Vec::new();
+
+    let mut graph: UnGraph<(), i64> = UnGraph::new_undirected();
+    let nodes: Vec<_> = (0..n).map(|_| graph.add_node(())).collect();
+
+    let mut edges: Vec<(i64, usize, usize)> = Vec::new();
     for i in 0..n {
         for j in i + 1..n {
             let dx = xs[i] - xs[j];
             let dy = ys[i] - ys[j];
             let dz = zs[i] - zs[j];
             let d2 = dx * dx + dy * dy + dz * dz;
-            edges.push(Edge {
-                dist: d2,
-                a: i,
-                b: j,
-            });
+            graph.add_edge(nodes[i], nodes[j], d2);
+            edges.push((d2, i, j));
         }
     }
-    edges.sort_by_key(|e| e.dist);
+    edges.sort_by_key(|e| e.0);
+
     let start = Instant::now();
-    let p1 = part1(n, &edges);
-    let p2 = part2(&xs, &edges, n);
+
+    // Part 1: Product of top 3 component sizes after first 1000 edges
+    let mut uf1 = UnionFind::<usize>::new(n);
+    let limit = edges.len().min(1000);
+    for i in 0..limit {
+        let (_, a, b) = edges[i];
+        uf1.union(a, b);
+    }
+    let mut sizes: Vec<u64> = (0..n)
+        .filter(|&i| uf1.find(i) == i)
+        .map(|i| {
+            (0..n).filter(|&j| uf1.find(j) == i).count() as u64
+        })
+        .collect();
+    sizes.sort_by(|a, b| b.cmp(a));
+    while sizes.len() < 3 {
+        sizes.push(1);
+    }
+    let p1 = sizes[0] * sizes[1] * sizes[2];
+
+    // Part 2: Product of x-coords of final MST edge
+    let mut uf2 = UnionFind::<usize>::new(n);
+    let mut components = n;
+    let mut last = 0u64;
+    for (_, a, b) in &edges {
+        if uf2.union(*a, *b) {
+            components -= 1;
+            last = (xs[*a] as u64) * (xs[*b] as u64);
+            if components == 1 {
+                break;
+            }
+        }
+    }
+    let p2 = last;
+
     let elapsed = start.elapsed().as_secs_f64() * 1000.0;
     println!(
         "top3_product={} final_join_x_product={} elapsed_ms={:.3}",

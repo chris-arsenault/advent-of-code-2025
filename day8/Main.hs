@@ -1,105 +1,96 @@
 {-# LANGUAGE BangPatterns #-}
 module Main where
 
-import Control.Monad (forM_, when)
-import Control.Monad.ST (ST, runST)
+import Data.Graph.Inductive.Graph (mkGraph, labNodes)
+import Data.Graph.Inductive.PatriciaTree (Gr)
+import Data.Graph.Inductive.Query.DFS (components)
 import Data.List (sortBy)
-import qualified Data.Vector as V
-import qualified Data.Vector.Unboxed as U
-import qualified Data.Vector.Unboxed.Mutable as MU
+import qualified Data.IntMap.Strict as IM
 import System.CPUTime (getCPUTime)
 
 type Point = (Int, Int, Int)
 
-loadPoints :: [String] -> V.Vector Point
-loadPoints lns = V.fromList $ map parse $ filter (not . null) lns
+loadPoints :: [String] -> [Point]
+loadPoints lns = map parse $ filter (not . null) lns
   where
     parse line = let [x,y,z] = map read (words [if c==',' then ' ' else c | c <- line])
                  in (x, y, z)
 
--- Build edges as unboxed vector of (dist², i, j) sorted by distance
-buildEdges :: V.Vector Point -> U.Vector (Int, Int, Int)
-buildEdges pts = U.fromList $ sortBy (\(a,_,_) (b,_,_) -> compare a b) edges
+buildEdges :: [Point] -> [(Int, (Int, Int, Int))]
+buildEdges pts = sortBy (\(d1,_) (d2,_) -> compare d1 d2) edges
   where
-    n = V.length pts
-    edges = [ let (xi,yi,zi) = pts V.! i
-                  (xj,yj,zj) = pts V.! j
+    n = length pts
+    indexed = zip [0..] pts
+    edges = [ let (xi,yi,zi) = pts !! i
+                  (xj,yj,zj) = pts !! j
                   !dx = xi - xj; !dy = yi - yj; !dz = zi - zj
                   !d2 = dx*dx + dy*dy + dz*dz
-              in (d2, i, j)
+              in (d2, (i, j, d2))
             | i <- [0..n-1], j <- [i+1..n-1] ]
 
--- DSU with path compression in ST monad
-findRoot :: MU.MVector s Int -> Int -> ST s Int
-findRoot parent x = do
-    p <- MU.unsafeRead parent x
-    if p == x
-        then return x
-        else do
-            r <- findRoot parent p
-            MU.unsafeWrite parent x r  -- path compression
-            return r
+-- Union-Find using Data.IntMap for parent tracking
+data DSU = DSU { parent :: IM.IntMap Int, size :: IM.IntMap Int, comps :: Int }
 
-unionST :: MU.MVector s Int -> MU.MVector s Int -> Int -> Int -> ST s Bool
-unionST parent size a b = do
-    ra <- findRoot parent a
-    rb <- findRoot parent b
-    if ra == rb
-        then return False
-        else do
-            sa <- MU.unsafeRead size ra
-            sb <- MU.unsafeRead size rb
-            let (ra', rb') = if sa < sb then (rb, ra) else (ra, rb)
-            MU.unsafeWrite parent rb' ra'
-            MU.unsafeWrite size ra' (sa + sb)
-            return True
+newDSU :: Int -> DSU
+newDSU n = DSU (IM.fromList [(i,i) | i <- [0..n-1]])
+               (IM.fromList [(i,1) | i <- [0..n-1]])
+               n
 
-part1 :: Int -> U.Vector (Int, Int, Int) -> Int -> Int
-part1 n edges k = runST $ do
-    parent <- MU.generate n id
-    size   <- MU.replicate n 1
-    let limit = min k (U.length edges)
-    forM_ [0..limit-1] $ \i -> do
-        let (_, a, b) = edges U.! i
-        _ <- unionST parent size a b
-        return ()
-    -- Collect component sizes
-    sizes <- U.generateM n $ \i -> do
-        p <- MU.unsafeRead parent i
-        if p == i
-            then MU.unsafeRead size i
-            else return 0
-    let top3 = take 3 $ reverse $ sortBy compare $ filter (>0) $ U.toList sizes
-        padded = top3 ++ repeat 1
-    return $ (padded !! 0) * (padded !! 1) * (padded !! 2)
+findDSU :: DSU -> Int -> (DSU, Int)
+findDSU dsu x =
+  let p = parent dsu IM.! x
+  in if p == x
+       then (dsu, x)
+       else let (dsu', root) = findDSU dsu p
+                dsu'' = dsu' { parent = IM.insert x root (parent dsu') }
+            in (dsu'', root)
 
-part2 :: V.Vector Point -> U.Vector (Int, Int, Int) -> Int
-part2 pts edges = runST $ do
-    let n = V.length pts
-        edgeCount = U.length edges
-    parent <- MU.generate n id
-    size   <- MU.replicate n 1
-    let go !comps !lastProd !i
-          | i >= edgeCount = return lastProd
-          | comps <= 1 = return lastProd
-          | otherwise = do
-              let (_, a, b) = edges U.! i
-              merged <- unionST parent size a b
-              if merged
-                  then do
-                      let (xa, _, _) = pts V.! a
-                          (xb, _, _) = pts V.! b
+unionDSU :: DSU -> Int -> Int -> (DSU, Bool)
+unionDSU dsu a b =
+  let (dsu1, ra) = findDSU dsu a
+      (dsu2, rb) = findDSU dsu1 b
+  in if ra == rb
+       then (dsu2, False)
+       else let sa = size dsu2 IM.! ra
+                sb = size dsu2 IM.! rb
+                (ra', rb') = if sa < sb then (rb, ra) else (ra, rb)
+                sa' = sa + sb
+                newParent = IM.insert rb' ra' (parent dsu2)
+                newSize = IM.insert ra' sa' (size dsu2)
+            in (DSU newParent newSize (comps dsu2 - 1), True)
+
+part1 :: Int -> [(Int, (Int, Int, Int))] -> Int -> Int
+part1 n edges k =
+  let limit = min k (length edges)
+      dsu0 = newDSU n
+      dsuFinal = foldl (\d (_, (a, b, _)) -> fst (unionDSU d a b)) dsu0 (take limit edges)
+      sizes = [size dsuFinal IM.! i | i <- [0..n-1], let (d', r) = findDSU dsuFinal i in r == i]
+      sorted = reverse $ sortBy compare sizes
+      padded = sorted ++ repeat 1
+  in (padded !! 0) * (padded !! 1) * (padded !! 2)
+
+part2 :: [Point] -> [(Int, (Int, Int, Int))] -> Int
+part2 pts edges =
+  let n = length pts
+      go dsu lastProd [] = lastProd
+      go dsu lastProd ((_, (a, b, _)):rest)
+        | comps dsu <= 1 = lastProd
+        | otherwise =
+            let (dsu', merged) = unionDSU dsu a b
+            in if merged
+                 then let (xa, _, _) = pts !! a
+                          (xb, _, _) = pts !! b
                           !prod = xa * xb
-                      go (comps - 1) prod (i + 1)
-                  else go comps lastProd (i + 1)
-    go n 0 0
+                      in go dsu' prod rest
+                 else go dsu' lastProd rest
+  in go (newDSU n) 0 edges
 
 main :: IO ()
 main = do
     linesIn <- lines <$> readFile "input.txt"
     let pts = loadPoints linesIn
         edges = buildEdges pts
-        n = V.length pts
+        n = length pts
     t0 <- getCPUTime
     let !p1 = part1 n edges 1000
         !p2 = part2 pts edges

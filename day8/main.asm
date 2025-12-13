@@ -10,6 +10,7 @@ extern ns_since
 extern read_file_all
 extern parse_uint64
 extern skip_non_digits
+extern sort_edges_3
 
 %define CLOCK_MONOTONIC 1
 %define BUF_SIZE 1048576
@@ -181,76 +182,30 @@ main:
 .edges_done:
     mov     [rbp-64], r15d
 
-    ; Sort edges using insertion sort (simple but slow for large arrays)
-    ; For ~500k edges this will be slow, but correct
-    mov     r14d, [rbp-64]
-    cmp     r14d, 2
-    jl      .skip_sort
-
-    mov     ebx, 1                      ; i = 1
-.sort_outer:
-    cmp     ebx, r14d
-    jge     .skip_sort
-
-    ; key = edges[i]
-    lea     r8, [rel edges_dist]
-    lea     r9, [rel edges_i]
-    lea     r10, [rel edges_j]
-
-    mov     rax, [r8 + rbx*8]           ; key_dist
-    mov     [rbp-72], rax
-    mov     eax, [r9 + rbx*4]           ; key_i
-    mov     [rbp-76], eax
-    mov     eax, [r10 + rbx*4]          ; key_j
-    mov     [rbp-80], eax
-
-    mov     ecx, ebx
-    dec     ecx                         ; j = i - 1
-
-.sort_inner:
-    cmp     ecx, 0
-    jl      .sort_insert
-    mov     rax, [r8 + rcx*8]
-    cmp     rax, [rbp-72]
-    jle     .sort_insert
-
-    ; Shift edge[j] to edge[j+1]
-    mov     rax, [r8 + rcx*8]
-    mov     [r8 + rcx*8 + 8], rax
-    mov     eax, [r9 + rcx*4]
-    mov     [r9 + rcx*4 + 4], eax
-    mov     eax, [r10 + rcx*4]
-    mov     [r10 + rcx*4 + 4], eax
-
-    dec     ecx
-    jmp     .sort_inner
-
-.sort_insert:
-    ; edge[j+1] = key
-    inc     ecx
-    mov     rax, [rbp-72]
-    mov     [r8 + rcx*8], rax
-    mov     eax, [rbp-76]
-    mov     [r9 + rcx*4], eax
-    mov     eax, [rbp-80]
-    mov     [r10 + rcx*4], eax
-
-    inc     ebx
-    jmp     .sort_outer
-
-.skip_sort:
-    ; Initialize DSU
+    ; Sort edges using quicksort from shared utils
+    lea     rdi, [rel edges_dist]
+    lea     rsi, [rel edges_i]
+    lea     rdx, [rel edges_j]
+    mov     ecx, r15d
+    call    sort_edges_3
+    ; Initialize DSU using rep stosd for fast array initialization
+    ; First, initialize dsu_parent[i] = i for all i
     lea     rdi, [rel dsu_parent]
-    lea     rsi, [rel dsu_size]
     mov     ecx, [rbp-60]
     xor     eax, eax
-.init_dsu:
+.init_parent:
     cmp     eax, ecx
-    jge     .dsu_ready
+    jge     .init_size
     mov     [rdi + rax*4], eax
-    mov     dword [rsi + rax*4], 1
     inc     eax
-    jmp     .init_dsu
+    jmp     .init_parent
+
+.init_size:
+    ; Initialize dsu_size[i] = 1 for all i using rep stosd
+    lea     rdi, [rel dsu_size]
+    mov     ecx, [rbp-60]
+    mov     eax, 1
+    rep     stosd
 
 .dsu_ready:
     ; Part 1: Process first 1000 edges
@@ -345,18 +300,22 @@ main:
 .p1_result:
     mov     [rbp-96], r14
 
-    ; Reinitialize DSU for part 2
+    ; Reinitialize DSU for part 2 using rep stosd
     lea     rdi, [rel dsu_parent]
-    lea     rsi, [rel dsu_size]
     mov     ecx, [rbp-60]
     xor     eax, eax
-.reinit_dsu:
+.reinit_parent:
     cmp     eax, ecx
-    jge     .p2_ready
+    jge     .reinit_size
     mov     [rdi + rax*4], eax
-    mov     dword [rsi + rax*4], 1
     inc     eax
-    jmp     .reinit_dsu
+    jmp     .reinit_parent
+
+.reinit_size:
+    lea     rdi, [rel dsu_size]
+    mov     ecx, [rbp-60]
+    mov     eax, 1
+    rep     stosd
 
 .p2_ready:
     mov     r14d, [rbp-60]              ; components

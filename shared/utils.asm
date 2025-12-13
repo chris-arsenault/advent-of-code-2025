@@ -10,6 +10,7 @@ global pow10
 global lower_bound_u64
 global upper_bound_u64
 global sort_u64
+global sort_edges_3
 
 section .text
 
@@ -507,6 +508,230 @@ sort_u64:
 
 .sort_done:
     add     rsp, 8
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    pop     rbp
+    ret
+
+;------------------------------------------------------------------------------
+; void sort_edges_3(uint64_t *dist, uint32_t *arr_i, uint32_t *arr_j, size_t n)
+; In-place quicksort for 3 parallel arrays (dist as key, arr_i and arr_j as satellites).
+; Sorts by dist ascending, keeping arr_i and arr_j in sync.
+; Input:  rdi = dist array pointer (uint64_t)
+;         rsi = arr_i array pointer (uint32_t)
+;         rdx = arr_j array pointer (uint32_t)
+;         rcx = array size (number of elements)
+;------------------------------------------------------------------------------
+sort_edges_3:
+    push    rbp
+    mov     rbp, rsp
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    sub     rsp, 40             ; local storage + alignment
+
+    ; Store array pointers
+    mov     [rbp-48], rdi       ; dist
+    mov     [rbp-56], rsi       ; arr_i
+    mov     [rbp-64], rdx       ; arr_j
+    mov     [rbp-72], rcx       ; n
+
+    test    rcx, rcx
+    jz      .se3_done
+    cmp     rcx, 1
+    je      .se3_done
+
+    ; Push initial range (0, n-1)
+    xor     eax, eax            ; lo = 0
+    lea     r8, [rcx - 1]       ; hi = n - 1
+    push    r8                  ; push hi
+    push    rax                 ; push lo
+
+.se3_stack_loop:
+    ; Check if stack is empty
+    lea     rax, [rbp - 80]     ; original rsp after pushes
+    cmp     rsp, rax
+    jge     .se3_done
+
+    pop     r13                 ; lo
+    pop     r14                 ; hi
+
+    cmp     r13, r14
+    jge     .se3_stack_loop
+
+    ; For small ranges, use insertion sort
+    mov     rax, r14
+    sub     rax, r13
+    cmp     rax, 16
+    jle     .se3_insertion
+
+    ; Load array pointers
+    mov     r12, [rbp-48]       ; dist
+    mov     r8, [rbp-56]        ; arr_i
+    mov     r9, [rbp-64]        ; arr_j
+
+    ; Median-of-three pivot: median of dist[lo], dist[mid], dist[hi]
+    lea     rax, [r13 + r14]
+    shr     rax, 1              ; mid
+
+    mov     r10, [r12 + r13*8]  ; a = dist[lo]
+    mov     r11, [r12 + rax*8]  ; b = dist[mid]
+    mov     r15, [r12 + r14*8]  ; c = dist[hi]
+
+    ; Find median and swap to hi position
+    cmp     r10, r11
+    jg      .se3_a_gt_b
+    cmp     r11, r15
+    jle     .se3_use_mid
+    jmp     .se3_use_hi
+.se3_a_gt_b:
+    cmp     r10, r15
+    jle     .se3_use_lo
+    cmp     r11, r15
+    jg      .se3_use_hi
+    jmp     .se3_use_mid
+
+.se3_use_mid:
+    ; Swap [mid] with [hi] for all 3 arrays
+    mov     [r12 + rax*8], r15
+    mov     [r12 + r14*8], r11
+    ; Swap arr_i
+    mov     r10d, [r8 + rax*4]
+    mov     r11d, [r8 + r14*4]
+    mov     [r8 + rax*4], r11d
+    mov     [r8 + r14*4], r10d
+    ; Swap arr_j
+    mov     r10d, [r9 + rax*4]
+    mov     r11d, [r9 + r14*4]
+    mov     [r9 + rax*4], r11d
+    mov     [r9 + r14*4], r10d
+    jmp     .se3_partition
+
+.se3_use_lo:
+    ; Swap [lo] with [hi]
+    mov     r11, [r12 + r14*8]
+    mov     [r12 + r13*8], r11
+    mov     [r12 + r14*8], r10
+    ; Swap arr_i
+    mov     r10d, [r8 + r13*4]
+    mov     r11d, [r8 + r14*4]
+    mov     [r8 + r13*4], r11d
+    mov     [r8 + r14*4], r10d
+    ; Swap arr_j
+    mov     r10d, [r9 + r13*4]
+    mov     r11d, [r9 + r14*4]
+    mov     [r9 + r13*4], r11d
+    mov     [r9 + r14*4], r10d
+    jmp     .se3_partition
+
+.se3_use_hi:
+    ; Pivot already at hi
+
+.se3_partition:
+    mov     r15, [r12 + r14*8]  ; pivot = dist[hi]
+    mov     rbx, r13            ; i = lo
+    mov     rcx, r13            ; j = lo
+
+.se3_part_loop:
+    cmp     rcx, r14
+    jge     .se3_part_done
+    mov     rax, [r12 + rcx*8]
+    cmp     rax, r15
+    jge     .se3_part_next
+    ; Swap [i] and [j] for all 3 arrays
+    mov     rdx, [r12 + rbx*8]
+    mov     [r12 + rbx*8], rax
+    mov     [r12 + rcx*8], rdx
+    mov     r10d, [r8 + rbx*4]
+    mov     r11d, [r8 + rcx*4]
+    mov     [r8 + rbx*4], r11d
+    mov     [r8 + rcx*4], r10d
+    mov     r10d, [r9 + rbx*4]
+    mov     r11d, [r9 + rcx*4]
+    mov     [r9 + rbx*4], r11d
+    mov     [r9 + rcx*4], r10d
+    inc     rbx
+.se3_part_next:
+    inc     rcx
+    jmp     .se3_part_loop
+
+.se3_part_done:
+    ; Swap [i] and [hi] to put pivot in place
+    mov     rax, [r12 + rbx*8]
+    mov     rdx, [r12 + r14*8]
+    mov     [r12 + rbx*8], rdx
+    mov     [r12 + r14*8], rax
+    mov     r10d, [r8 + rbx*4]
+    mov     r11d, [r8 + r14*4]
+    mov     [r8 + rbx*4], r11d
+    mov     [r8 + r14*4], r10d
+    mov     r10d, [r9 + rbx*4]
+    mov     r11d, [r9 + r14*4]
+    mov     [r9 + rbx*4], r11d
+    mov     [r9 + r14*4], r10d
+
+    ; Push right partition (i+1, hi)
+    lea     rax, [rbx + 1]
+    cmp     rax, r14
+    jg      .se3_skip_right
+    push    r14
+    push    rax
+.se3_skip_right:
+    ; Push left partition (lo, i-1)
+    lea     rax, [rbx - 1]
+    cmp     r13, rax
+    jg      .se3_skip_left
+    push    rax
+    push    r13
+.se3_skip_left:
+    jmp     .se3_stack_loop
+
+.se3_insertion:
+    ; Insertion sort for small range
+    mov     r12, [rbp-48]       ; dist
+    mov     r8, [rbp-56]        ; arr_i
+    mov     r9, [rbp-64]        ; arr_j
+    lea     rcx, [r13 + 1]      ; i = lo + 1
+
+.se3_ins_outer:
+    cmp     rcx, r14
+    jg      .se3_stack_loop
+
+    mov     rax, [r12 + rcx*8]  ; key_dist
+    mov     r10d, [r8 + rcx*4]  ; key_i
+    mov     r11d, [r9 + rcx*4]  ; key_j
+    mov     rbx, rcx
+    dec     rbx                 ; j = i - 1
+
+.se3_ins_inner:
+    cmp     rbx, r13
+    jl      .se3_ins_place
+    mov     rdx, [r12 + rbx*8]
+    cmp     rdx, rax
+    jle     .se3_ins_place
+    ; Shift [j] to [j+1]
+    mov     [r12 + rbx*8 + 8], rdx
+    mov     edx, [r8 + rbx*4]
+    mov     [r8 + rbx*4 + 4], edx
+    mov     edx, [r9 + rbx*4]
+    mov     [r9 + rbx*4 + 4], edx
+    dec     rbx
+    jmp     .se3_ins_inner
+
+.se3_ins_place:
+    mov     [r12 + rbx*8 + 8], rax
+    mov     [r8 + rbx*4 + 4], r10d
+    mov     [r9 + rbx*4 + 4], r11d
+    inc     rcx
+    jmp     .se3_ins_outer
+
+.se3_done:
+    add     rsp, 40
     pop     r15
     pop     r14
     pop     r13

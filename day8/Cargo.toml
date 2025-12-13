@@ -1,0 +1,11 @@
+[package]
+name = "day8rs"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "day8rs"
+path = "main.rs"
+
+[dependencies]
+petgraph = "0.6"

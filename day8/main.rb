@@ -16,24 +16,33 @@ edges.sort_by!(&:first)
 
 class DSU
   def initialize(n)
-    @p = (0...n).to_a
-    @s = Array.new(n, 1)
+    @parent = {}
+    @size = {}
+    (0...n).each do |i|
+      @parent[i] = i
+      @size[i] = 1
+    end
   end
+
   def find(x)
-    @p[x] = find(@p[x]) if @p[x] != x
-    @p[x]
+    if @parent[x] != x
+      @parent[x] = find(@parent[x])
+    end
+    @parent[x]
   end
+
   def unite(a, b)
     ra = find(a)
     rb = find(b)
     return false if ra == rb
-    ra, rb = rb, ra if @s[ra] < @s[rb]
-    @p[rb] = ra
-    @s[ra] += @s[rb]
+    ra, rb = rb, ra if @size[ra] < @size[rb]
+    @parent[rb] = ra
+    @size[ra] += @size[rb]
     true
   end
+
   def size(x)
-    @s[find(x)]
+    @size[find(x)]
   end
 end
 

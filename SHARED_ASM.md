@@ -379,6 +379,51 @@ In-place hybrid quicksort for uint64 array.
 
 ---
 
+### `sort_edges_3`
+
+In-place hybrid quicksort for 3 parallel arrays (sorting by first array as key).
+
+```asm
+; void sort_edges_3(uint64_t *dist, uint32_t *arr_i, uint32_t *arr_j, size_t n)
+```
+
+| Parameter | Register | Description |
+|-----------|----------|-------------|
+| `dist` | `rdi` | Pointer to uint64 key array (sorted by) |
+| `arr_i` | `rsi` | Pointer to uint32 satellite array 1 |
+| `arr_j` | `rdx` | Pointer to uint32 satellite array 2 |
+| `n` | `rcx` | Number of elements |
+
+**Behavior:**
+- Sorts `dist` array in ascending order
+- Keeps `arr_i` and `arr_j` arrays in sync (same permutation applied)
+- In-place (no additional memory allocation)
+- Uses iterative quicksort with stack-based recursion simulation
+- **Median-of-three** pivot selection to avoid O(n²) worst case
+- **Insertion sort** for subarrays ≤ 16 elements (cache-friendly)
+- Expected O(n log n) performance
+
+**Use Case:**
+Ideal for sorting edges by weight while keeping endpoint indices in sync (e.g., Kruskal's MST algorithm).
+
+**Example:**
+```asm
+section .bss
+    edge_dist: resq 100000    ; uint64 distances
+    edge_i:    resd 100000    ; uint32 endpoint i
+    edge_j:    resd 100000    ; uint32 endpoint j
+
+section .text
+    lea     rdi, [edge_dist]
+    lea     rsi, [edge_i]
+    lea     rdx, [edge_j]
+    mov     rcx, edge_count   ; number of edges
+    call    sort_edges_3
+    ; All three arrays now sorted by edge_dist ascending
+```
+
+---
+
 ## Future Additions
 
 Candidates for extraction from day solutions:
