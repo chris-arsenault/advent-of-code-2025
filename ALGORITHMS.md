@@ -174,18 +174,23 @@ Grid of paper rolls (`@`). Part 1: Count rolls accessible by forklift (fewer tha
 | **Ruby** | Array queue; `each` with 8-direction offsets |
 | **Lisp** | List-based queue or `cl-containers`; 2D array with `aref` |
 | **Julia** | `DataStructures.Queue`; native 2D array with CartesianIndex |
-| **Haskell** | `Data.Sequence` for O(1) queue; `Data.Array` for grid |
+| **Haskell** | `Data.Sequence` for O(1) queue operations; `Data.Set`/`Data.Map.Strict` for sparse grid |
 
 ### Assembly Optimization
+
+The ASM uses standard BFS with:
+- **Byte arrays:** `grid[r*cols+c]` for presence, `counts[]` for neighbor counts, `removed[]` for tracking
+- **Scalar neighbor loop:** Iterate 8 directions with bounds checking
+- **Queue-based BFS:** Same wavefront algorithm as C reference
+
+**Performance:** ~0.8ms (faster than C due to avoiding function call overhead)
+
+**Potential future optimizations (not implemented):**
 - Pack grid into bitfield for cache efficiency
 - Use `popcnt` for neighbor counting with bitmasks
 - SIMD parallel processing of grid rows
-- Consider spatial locality: process in cache-line-sized chunks
-
-**Bitfield packing optimization:** Instead of `int neighbors[MAX][MAX]` (16MB for 4K×4K):
+- Process in cache-line-sized chunks for spatial locality
 - Pack neighbor count as 3-bit field (values 0-8) → 1 byte per cell
-- Or use separate "accessible" bitfield for O(1) threshold check
-- Reduces memory footprint 4-16x, improves cache utilization
 
 ---
 

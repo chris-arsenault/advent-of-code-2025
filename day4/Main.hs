@@ -1,80 +1,76 @@
 {-# LANGUAGE BangPatterns #-}
 module Main where
 
-import Data.Array.Unboxed
-import Data.Char (isSpace)
+import qualified Data.Set as S
+import qualified Data.Map.Strict as M
+import qualified Data.Sequence as Seq
+import Data.Sequence (Seq, (|>))
 import System.CPUTime (getCPUTime)
 
-trim :: String -> String
-trim = f . f where f = reverse . dropWhile isSpace
+type Pos = (Int, Int)
 
-parseGrid :: [String] -> (UArray (Int,Int) Char, Int, Int)
-parseGrid ls =
-  let h = length ls
-      w = maximum (map length ls)
-      arr = array ((0,0),(h-1,w-1))
-            [((r,c), if c < length (ls !! r) then (ls !! r) !! c else ' ')
-            | r <- [0..h-1], c <- [0..w-1]]
-  in (arr,h,w)
-
-neighbors :: [(Int,Int)]
+neighbors :: [Pos]
 neighbors = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]
 
-part1 :: UArray (Int,Int) Char -> Int -> Int -> Int
-part1 grid h w =
-  length
-  [ ()
-  | r <- [0..h-1], c <- [0..w-1]
-  , grid!(r,c) == '@'
-  , let cnt = length [ ()
-                     | (dr,dc) <- neighbors
-                     , let r' = r+dr
-                     , let c' = c+dc
-                     , r' >= 0 && r' < h && c' >= 0 && c' < w
-                     , grid!(r',c') == '@'
-                     ]
-  , cnt < 4
+parseGrid :: [String] -> S.Set Pos
+parseGrid ls = S.fromList
+  [ (r, c)
+  | (r, line) <- zip [0..] ls
+  , (c, ch) <- zip [0..] line
+  , ch == '@'
   ]
 
-part2 :: UArray (Int,Int) Char -> Int -> Int -> Int
-part2 grid h w =
-  let arr = grid
-      counts = accumArray (+) 0 ((0,0),(h-1,w-1))
-               [((r,c),1) | r <- [0..h-1], c <- [0..w-1], arr!(r,c)=='@']
-      mutable = part2remove arr counts
-  in mutable
+neighborCount :: S.Set Pos -> Pos -> Int
+neighborCount rolls (r, c) =
+  length [ () | (dr, dc) <- neighbors, S.member (r+dr, c+dc) rolls ]
 
-part2remove :: UArray (Int,Int) Char -> UArray (Int,Int) Int -> Int
-part2remove grid counts = go grid counts 0
+computeCounts :: S.Set Pos -> M.Map Pos Int
+computeCounts rolls = M.fromList [(p, neighborCount rolls p) | p <- S.toList rolls]
+
+part1 :: M.Map Pos Int -> Int
+part1 counts = M.size $ M.filter (< 4) counts
+
+-- BFS wavefront removal: O(n) instead of O(n²)
+part2 :: S.Set Pos -> M.Map Pos Int -> Int
+part2 rolls0 counts0 = go rolls0 counts0 initialQueue S.empty 0
   where
-    ((r0,c0),(rh,ch)) = bounds grid
-    go arr cnts !acc =
-      let removable = [ (r,c)
-                      | r <- [r0..rh], c <- [c0..ch]
-                      , arr!(r,c)=='@'
-                      , let neighborsCnt = length [ ()
-                                                  | (dr,dc) <- neighbors
-                                                  , let r' = r+dr
-                                                  , let c' = c+dc
-                                                  , inBounds r' c'
-                                                  , arr!(r',c')=='@'
-                                                  ]
-                      , neighborsCnt < 4
-                      ]
-      in if null removable then acc
-         else
-           let arr' = arr // [((r,c),'x') | (r,c) <- removable]
-               acc' = acc + length removable
-           in go arr' cnts acc'
-    inBounds r c = r>=r0 && r<=rh && c>=c0 && c<=ch
+    initialQueue = Seq.fromList [p | (p, cnt) <- M.toList counts0, cnt < 4]
+
+    go :: S.Set Pos -> M.Map Pos Int -> Seq Pos -> S.Set Pos -> Int -> Int
+    go !rolls !counts !queue !removed !acc =
+      case Seq.viewl queue of
+        Seq.EmptyL -> acc
+        p Seq.:< rest
+          | S.member p removed -> go rolls counts rest removed acc
+          | otherwise ->
+              let removed' = S.insert p removed
+                  (r, c) = p
+                  -- Update neighbors and collect newly accessible
+                  (counts', newAccessible) = foldr (updateNeighbor rolls removed') (counts, []) neighbors
+                    where
+                      updateNeighbor rs rm (dr, dc) (cnts, acc') =
+                        let np = (r + dr, c + dc)
+                        in if S.member np rs && not (S.member np rm)
+                           then case M.lookup np cnts of
+                                  Just cnt ->
+                                    let cnt' = cnt - 1
+                                        cnts' = M.insert np cnt' cnts
+                                    in if cnt' < 4 && cnt >= 4
+                                       then (cnts', np : acc')
+                                       else (cnts', acc')
+                                  Nothing -> (cnts, acc')
+                           else (cnts, acc')
+                  queue' = foldl (|>) rest newAccessible
+              in go rolls counts' queue' removed' (acc + 1)
 
 main :: IO ()
 main = do
-  ls <- lines <$> readFile "inputl.txt"
-  let (grid,h,w) = parseGrid ls
+  ls <- lines <$> readFile "input.txt"
+  let rolls = parseGrid ls
+      counts = computeCounts rolls
   t0 <- getCPUTime
-  let !p1 = part1 grid h w
-  let !p2 = part2 grid h w
+  let !p1 = part1 counts
+  let !p2 = part2 rolls counts
   t1 <- getCPUTime
   let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
   putStrLn $ "accessible=" ++ show p1 ++ " removable_total=" ++ show p2 ++
