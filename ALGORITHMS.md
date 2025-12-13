@@ -351,24 +351,31 @@ Find largest axis-aligned rectangle with red corners. Part 2: Rectangle must als
 
 ### C Algorithm
 - O(n²) enumeration of point pairs as potential rectangle corners
-- For each pair, check if complementary corners exist
+- Area formula: `(|x1 - x2| + 1) * (|y1 - y2| + 1)` (inclusive grid counting)
 - Part 2: Ray casting algorithm for point-in-polygon test
+  - Check all 4 corners are inside polygon (including on-edge)
+  - Check no polygon edge crosses rectangle interior
 - Track maximum area found
 
 ### Idiomatic Suggestions
 
 | Language | Approach |
 |----------|----------|
-| **Python** | `shapely` library for polygon operations; `scipy.spatial` for point queries |
-| **Go** | `orb` library for geometry; or manual ray casting |
-| **Rust** | `geo` crate for polygon containment; `HashSet` for point lookup |
-| **TypeScript** | `turf.js` for geospatial operations |
-| **Ruby** | `rgeo` gem for geometric predicates |
-| **Lisp** | Manual implementation; `complex` numbers for 2D points |
-| **Julia** | `Meshes.jl` or `PolygonOps.jl` for containment; native broadcasting |
-| **Haskell** | `hgeometry` package; or manual with `Data.Set` for points |
+| **Python** | Manual ray casting; integer arithmetic for exact comparisons |
+| **Go** | Manual ray casting with point-on-edge check |
+| **Rust** | Manual ray casting; tuple `(i64, i64)` for points |
+| **TypeScript** | Manual ray casting; `number` type for coordinates |
+| **Ruby** | Manual ray casting with `minmax` for coordinate bounds |
+| **Lisp** | `complex` numbers for 2D points (`realpart`/`imagpart` accessors) |
+| **Julia** | Manual ray casting; `Tuple{Int,Int}` for points; integer division `÷` |
+| **Haskell** | Manual ray casting with bang patterns for strict evaluation |
+
+**Note:** External geometry libraries were evaluated but had issues: `rgeo` doesn't support Polygon-contains-Polygon, `geo` crate was 100x slower, `PolygonOps` requires closed polygons. Manual ray casting provides consistent, fast implementations.
 
 ### Assembly Optimization
+- Integer ray casting with signed division (`idiv`)
+- Point-on-edge check for boundary handling
+- Early exit on first failing corner or edge crossing check 
 - SIMD point-in-polygon with `vfmadd` for cross products
 - Sort points by x-coordinate for cache-friendly access
 - Use `pdep`/`pext` (BMI2) for coordinate packing

@@ -23,3 +23,10 @@ day*/Cargo.lock
 
 # Haskell/Cabal build artifacts
 day*/dist-newstyle/
+
+# Node.js artifacts
+day*/node_modules/
+day*/package-lock.json
+
+# Ruby artifacts
+day*/Gemfile.lock

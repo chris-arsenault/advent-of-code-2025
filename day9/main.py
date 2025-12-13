@@ -3,8 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 import time
 
-from shapely.geometry import Polygon, box
-
 
 def load_points(lines: list[str]) -> list[tuple[int, int]]:
     pts: list[tuple[int, int]] = []
@@ -25,13 +23,77 @@ def max_rectangle_any(pts: list[tuple[int, int]]) -> int:
             x2, y2 = pts[j]
             if x1 == x2 or y1 == y2:
                 continue
-            area = abs(x1 - x2) * abs(y1 - y2)
+            area = (abs(x1 - x2) + 1) * (abs(y1 - y2) + 1)
             if area > best:
                 best = area
     return best
 
 
-def max_rectangle_inside(pts: list[tuple[int, int]], region: Polygon) -> int:
+def point_on_edge(px: int, py: int, x1: int, y1: int, x2: int, y2: int) -> bool:
+    if x1 == x2:
+        return px == x1 and min(y1, y2) <= py <= max(y1, y2)
+    elif y1 == y2:
+        return py == y1 and min(x1, x2) <= px <= max(x1, x2)
+    return False
+
+
+def point_inside(px: int, py: int, poly: list[tuple[int, int]]) -> bool:
+    n = len(poly)
+    inside = False
+    j = n - 1
+    for i in range(n):
+        x1, y1 = poly[j]
+        x2, y2 = poly[i]
+        if point_on_edge(px, py, x1, y1, x2, y2):
+            return True
+        if (y1 > py) != (y2 > py):
+            x_intersect = (x2 - x1) * (py - y1) // (y2 - y1) + x1
+            if px < x_intersect:
+                inside = not inside
+        j = i
+    return inside
+
+
+def edge_crosses_interior(xlo: int, xhi: int, ylo: int, yhi: int, x1: int, y1: int, x2: int, y2: int) -> bool:
+    if x1 == x2:
+        if x1 <= xlo or x1 >= xhi:
+            return False
+        ya, yb = min(y1, y2), max(y1, y2)
+        if yb <= ylo or ya >= yhi:
+            return False
+        return ya < yhi and yb > ylo
+    elif y1 == y2:
+        if y1 <= ylo or y1 >= yhi:
+            return False
+        xa, xb = min(x1, x2), max(x1, x2)
+        if xb <= xlo or xa >= xhi:
+            return False
+        return xa < xhi and xb > xlo
+    return False
+
+
+def rect_inside_polygon(xlo: int, xhi: int, ylo: int, yhi: int, poly: list[tuple[int, int]]) -> bool:
+    if not point_inside(xlo, ylo, poly):
+        return False
+    if not point_inside(xlo, yhi, poly):
+        return False
+    if not point_inside(xhi, ylo, poly):
+        return False
+    if not point_inside(xhi, yhi, poly):
+        return False
+
+    n = len(poly)
+    j = n - 1
+    for i in range(n):
+        x1, y1 = poly[j]
+        x2, y2 = poly[i]
+        if edge_crosses_interior(xlo, xhi, ylo, yhi, x1, y1, x2, y2):
+            return False
+        j = i
+    return True
+
+
+def max_rectangle_inside(pts: list[tuple[int, int]], poly: list[tuple[int, int]]) -> int:
     best = 0
     n = len(pts)
     for i in range(n):
@@ -40,25 +102,21 @@ def max_rectangle_inside(pts: list[tuple[int, int]], region: Polygon) -> int:
             x2, y2 = pts[j]
             if x1 == x2 or y1 == y2:
                 continue
-            rect = box(min(x1, x2), min(y1, y2), max(x1, x2), max(y1, y2))
-            if region.covers(rect):
-                area = rect.area
+            xlo, xhi = min(x1, x2), max(x1, x2)
+            ylo, yhi = min(y1, y2), max(y1, y2)
+            if rect_inside_polygon(xlo, xhi, ylo, yhi, poly):
+                area = (xhi - xlo + 1) * (yhi - ylo + 1)
                 if area > best:
-                    best = int(area)
+                    best = area
     return best
-
-
-def build_polygon(pts: list[tuple[int, int]]) -> Polygon:
-    return Polygon(pts)
 
 
 def main() -> None:
     lines = Path(__file__).with_name("input.txt").read_text().splitlines()
     t0 = time.perf_counter()
     pts = load_points(lines)
-    poly = build_polygon(pts)
     p1 = max_rectangle_any(pts)
-    p2 = max_rectangle_inside(pts, poly)
+    p2 = max_rectangle_inside(pts, pts)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     print(f"max_rect_area={p1} max_green_rect_area={p2} elapsed_ms={elapsed_ms:.3f}")
 

@@ -100,6 +100,14 @@ def install_requirements(day_dir: Path) -> None:
     req = day_dir / "requirements.txt"
     if req.exists() and req.read_text().strip():
         subprocess.run(f"pip install -q -r {req}", shell=True, cwd=day_dir, check=True)
+    # Node.js packages
+    pkg_json = day_dir / "package.json"
+    if pkg_json.exists():
+        subprocess.run("npm install --silent", shell=True, cwd=day_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Ruby gems
+    gemfile = day_dir / "Gemfile"
+    if gemfile.exists():
+        subprocess.run("bundle install --quiet", shell=True, cwd=day_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
 def do_installs() -> bool:
