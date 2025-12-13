@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -229,26 +230,43 @@ func canPackSmall(w, h int, shapes []Shape, counts []int) bool {
 }
 
 func solve(shapes []Shape, regions [][2]int, counts [][]int) int {
-	good := 0
+	var wg sync.WaitGroup
+	results := make(chan int, len(regions))
+
 	for i, reg := range regions {
-		w := reg[0]
-		h := reg[1]
-		pieces := 0
-		area := 0
-		for j, c := range counts[i] {
-			pieces += c
-			area += c * shapes[j].area
-		}
-		if area > w*h {
-			continue
-		}
-		if w*h <= 400 && pieces <= 25 {
-			if canPackSmall(w, h, shapes, counts[i]) {
-				good++
+		wg.Add(1)
+		go func(idx int, w, h int, cts []int) {
+			defer wg.Done()
+			pieces := 0
+			area := 0
+			for j, c := range cts {
+				pieces += c
+				area += c * shapes[j].area
 			}
-		} else {
-			good++
-		}
+			if area > w*h {
+				results <- 0
+				return
+			}
+			if w*h <= 400 && pieces <= 25 {
+				if canPackSmall(w, h, shapes, cts) {
+					results <- 1
+				} else {
+					results <- 0
+				}
+			} else {
+				results <- 1
+			}
+		}(i, reg[0], reg[1], counts[i])
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	good := 0
+	for r := range results {
+		good += r
 	}
 	return good
 }

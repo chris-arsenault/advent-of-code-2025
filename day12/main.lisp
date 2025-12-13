@@ -105,29 +105,114 @@
             (push (list w h (nreverse counts)) regions)))))
     (values shapes (nreverse regions))))
 
+;; Dancing Links (DLX) data structure using defstruct
+(defstruct dlx-node
+  (left nil)
+  (right nil)
+  (up nil)
+  (down nil)
+  (column nil)
+  (row-id -1)
+  (size 0)
+  (name nil))
+
+(defun dlx-build (num-cols rows)
+  (let* ((root (make-dlx-node :name 'root))
+         (headers (make-array num-cols)))
+    (setf (dlx-node-left root) root)
+    (setf (dlx-node-right root) root)
+    (setf (dlx-node-up root) root)
+    (setf (dlx-node-down root) root)
+    ;; Create column headers
+    (dotimes (i num-cols)
+      (let ((h (make-dlx-node :name i :size 0)))
+        (setf (aref headers i) h)
+        (setf (dlx-node-column h) h)
+        (setf (dlx-node-up h) h)
+        (setf (dlx-node-down h) h)
+        ;; Link into header row
+        (let ((prev (dlx-node-left root)))
+          (setf (dlx-node-right prev) h)
+          (setf (dlx-node-left h) prev)
+          (setf (dlx-node-right h) root)
+          (setf (dlx-node-left root) h))))
+    ;; Add rows
+    (loop for row-idx from 0
+          for row in rows do
+      (let ((first nil) (prev nil))
+        (dolist (col-idx row)
+          (let* ((col-header (aref headers col-idx))
+                 (node (make-dlx-node :column col-header :row-id row-idx)))
+            (incf (dlx-node-size col-header))
+            ;; Vertical link
+            (let ((up-node (dlx-node-up col-header)))
+              (setf (dlx-node-down up-node) node)
+              (setf (dlx-node-up node) up-node)
+              (setf (dlx-node-down node) col-header)
+              (setf (dlx-node-up col-header) node))
+            ;; Horizontal link
+            (if first
+                (progn
+                  (setf (dlx-node-right prev) node)
+                  (setf (dlx-node-left node) prev))
+                (progn
+                  (setf first node)
+                  (setf (dlx-node-left node) node)))
+            (setf prev node)))
+        (when first
+          (setf (dlx-node-right prev) first)
+          (setf (dlx-node-left first) prev))))
+    root))
+
+(defun dlx-cover (col)
+  (setf (dlx-node-right (dlx-node-left col)) (dlx-node-right col))
+  (setf (dlx-node-left (dlx-node-right col)) (dlx-node-left col))
+  (loop for row = (dlx-node-down col) then (dlx-node-down row)
+        until (eq row col) do
+    (loop for node = (dlx-node-right row) then (dlx-node-right node)
+          until (eq node row) do
+      (setf (dlx-node-down (dlx-node-up node)) (dlx-node-down node))
+      (setf (dlx-node-up (dlx-node-down node)) (dlx-node-up node))
+      (decf (dlx-node-size (dlx-node-column node))))))
+
+(defun dlx-uncover (col)
+  (loop for row = (dlx-node-up col) then (dlx-node-up row)
+        until (eq row col) do
+    (loop for node = (dlx-node-left row) then (dlx-node-left node)
+          until (eq node row) do
+      (incf (dlx-node-size (dlx-node-column node)))
+      (setf (dlx-node-down (dlx-node-up node)) node)
+      (setf (dlx-node-up (dlx-node-down node)) node)))
+  (setf (dlx-node-right (dlx-node-left col)) col)
+  (setf (dlx-node-left (dlx-node-right col)) col))
+
+(defun dlx-search (root)
+  (when (eq (dlx-node-right root) root)
+    (return-from dlx-search t))
+  ;; Choose column with minimum size (MRV heuristic)
+  (let ((best nil) (best-size most-positive-fixnum))
+    (loop for col = (dlx-node-right root) then (dlx-node-right col)
+          until (eq col root) do
+      (when (< (dlx-node-size col) best-size)
+        (setf best col best-size (dlx-node-size col))))
+    (when (zerop best-size) (return-from dlx-search nil))
+    (dlx-cover best)
+    (loop for row = (dlx-node-down best) then (dlx-node-down row)
+          until (eq row best) do
+      (loop for node = (dlx-node-right row) then (dlx-node-right node)
+            until (eq node row) do
+        (dlx-cover (dlx-node-column node)))
+      (when (dlx-search root)
+        (return-from dlx-search t))
+      (loop for node = (dlx-node-left row) then (dlx-node-left node)
+            until (eq node row) do
+        (dlx-uncover (dlx-node-column node))))
+    (dlx-uncover best)
+    nil))
+
 (defun exact-cover? (columns rows)
-  (labels ((choose-col (cols rows)
-             (let ((best nil) (best-count nil))
-               (dolist (c cols)
-                 (let ((cnt (count-if (lambda (r) (member c r :test #'=)) rows)))
-                   (when (or (null best-count) (< cnt best-count))
-                     (setf best c best-count cnt))))
-               best))
-           (filter-rows (rows row)
-             (let ((cols row))
-               (remove-if (lambda (r) (intersection cols r :test #'=)) rows))))
-    (labels ((do-search (cols rows)
-               (if (null cols)
-                   t
-                   (let* ((col (choose-col cols rows))
-                          (candidates (remove-if-not (lambda (r) (member col r :test #'=)) rows)))
-                     (dolist (r candidates)
-                       (let* ((new-cols (set-difference cols r :test #'=))
-                              (new-rows (filter-rows rows r)))
-                         (when (do-search new-cols new-rows)
-                           (return-from do-search t))))
-                     nil))))
-      (do-search columns rows))))
+  (let ((root (dlx-build (length columns) rows)))
+    (dlx-search root)))
 
 (defun solve-region (w h shapes counts)
   (let* ((needed-area (loop for shp in shapes

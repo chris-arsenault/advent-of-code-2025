@@ -70,6 +70,18 @@ while i < lines.size
   end
 end
 
+def search_solutions(placements, order, idx, used, &block)
+  if idx == order.size
+    yield used
+    return
+  end
+  si = order[idx]
+  placements[si].each do |pm|
+    next unless (pm & used).zero?
+    search_solutions(placements, order, idx + 1, used | pm, &block)
+  end
+end
+
 def can_pack_small(w, h, shapes, cnts)
   total_pieces = cnts.sum
   needed_area = cnts.each_with_index.sum { |c, idx| c * shapes[idx][:area] }
@@ -99,16 +111,11 @@ def can_pack_small(w, h, shapes, cnts)
   end
   order.sort_by! { |i| placements[i].size }
 
-  dfs = lambda do |idx, used|
-    return true if idx == order.size
-    si = order[idx]
-    placements[si].each do |pm|
-      next unless (pm & used).zero?
-      return true if dfs.call(idx + 1, used | pm)
-    end
-    false
+  catch(:found) do
+    search_solutions(placements, order, 0, 0) { throw :found, true }
+    return false
   end
-  dfs.call(0, 0)
+  true
 end
 
 t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)

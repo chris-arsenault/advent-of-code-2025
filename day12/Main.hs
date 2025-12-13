@@ -1,8 +1,10 @@
 {-# LANGUAGE BangPatterns #-}
 module Main where
 
+import Control.Monad (guard, msum)
 import Data.Char (isSpace)
 import Data.List (sort)
+import Data.Maybe (isJust)
 import System.CPUTime (getCPUTime)
 
 type Cell = (Int,Int)
@@ -114,18 +116,22 @@ stepOnce d span poss = [canReach i | i <- [0..span-1]]
                  in (i1 >= 0 && i1 < span && poss !! i1) ||
                     (i2 >= 0 && i2 < span && poss !! i2)
 
+-- Backtracking search using list monad with Control.Monad
 exactCover :: [Int] -> [[Int]] -> Bool
-exactCover cols rows = search cols rows
+exactCover cols rows = isJust $ search cols rows
   where
-    search [] _ = True
-    search _ [] = False
-    search cs rs =
-      let col = minimum cs  -- Choose column with fewest candidates (MRV heuristic approximation)
-          cand = filter (\r -> col `elem` r) rs
-      in any (\r ->
-                let cs' = filter (`notElem` r) cs
-                    rs' = filter (null . intersect r) rs
-                in search cs' rs') cand
+    search :: [Int] -> [[Int]] -> Maybe ()
+    search [] _ = Just ()  -- Found solution
+    search cs rs = msum $ do
+      let col = minimum cs  -- MRV heuristic approximation
+          candidates = filter (\r -> col `elem` r) rs
+      guard (not $ null candidates)
+      r <- candidates
+      let cs' = filter (`notElem` r) cs
+          rs' = filter (null . intersect r) rs
+      return $ search cs' rs'
+
+    intersect :: [Int] -> [Int] -> [Int]
     intersect a b = [x | x <- a, x `elem` b]
 
 solveRegion :: Int -> Int -> [Shape] -> [Int] -> Bool
