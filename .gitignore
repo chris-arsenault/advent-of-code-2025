@@ -16,4 +16,10 @@ day*/main_c
 day*/main_ref
 day*/day*
 day*/day*_rs
+
+# Rust build artifacts
 day*/target/
+day*/Cargo.lock
+
+# Haskell/Cabal build artifacts
+day*/dist-newstyle/
