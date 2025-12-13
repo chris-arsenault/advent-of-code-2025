@@ -131,12 +131,16 @@ Given a sequence of digits, select exactly k digits (in order) to form the large
 | **Ruby** | Array stack; `each_char.with_index` for iteration |
 | **Lisp** | Recursive solution with accumulator; or `loop` with stack list |
 | **Julia** | Vector stack; `push!`/`pop!` for mutation |
-| **Haskell** | Fold with explicit stack state; or use `Seq` for O(1) both ends |
+| **Haskell** | Fold with explicit stack state; use reversed list (head=top) for O(1) push/pop/peek |
 
 ### Assembly Optimization
-- Unroll digit comparisons
-- Use `cmov` for branchless stack operations
-- Process multiple banks in parallel with SIMD gather/scatter
+
+The ASM uses:
+- **Suffix max array:** Build suffix maximum for O(1) best-pair lookups in Part 1
+- **`cmov` instructions:** Branchless max comparisons (suffix max, find best candidate)
+- **Greedy monotonic stack:** Standard loop with conditional pop
+
+**Performance:** ~0.15ms (very fast; further optimization has diminishing returns)
 
 ---
 
