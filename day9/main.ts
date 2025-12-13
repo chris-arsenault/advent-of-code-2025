@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import * as turf from "@turf/turf";
 
 type Point = { x: number; y: number };
 
@@ -24,20 +25,7 @@ function maxRectAny(pts: Point[]): number {
   return best;
 }
 
-function pointInPoly(p: Point, poly: Point[]): boolean {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const pi = poly[i];
-    const pj = poly[j];
-    const cond =
-      pi.y > p.y !== pj.y > p.y &&
-      p.x < ((pj.x - pi.x) * (p.y - pi.y)) / (pj.y - pi.y) + pi.x;
-    if (cond) inside = !inside;
-  }
-  return inside;
-}
-
-function maxRectInside(pts: Point[], poly: Point[]): number {
+function maxRectInside(pts: Point[], poly: turf.Feature<turf.Polygon>): number {
   let best = 0;
   for (let i = 0; i < pts.length; i++) {
     for (let j = i + 1; j < pts.length; j++) {
@@ -46,13 +34,9 @@ function maxRectInside(pts: Point[], poly: Point[]): number {
       const x2 = Math.max(pts[i].x, pts[j].x);
       const y1 = Math.min(pts[i].y, pts[j].y);
       const y2 = Math.max(pts[i].y, pts[j].y);
-      const corners = [
-        { x: x1, y: y1 },
-        { x: x1, y: y2 },
-        { x: x2, y: y1 },
-        { x: x2, y: y2 },
-      ];
-      if (corners.every((c) => pointInPoly(c, poly))) {
+
+      const rect = turf.bboxPolygon([x1, y1, x2, y2]);
+      if (turf.booleanContains(poly, rect)) {
         const area = (x2 - x1) * (y2 - y1);
         if (area > best) best = area;
       }
@@ -62,7 +46,10 @@ function maxRectInside(pts: Point[], poly: Point[]): number {
 }
 
 const pts = loadPoints("input.txt");
-const poly = pts;
+const coords = pts.map((p) => [p.x, p.y] as [number, number]);
+coords.push(coords[0]); // Close the polygon
+const poly = turf.polygon([coords]);
+
 const t0 = performance.now();
 const p1 = maxRectAny(pts);
 const p2 = maxRectInside(pts, poly);

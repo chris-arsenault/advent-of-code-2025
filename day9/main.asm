@@ -77,6 +77,45 @@ point_in_polygon:
     mov     rdi, [rbp-8]                ; px
     mov     rsi, [rbp-16]               ; py
 
+    ; Check if point is on this edge
+    cmp     r8, r10
+    jne     .check_horiz_edge
+    ; Vertical edge: x1 == x2
+    cmp     rdi, r8                     ; px == x1?
+    jne     .pip_ray_test
+    ; Check if py in range [min(y1,y2), max(y1,y2)]
+    mov     rax, r9
+    mov     rdx, r11
+    cmp     rax, rdx
+    jle     .v_minmax_ok
+    xchg    rax, rdx
+.v_minmax_ok:
+    cmp     rsi, rax                    ; py < min?
+    jl      .pip_ray_test
+    cmp     rsi, rdx                    ; py > max?
+    jg      .pip_ray_test
+    jmp     .pip_on_edge                ; point is on this edge
+
+.check_horiz_edge:
+    cmp     r9, r11
+    jne     .pip_ray_test
+    ; Horizontal edge: y1 == y2
+    cmp     rsi, r9                     ; py == y1?
+    jne     .pip_ray_test
+    ; Check if px in range [min(x1,x2), max(x1,x2)]
+    mov     rax, r8
+    mov     rdx, r10
+    cmp     rax, rdx
+    jle     .h_minmax_ok
+    xchg    rax, rdx
+.h_minmax_ok:
+    cmp     rdi, rax                    ; px < min?
+    jl      .pip_ray_test
+    cmp     rdi, rdx                    ; px > max?
+    jg      .pip_ray_test
+    jmp     .pip_on_edge                ; point is on this edge
+
+.pip_ray_test:
     ; Check if ray from (px, py) going right crosses edge (x1,y1)-(x2,y2)
     ; Condition: (y1 > py) != (y2 > py) AND
     ;            px < (x2-x1) * (py-y1) / (y2-y1) + x1
@@ -118,11 +157,17 @@ point_in_polygon:
     inc     ebx
     jmp     .pip_loop
 
+.pip_on_edge:
+    ; Point is on edge, return 1
+    mov     eax, 1
+    jmp     .pip_ret
+
 .pip_done:
     ; odd crossings = inside
     mov     eax, r15d
     and     eax, 1
 
+.pip_ret:
     add     rsp, 32
     pop     rbp
     pop     r15
@@ -133,8 +178,8 @@ point_in_polygon:
     ret
 
 ;------------------------------------------------------------------------------
-; bool rect_in_polygon(int64 x1, int64 y1, int64 x2, int64 y2, int n)
-; Check if all 4 corners are inside polygon
+; bool rect_in_polygon(int64 xlo, int64 ylo, int64 xhi, int64 yhi, int n)
+; Check if all 4 corners are inside polygon AND no edge crosses interior
 ;------------------------------------------------------------------------------
 rect_in_polygon:
     push    rbx
@@ -142,16 +187,16 @@ rect_in_polygon:
     push    r13
     push    r14
     push    r15
-    sub     rsp, 48
+    sub     rsp, 56
 
-    ; Store args
-    mov     [rsp], rdi                  ; x1
-    mov     [rsp+8], rsi                ; y1
-    mov     [rsp+16], rdx               ; x2
-    mov     [rsp+24], rcx               ; y2
+    ; Store args (xlo, ylo, xhi, yhi, n)
+    mov     [rsp], rdi                  ; xlo
+    mov     [rsp+8], rsi                ; ylo
+    mov     [rsp+16], rdx               ; xhi
+    mov     [rsp+24], rcx               ; yhi
     mov     [rsp+32], r8d               ; n
 
-    ; Check corner (x1, y1)
+    ; Check corner (xlo, ylo)
     mov     rdi, [rsp]
     mov     rsi, [rsp+8]
     mov     edx, [rsp+32]
@@ -159,7 +204,7 @@ rect_in_polygon:
     test    eax, eax
     jz      .rip_false
 
-    ; Check corner (x2, y1)
+    ; Check corner (xhi, ylo)
     mov     rdi, [rsp+16]
     mov     rsi, [rsp+8]
     mov     edx, [rsp+32]
@@ -167,7 +212,7 @@ rect_in_polygon:
     test    eax, eax
     jz      .rip_false
 
-    ; Check corner (x1, y2)
+    ; Check corner (xlo, yhi)
     mov     rdi, [rsp]
     mov     rsi, [rsp+24]
     mov     edx, [rsp+32]
@@ -175,7 +220,7 @@ rect_in_polygon:
     test    eax, eax
     jz      .rip_false
 
-    ; Check corner (x2, y2)
+    ; Check corner (xhi, yhi)
     mov     rdi, [rsp+16]
     mov     rsi, [rsp+24]
     mov     edx, [rsp+32]
@@ -183,6 +228,80 @@ rect_in_polygon:
     test    eax, eax
     jz      .rip_false
 
+    ; Check no polygon edge crosses the rectangle interior
+    lea     r12, [rel points_x]
+    lea     r13, [rel points_y]
+    mov     r14d, [rsp+32]              ; n
+    xor     ebx, ebx                    ; i = 0
+
+.edge_check_loop:
+    cmp     ebx, r14d
+    jge     .rip_true
+
+    ; j = (i + 1) % n
+    mov     ecx, ebx
+    inc     ecx
+    cmp     ecx, r14d
+    jl      .edge_j_ok
+    xor     ecx, ecx
+.edge_j_ok:
+    ; Get edge endpoints
+    mov     r8, [r12 + rbx*8]           ; x1
+    mov     r9, [r13 + rbx*8]           ; y1
+    mov     r10, [r12 + rcx*8]          ; x2
+    mov     r11, [r13 + rcx*8]          ; y2
+
+    ; Check if vertical edge crosses interior
+    cmp     r8, r10
+    jne     .check_horiz
+    ; Vertical edge: x1 == x2
+    mov     rax, [rsp]                  ; xlo
+    cmp     r8, rax
+    jle     .edge_next
+    mov     rax, [rsp+16]               ; xhi
+    cmp     r8, rax
+    jge     .edge_next
+    ; x is strictly inside, check y overlap
+    mov     rax, r9
+    cmp     rax, r11
+    jle     .v_ya_ok
+    xchg    rax, r11
+.v_ya_ok:                               ; rax = min(y1,y2), r11 = max(y1,y2)
+    mov     rcx, [rsp+24]               ; yhi
+    cmp     r11, [rsp+8]                ; ylo
+    jle     .edge_next
+    cmp     rax, rcx
+    jge     .edge_next
+    jmp     .rip_false                  ; Edge crosses interior
+
+.check_horiz:
+    cmp     r9, r11
+    jne     .edge_next
+    ; Horizontal edge: y1 == y2
+    mov     rax, [rsp+8]                ; ylo
+    cmp     r9, rax
+    jle     .edge_next
+    mov     rax, [rsp+24]               ; yhi
+    cmp     r9, rax
+    jge     .edge_next
+    ; y is strictly inside, check x overlap
+    mov     rax, r8
+    cmp     rax, r10
+    jle     .h_xa_ok
+    xchg    rax, r10
+.h_xa_ok:                               ; rax = min(x1,x2), r10 = max(x1,x2)
+    mov     rcx, [rsp+16]               ; xhi
+    cmp     r10, [rsp]                  ; xlo
+    jle     .edge_next
+    cmp     rax, rcx
+    jge     .edge_next
+    jmp     .rip_false                  ; Edge crosses interior
+
+.edge_next:
+    inc     ebx
+    jmp     .edge_check_loop
+
+.rip_true:
     mov     eax, 1
     jmp     .rip_done
 
@@ -190,7 +309,7 @@ rect_in_polygon:
     xor     eax, eax
 
 .rip_done:
-    add     rsp, 48
+    add     rsp, 56
     pop     r15
     pop     r14
     pop     r13
@@ -209,7 +328,7 @@ main:
     push    r13
     push    r14
     push    r15
-    sub     rsp, 72
+    sub     rsp, 88
 
     ; Read file
     lea     rdi, [rel input_file]
@@ -306,12 +425,13 @@ main:
     cmp     r10, r11
     je      .p1_next_j                  ; skip if same y
 
-    ; area = abs(x1-x2) * abs(y1-y2)
+    ; area = (abs(x1-x2) + 1) * (abs(y1-y2) + 1)
     sub     rax, rdx
     mov     rdx, rax
     sar     rdx, 63
     xor     rax, rdx
     sub     rax, rdx                    ; abs(x1-x2)
+    inc     rax                         ; + 1
     mov     r12, rax
 
     mov     rax, r10
@@ -320,6 +440,7 @@ main:
     sar     rdx, 63
     xor     rax, rdx
     sub     rax, rdx                    ; abs(y1-y2)
+    inc     rax                         ; + 1
 
     imul    rax, r12                    ; area
     cmp     rax, [rbp-72]
@@ -336,10 +457,7 @@ main:
 
 .p1_done:
     ; Part 2: Find max rectangle inside polygon
-    ; NOTE: O(n³) algorithm too slow for ~500 points
-    ; Would need spatial indexing or segment tree for production
     mov     qword [rbp-80], 0           ; best2 = 0
-    jmp     .p2_done                    ; Skip for now
 
     xor     ebx, ebx                    ; i = 0
 .p2_i:
@@ -366,52 +484,44 @@ main:
     cmp     r10, r11
     je      .p2_next_j
 
-    ; Save for area calculation later
+    ; Save original coordinates for area calculation
     mov     [rbp-88], rax               ; x1
     mov     [rbp-96], rdx               ; x2
     mov     [rbp-104], r10              ; y1
     mov     [rbp-112], r11              ; y2
+    mov     [rbp-120], ecx              ; save j loop counter
 
-    ; Get min/max for rectangle
-    cmp     rax, rdx
-    jle     .min_x_ok
-    xchg    rax, rdx
-.min_x_ok:
-    mov     rdi, rax                    ; min_x
-    mov     rdx, [rbp-96]
-    cmp     [rbp-88], rdx
-    jge     .max_x_ok
-    mov     rdx, [rbp-88]
-.max_x_ok:
-    push    rdx                         ; max_x on stack
-
-    mov     rax, r10
-    mov     rsi, r11
-    cmp     rax, rsi
-    jle     .min_y_ok
-    xchg    rax, rsi
-.min_y_ok:
-    mov     rsi, rax                    ; min_y
-    mov     rcx, r10
-    cmp     r11, rcx
-    jge     .max_y_ok
-    mov     rcx, r11
-.max_y_ok:
-    pop     rdx                         ; max_x
-    ; rdi=min_x, rsi=min_y, rdx=max_x, rcx=max_y
-
+    ; Compute min/max for xlo, xhi, ylo, yhi
+    ; xlo = min(x1, x2), xhi = max(x1, x2)
+    mov     rdi, rax                    ; xlo = x1
+    mov     r12, rdx                    ; xhi = x2
+    cmp     rdi, r12
+    jle     .x_sorted
+    xchg    rdi, r12                    ; swap if x1 > x2
+.x_sorted:
+    ; ylo = min(y1, y2), yhi = max(y1, y2)
+    mov     rsi, r10                    ; ylo = y1
+    mov     rcx, r11                    ; yhi = y2
+    cmp     rsi, rcx
+    jle     .y_sorted
+    xchg    rsi, rcx                    ; swap if y1 > y2
+.y_sorted:
+    ; rdi=xlo, rsi=ylo, r12=xhi, rcx=yhi
+    mov     rdx, r12                    ; rdx = xhi
     mov     r8d, r14d                   ; n
     call    rect_in_polygon
+    mov     ecx, [rbp-120]              ; restore j loop counter
     test    eax, eax
     jz      .p2_next_j
 
-    ; Calculate area
+    ; Calculate area = (abs(x1-x2) + 1) * (abs(y1-y2) + 1)
     mov     rax, [rbp-88]
     sub     rax, [rbp-96]
     mov     rdx, rax
     sar     rdx, 63
     xor     rax, rdx
     sub     rax, rdx                    ; abs(x1-x2)
+    inc     rax                         ; + 1
     mov     r12, rax
 
     mov     rax, [rbp-104]
@@ -420,6 +530,7 @@ main:
     sar     rdx, 63
     xor     rax, rdx
     sub     rax, rdx                    ; abs(y1-y2)
+    inc     rax                         ; + 1
 
     imul    rax, r12
     cmp     rax, [rbp-80]
@@ -454,7 +565,7 @@ main:
     xor     eax, eax
 
 .exit:
-    add     rsp, 72
+    add     rsp, 88
     pop     r15
     pop     r14
     pop     r13

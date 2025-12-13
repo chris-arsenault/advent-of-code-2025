@@ -20,6 +20,7 @@
     (push (subseq s start len) parts)
     (nreverse parts)))
 
+;; Points represented as complex numbers: x + yi
 (defun load-points (lines)
   (let ((pts '()))
     (dolist (line lines)
@@ -28,8 +29,11 @@
           (let* ((parts (split-commas trim))
                  (x (parse-integer (first parts)))
                  (y (parse-integer (second parts))))
-            (push (list x y) pts)))))
+            (push (complex x y) pts)))))
     (coerce (nreverse pts) 'vector)))
+
+(defun pt-x (pt) (realpart pt))
+(defun pt-y (pt) (imagpart pt))
 
 (defun max-rectangle-any (pts)
   (let ((best 0)
@@ -38,8 +42,8 @@
       (loop for j from (1+ i) below n do
         (let* ((p-i (aref pts i))
                (p-j (aref pts j))
-               (x1 (first p-i)) (y1 (second p-i))
-               (x2 (first p-j)) (y2 (second p-j))
+               (x1 (pt-x p-i)) (y1 (pt-y p-i))
+               (x2 (pt-x p-j)) (y2 (pt-y p-j))
                (dx (abs (- x1 x2)))
                (dy (abs (- y1 y2)))
                (area (* (1+ dx) (1+ dy))))
@@ -54,15 +58,17 @@
      (and (= py y1) (>= px (min x1 x2)) (<= px (max x1 x2))))
     (t nil)))
 
-(defun point-inside-p (px py poly)
-  (let* ((n (length poly))
+(defun point-inside-p (pt poly)
+  (let* ((px (pt-x pt))
+         (py (pt-y pt))
+         (n (length poly))
          (inside nil)
          (j (1- n)))
     (loop for i from 0 below n do
       (let* ((p-j (aref poly j))
              (p-i (aref poly i))
-             (x1 (first p-j)) (y1 (second p-j))
-             (x2 (first p-i)) (y2 (second p-i)))
+             (x1 (pt-x p-j)) (y1 (pt-y p-j))
+             (x2 (pt-x p-i)) (y2 (pt-y p-i)))
         (when (point-on-edge-p px py x1 y1 x2 y2)
           (return-from point-inside-p t))
         (when (and (/= y1 y2)
@@ -76,29 +82,29 @@
 (defun edge-crosses-interior-p (xlo xhi ylo yhi x1 y1 x2 y2)
   (cond
     ((= x1 x2)  ; vertical edge
-     (and (> x1 xlo) (< x1 xhi)  ; strictly between left and right
+     (and (> x1 xlo) (< x1 xhi)
           (let ((ya (min y1 y2))
                 (yb (max y1 y2)))
-            (and (> yb ylo) (< ya yhi)))))  ; overlaps y range
+            (and (> yb ylo) (< ya yhi)))))
     ((= y1 y2)  ; horizontal edge
-     (and (> y1 ylo) (< y1 yhi)  ; strictly between bottom and top
+     (and (> y1 ylo) (< y1 yhi)
           (let ((xa (min x1 x2))
                 (xb (max x1 x2)))
-            (and (> xb xlo) (< xa xhi)))))  ; overlaps x range
+            (and (> xb xlo) (< xa xhi)))))
     (t nil)))
 
 (defun rect-inside-polygon-p (xlo xhi ylo yhi poly)
-  (and (point-inside-p xlo ylo poly)
-       (point-inside-p xlo yhi poly)
-       (point-inside-p xhi ylo poly)
-       (point-inside-p xhi yhi poly)
+  (and (point-inside-p (complex xlo ylo) poly)
+       (point-inside-p (complex xlo yhi) poly)
+       (point-inside-p (complex xhi ylo) poly)
+       (point-inside-p (complex xhi yhi) poly)
        (let ((n (length poly))
              (j (1- (length poly))))
          (loop for i from 0 below n do
            (let* ((p-j (aref poly j))
                   (p-i (aref poly i))
-                  (x1 (first p-j)) (y1 (second p-j))
-                  (x2 (first p-i)) (y2 (second p-i)))
+                  (x1 (pt-x p-j)) (y1 (pt-y p-j))
+                  (x2 (pt-x p-i)) (y2 (pt-y p-i)))
              (when (edge-crosses-interior-p xlo xhi ylo yhi x1 y1 x2 y2)
                (return-from rect-inside-polygon-p nil))
              (setf j i)))
@@ -110,8 +116,8 @@
     (loop for i from 0 below n do
       (loop for j from (1+ i) below n do
         (let* ((p1 (aref pts i)) (p2 (aref pts j))
-               (x1 (first p1)) (y1 (second p1))
-               (x2 (first p2)) (y2 (second p2)))
+               (x1 (pt-x p1)) (y1 (pt-y p1))
+               (x2 (pt-x p2)) (y2 (pt-y p2)))
           (when (and (/= x1 x2) (/= y1 y2))
             (let* ((xmin (min x1 x2)) (xmax (max x1 x2))
                    (ymin (min y1 y2)) (ymax (max y1 y2)))

@@ -1,5 +1,7 @@
 #!/usr/bin/env julia
 
+using PolygonOps
+
 function load_points(lines)
     pts = Tuple{Int,Int}[]
     for line in lines
@@ -27,75 +29,43 @@ function max_rectangle_any(pts)
     best
 end
 
-function point_on_edge(px, py, x1, y1, x2, y2)
-    if x1 == x2
-        return px == x1 && py >= min(y1, y2) && py <= max(y1, y2)
-    elseif y1 == y2
-        return py == y1 && px >= min(x1, x2) && px <= max(x1, x2)
-    end
-    false
-end
-
-function point_inside(px, py, poly)
-    inside = false
-    n = length(poly)
-    j = n
-    for i in 1:n
-        x1, y1 = poly[j]
-        x2, y2 = poly[i]
-        if point_on_edge(px, py, x1, y1, x2, y2)
-            return true
-        end
-        if (y1 > py) != (y2 > py) && y1 != y2
-            x_int = div((x2 - x1) * (py - y1), (y2 - y1)) + x1
-            if px < x_int
-                inside = !inside
-            end
-        end
-        j = i
-    end
-    inside
-end
-
-function edge_crosses_interior(xlo, xhi, ylo, yhi, x1, y1, x2, y2)
-    if x1 == x2  # vertical edge
-        # strictly between left and right
-        x1 > xlo && x1 < xhi || return false
-        ya = min(y1, y2)
-        yb = max(y1, y2)
-        # overlaps y range
-        return yb > ylo && ya < yhi
-    elseif y1 == y2  # horizontal edge
-        # strictly between bottom and top
-        y1 > ylo && y1 < yhi || return false
-        xa = min(x1, x2)
-        xb = max(x1, x2)
-        # overlaps x range
-        return xb > xlo && xa < xhi
-    end
-    false
-end
-
-function rect_inside_polygon(xlo, xhi, ylo, yhi, poly)
-    point_inside(xlo, ylo, poly) || return false
-    point_inside(xlo, yhi, poly) || return false
-    point_inside(xhi, ylo, poly) || return false
-    point_inside(xhi, yhi, poly) || return false
-
-    n = length(poly)
-    j = n
-    for i in 1:n
-        x1, y1 = poly[j]
-        x2, y2 = poly[i]
-        if edge_crosses_interior(xlo, xhi, ylo, yhi, x1, y1, x2, y2)
+function rect_inside_polygon(xlo, xhi, ylo, yhi, poly_coords)
+    # Check all 4 corners are inside
+    corners = [(xlo, ylo), (xlo, yhi), (xhi, ylo), (xhi, yhi)]
+    for (cx, cy) in corners
+        # inpolygon returns 1 for inside, 0 for on boundary, -1 for outside
+        if inpolygon((cx, cy), poly_coords) == -1
             return false
         end
-        j = i
+    end
+
+    # Check no polygon edge crosses the interior
+    n = length(poly_coords)
+    for i in 1:n
+        j = i == n ? 1 : i + 1
+        x1, y1 = poly_coords[i]
+        x2, y2 = poly_coords[j]
+
+        if x1 == x2  # vertical edge
+            if x1 > xlo && x1 < xhi
+                ya, yb = minmax(y1, y2)
+                if yb > ylo && ya < yhi
+                    return false
+                end
+            end
+        elseif y1 == y2  # horizontal edge
+            if y1 > ylo && y1 < yhi
+                xa, xb = minmax(x1, x2)
+                if xb > xlo && xa < xhi
+                    return false
+                end
+            end
+        end
     end
     true
 end
 
-function max_rectangle_inside(pts, poly)
+function max_rectangle_inside(pts, poly_coords)
     best = 0
     n = length(pts)
     for i in 1:n
@@ -103,9 +73,9 @@ function max_rectangle_inside(pts, poly)
         for j in i+1:n
             x2,y2 = pts[j]
             (x1 == x2 || y1 == y2) && continue
-            xlo, xhi = min(x1,x2), max(x1,x2)
-            ylo, yhi = min(y1,y2), max(y1,y2)
-            if rect_inside_polygon(xlo, xhi, ylo, yhi, poly)
+            xlo, xhi = minmax(x1, x2)
+            ylo, yhi = minmax(y1, y2)
+            if rect_inside_polygon(xlo, xhi, ylo, yhi, poly_coords)
                 area = (xhi - xlo + 1) * (yhi - ylo + 1)
                 area > best && (best = area)
             end
@@ -117,9 +87,12 @@ end
 function main()
     lines = readlines("input.txt")
     pts = load_points(lines)
+    # PolygonOps expects Vector of Tuples
+    poly_coords = [(Float64(x), Float64(y)) for (x,y) in pts]
+
     t0 = time_ns()
     p1 = max_rectangle_any(pts)
-    p2 = max_rectangle_inside(pts, pts)
+    p2 = max_rectangle_inside(pts, poly_coords)
     elapsed_ms = (time_ns() - t0)/1e6
     println("max_rect_area=$(p1) max_green_rect_area=$(p2) elapsed_ms=$(round(elapsed_ms; digits=3))")
 end
