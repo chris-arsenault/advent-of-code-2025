@@ -1,0 +1,68 @@
+#!/usr/bin/env sbcl --script
+
+(defun read-lines (path)
+  (with-open-file (in path)
+    (loop for line = (read-line in nil nil)
+          while line collect line)))
+
+(defun elapsed-ms (start end)
+  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
+
+(defun split-spaces (s)
+  (let ((parts '())
+        (start 0)
+        (len (length s)))
+    (labels ((emit (end)
+               (when (> end start)
+                 (push (subseq s start end) parts))))
+      (loop for i from 0 below len
+            for ch = (char s i) do
+              (if (char= ch #\Space)
+                  (progn (emit i) (setf start (1+ i)))
+                  nil))
+      (emit len))
+    (nreverse parts)))
+
+(defun load-graph (lines)
+  (let ((g (make-hash-table :test 'equal)))
+    (dolist (line lines)
+      (let ((trim (string-trim '(#\Space #\Tab #\Return #\Newline) line)))
+        (when (> (length trim) 0)
+          (let* ((pos (position #\: trim))
+                 (src (string-trim '(#\Space) (subseq trim 0 pos)))
+                 (rest (string-trim '(#\Space) (subseq trim (1+ pos))))
+                 (dests (remove "" (split-spaces rest) :test #'string=)))
+            (setf (gethash src g) dests)))))
+    g))
+
+(defun count-paths (graph start target)
+  (let ((memo (make-hash-table :test 'equal)))
+    (labels ((dfs (node)
+               (cond
+                 ((equal node target) 1)
+                 ((gethash node memo) (gethash node memo))
+                 (t
+                  (let ((total 0))
+                    (dolist (nxt (gethash node graph))
+                      (incf total (dfs nxt)))
+                    (setf (gethash node memo) total)
+                    total)))))
+      (dfs start))))
+
+(defun main ()
+  (let* ((lines (read-lines "input.txt"))
+         (t0 (get-internal-real-time))
+         (graph (load-graph lines))
+         (p1 (count-paths graph "you" "out"))
+         (a1 (count-paths graph "svr" "dac"))
+         (a2 (count-paths graph "dac" "fft"))
+         (a3 (count-paths graph "fft" "out"))
+         (b1 (count-paths graph "svr" "fft"))
+         (b2 (count-paths graph "fft" "dac"))
+         (b3 (count-paths graph "dac" "out"))
+         (p2 (+ (* a1 a2 a3) (* b1 b2 b3)))
+         (t1 (get-internal-real-time))
+         (elapsed (elapsed-ms t0 t1)))
+    (format t "paths_you_to_out=~A paths_svr_via_dac_fft=~A elapsed_ms=~,3f~%" p1 p2 elapsed)))
+
+(main)

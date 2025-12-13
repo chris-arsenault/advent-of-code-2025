@@ -65,7 +65,7 @@ static inline unsigned long long partb(char * buf, int num_jolts) {
 }
 
 int main(void) {
-    FILE *fp = fopen("input_eric.txt", "r");
+    FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
         return EXIT_FAILURE;

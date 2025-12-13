@@ -16,6 +16,10 @@ LANGS = {
     "rs": {"exe": "./day{day}_rs", "build": True},
     "ts": {"exe": "ts-node main.ts", "build": False},
     "rb": {"exe": "ruby main.rb", "build": False},
+    # "asm": {"exe": "./day{day}_asm", "build": True},
+    "lisp": {"exe": "sbcl --script main.lisp", "build": False},
+    "jl": {"exe": "julia main.jl", "build": False},
+    "hs": {"exe": "./day{day}_hs", "build": True},
 }
 
 
@@ -55,6 +59,30 @@ def ensure_built(day_dir: Path, day: str) -> None:
         subprocess.run("npm list ts-node >/dev/null 2>&1 || npm install -g ts-node typescript", shell=True)
     # go, rb: no build step
 
+    main_asm = day_dir / "main.asm"
+    if main_asm.exists():
+        asm_exe = day_dir / f"day{day}_asm"
+        shared_obj = ROOT / "shared" / "utils.o"
+        if not shared_obj.exists():
+            # build shared utils
+            shared_src = ROOT / "shared" / "utils.asm"
+            if shared_src.exists():
+                subprocess.run(
+                    f"nasm -felf64 {shared_src} -o {shared_obj}",
+                    shell=True,
+                    cwd=ROOT,
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+        cmd = f"nasm -felf64 main.asm -o main.o && gcc -no-pie main.o {shared_obj} -o {asm_exe}"
+        subprocess.run(cmd, shell=True, cwd=day_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    main_hs = day_dir / "Main.hs"
+    if main_hs.exists():
+        exe = day_dir / f"day{day}_hs"
+        cmd = f"ghc -O2 -o {exe} Main.hs"
+        subprocess.run(cmd, shell=True, cwd=day_dir, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
 
 def install_requirements(day_dir: Path) -> None:
     req = day_dir / "requirements.txt"
@@ -86,6 +114,7 @@ def main(do_install: bool) -> None:
             return
     # Execute and collect stats
     summary = {lang: [] for lang in LANGS}
+    outputs = {lang: [] for lang in LANGS}
     any_fail = False
     for day in DAYS:
         day_dir = ROOT / f"day{day}"
@@ -106,10 +135,25 @@ def main(do_install: bool) -> None:
             ok = code == 0 and elapsed is not None
             if not ok:
                 any_fail = True
-            day_results[lang] = {"elapsed": elapsed, "ok": ok}
+            day_results[lang] = {"elapsed": elapsed, "ok": ok, "out": out}
             summary[lang].append((day, elapsed, ok))
+            outputs[lang].append(out if ok else None)
 
-        base = day_results.get("c", {}).get("elapsed")
+        base_out = day_results.get("c", {}).get("out")
+        base_elapsed = day_results.get("c", {}).get("elapsed")
+        # validate outputs match C
+        for lang, res in day_results.items():
+            if lang == "c":
+                continue
+            if base_out is None or not res["ok"]:
+                res["ok"] = False
+                res["elapsed"] = None
+                continue
+            if res["out"] != base_out:
+                print(f"[mismatch] day {day} {lang} output differs from C")
+                res["ok"] = False
+                res["elapsed"] = None
+        base = base_elapsed
         if base is not None:
             for lang, res in day_results.items():
                 if lang == "c":
@@ -125,11 +169,11 @@ def main(do_install: bool) -> None:
     for idx, day in enumerate(DAYS):
         row = [f"{day:>{colw}}"]
         for lang in LANGS:
-            val, ok = summary[lang][idx][1], summary[lang][idx][2]
+            _, val, ok = summary[lang][idx]
             if ok and val is not None:
                 row.append(f"{val:>{colw}.3f}")
             else:
-                row.append(f"{'FAIL' if not ok else 'N/A':>{colw}}")
+                row.append(f"{'ERR' if not ok else 'N/A':>{colw}}")
         print("  ".join(row))
     if any_fail:
         print("\nSome runs failed or missing elapsed_ms; see logs above.")
