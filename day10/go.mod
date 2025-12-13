@@ -1,3 +1,5 @@
 module day10
 
-go 1.22.3
+go 1.23.0
+
+require gonum.org/v1/gonum v0.16.0 // indirect

@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 import time
-from typing import List, Tuple
 
+import numpy as np
 import pulp
 
 
@@ -32,34 +32,85 @@ def load(lines: list[str]) -> list[tuple[str, list[list[int]], list[int]]]:
     return machines
 
 
+def gf2_solve(buttons: list[list[int]], target: list[int], lights: int) -> int | None:
+    """Solve XOR system over GF(2) using numpy and find minimum presses."""
+    n_buttons = len(buttons)
+    if n_buttons == 0:
+        return 0 if all(t == 0 for t in target) else None
+
+    # Build augmented matrix [A | b] over GF(2)
+    # Rows = lights, Cols = buttons + 1 (for target)
+    aug = np.zeros((lights, n_buttons + 1), dtype=np.uint8)
+    for b_idx, btn in enumerate(buttons):
+        for light in btn:
+            if light < lights:
+                aug[light, b_idx] = 1
+    for i, t in enumerate(target):
+        aug[i, n_buttons] = t
+
+    # Gaussian elimination over GF(2)
+    pivot_cols = []
+    row = 0
+    for col in range(n_buttons):
+        # Find pivot
+        pivot = None
+        for r in range(row, lights):
+            if aug[r, col] == 1:
+                pivot = r
+                break
+        if pivot is None:
+            continue
+        # Swap rows
+        aug[[row, pivot]] = aug[[pivot, row]]
+        pivot_cols.append(col)
+        # Eliminate
+        for r in range(lights):
+            if r != row and aug[r, col] == 1:
+                aug[r] = (aug[r] + aug[row]) % 2
+        row += 1
+
+    rank = len(pivot_cols)
+
+    # Check consistency
+    for r in range(rank, lights):
+        if aug[r, n_buttons] == 1:
+            return None
+
+    # Free variables
+    free_cols = [c for c in range(n_buttons) if c not in pivot_cols]
+    n_free = len(free_cols)
+
+    # Enumerate all 2^n_free assignments to find minimum weight solution
+    best = None
+    for mask in range(1 << n_free):
+        sol = np.zeros(n_buttons, dtype=np.uint8)
+        for i, fc in enumerate(free_cols):
+            sol[fc] = (mask >> i) & 1
+
+        # Back-substitute to find pivot values
+        valid = True
+        for i in range(rank - 1, -1, -1):
+            pc = pivot_cols[i]
+            val = aug[i, n_buttons]
+            for c in range(pc + 1, n_buttons):
+                val = (val + aug[i, c] * sol[c]) % 2
+            sol[pc] = val
+
+        if valid:
+            weight = int(sol.sum())
+            if best is None or weight < best:
+                best = weight
+
+    return best
+
+
 def part1(machines: list[tuple[str, list[list[int]], list[int]]]) -> int:
     total = 0
     for pattern, buttons, _ in machines:
         lights = len(pattern)
-        target_mask = 0
-        for i, ch in enumerate(pattern):
-            if ch == "#":
-                target_mask |= 1 << i
-        button_masks = []
-        for b in buttons:
-            mask = 0
-            for idx in b:
-                if idx < lights:
-                    mask |= 1 << idx
-            button_masks.append(mask)
-
-        best = None
-        n = len(button_masks)
-        for mask in range(1 << n):
-            state = 0
-            for i in range(n):
-                if mask >> i & 1:
-                    state ^= button_masks[i]
-            if state == target_mask:
-                presses = mask.bit_count()
-                if best is None or presses < best:
-                    best = presses
-        total += best or 0
+        target = [1 if ch == "#" else 0 for ch in pattern]
+        result = gf2_solve(buttons, target, lights)
+        total += result or 0
     return total
 
 

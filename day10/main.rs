@@ -195,18 +195,6 @@ fn part2(machines: &[Machine]) -> i32 {
         let sum_targets: i32 = m.targets.iter().sum();
         let mut best = sum_targets;
         let mut free_vals = vec![0i32; free_count];
-        let mut bounds = vec![best; free_count];
-        for f in 0..free_count {
-            for r in 0..rank {
-                let a = coef[r][f];
-                if a > EPS {
-                    let limit = (rhs[r] / a + EPS).floor() as i32;
-                    if limit < bounds[f] {
-                        bounds[f] = limit;
-                    }
-                }
-            }
-        }
 
         fn evaluate(
             cur: i32,
@@ -251,7 +239,6 @@ fn part2(machines: &[Machine]) -> i32 {
             cur: i32,
             cap: i32,
             free_count: usize,
-            bounds: &[i32],
             free_vals: &mut [i32],
             rank: usize,
             rhs: &[f64],
@@ -266,21 +253,16 @@ fn part2(machines: &[Machine]) -> i32 {
                 evaluate(cur, rank, free_count, rhs, coef, free_vals, eps, best);
                 return;
             }
-            let mut lim = cap;
-            if bounds[idx] < lim {
-                lim = bounds[idx];
-            }
-            if lim < 0 {
-                return;
-            }
-            for v in 0..=lim {
+            for v in 0..=cap {
+                if cur + v >= *best {
+                    break;
+                }
                 free_vals[idx] = v;
                 quick(
                     idx + 1,
                     cur + v,
                     cap,
                     free_count,
-                    bounds,
                     free_vals,
                     rank,
                     rhs,
@@ -301,7 +283,6 @@ fn part2(machines: &[Machine]) -> i32 {
                 0,
                 seed_cap,
                 free_count,
-                &bounds,
                 &mut free_vals,
                 rank,
                 &rhs,
@@ -315,7 +296,6 @@ fn part2(machines: &[Machine]) -> i32 {
             idx: usize,
             cur: i32,
             free_count: usize,
-            bounds: &[i32],
             free_vals: &mut [i32],
             rank: usize,
             rhs: &[f64],
@@ -330,20 +310,13 @@ fn part2(machines: &[Machine]) -> i32 {
                 evaluate(cur, rank, free_count, rhs, coef, free_vals, eps, best);
                 return;
             }
-            let mut maxv = *best - cur;
-            if bounds[idx] < maxv {
-                maxv = bounds[idx];
-            }
-            if maxv < 0 {
-                return;
-            }
+            let maxv = *best - cur;
             for v in 0..=maxv {
                 free_vals[idx] = v;
                 dfs(
                     idx + 1,
                     cur + v,
                     free_count,
-                    bounds,
                     free_vals,
                     rank,
                     rhs,
@@ -359,7 +332,6 @@ fn part2(machines: &[Machine]) -> i32 {
                 0,
                 0,
                 free_count,
-                &bounds,
                 &mut free_vals,
                 rank,
                 &rhs,

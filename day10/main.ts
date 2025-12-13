@@ -141,16 +141,6 @@ function part2(ms: Machine[]): number {
     const sumTargets = m.targets.reduce((a, b) => a + b, 0);
     let best = sumTargets;
     const freeVals = Array(freeCount).fill(0);
-    const bounds = Array(freeCount).fill(best);
-    for (let f = 0; f < freeCount; f++) {
-      for (let r = 0; r < rank; r++) {
-        const a = coef[r][f];
-        if (a > EPS) {
-          const limit = Math.floor(rhs[r] / a + EPS);
-          if (limit < bounds[f]) bounds[f] = limit;
-        }
-      }
-    }
 
     const evaluate = (cur: number) => {
       if (cur >= best) return;
@@ -175,10 +165,8 @@ function part2(ms: Machine[]): number {
         evaluate(cur);
         return;
       }
-      let lim = cap;
-      if (bounds[idx] < lim) lim = bounds[idx];
-      if (lim < 0) return;
-      for (let v = 0; v <= lim; v++) {
+      for (let v = 0; v <= cap; v++) {
+        if (cur + v >= best) break;
         freeVals[idx] = v;
         quick(idx + 1, cur + v, cap);
       }
@@ -194,9 +182,7 @@ function part2(ms: Machine[]): number {
         evaluate(cur);
         return;
       }
-      let maxv = best - cur;
-      if (bounds[idx] < maxv) maxv = bounds[idx];
-      if (maxv < 0) return;
+      const maxv = best - cur;
       for (let v = 0; v <= maxv; v++) {
         freeVals[idx] = v;
         dfs(idx + 1, cur + v);

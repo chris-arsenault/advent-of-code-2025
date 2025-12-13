@@ -77,9 +77,20 @@ parse_int:
     ret
 
 ;------------------------------------------------------------------------------
-; Parse a single machine and solve Part 1
+; Parse a single machine and solve Part 1 using GF(2) Gaussian elimination
+; Uses: tzcnt for pivot finding, popcnt for bit counting, pxor for row XOR
 ; Input: rdi = start of line, rsi = end of file
 ; Output: rax = min presses for lights, rdi = next line
+;
+; Stack layout:
+;   rbp-8:    lights count
+;   rbp-12:   button count
+;   rbp-16:   target_mask
+;   rbp-80:   matrix[16] - each row is 32-bit: low 16 bits = button coeffs
+;   rbp-144:  pivot_cols[16] - which column is pivot for each row (-1 if none)
+;   rbp-148:  rank
+;   rbp-152:  free_count
+;   rbp-216:  free_cols[16] - indices of free (non-pivot) columns
 ;------------------------------------------------------------------------------
 solve_p1_machine:
     push    rbx
@@ -89,7 +100,7 @@ solve_p1_machine:
     push    r15
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 128
+    sub     rsp, 224
 
     mov     r12, rdi                    ; current pos
     mov     r13, rsi                    ; end
@@ -107,9 +118,9 @@ solve_p1_machine:
 .found_bracket:
     inc     r12                         ; skip '['
 
-    ; Parse pattern to get target mask
+    ; Parse pattern to get target bits and count lights
     xor     r14d, r14d                  ; target_mask
-    xor     ecx, ecx                    ; bit position
+    xor     ecx, ecx                    ; light index / bit position
 .parse_pattern:
     cmp     r12, r13
     jge     .no_solution
@@ -118,10 +129,7 @@ solve_p1_machine:
     je      .pattern_done
     cmp     al, '#'
     jne     .not_on
-    mov     eax, 1
-    mov     edx, ecx
-    shl     eax, cl
-    or      r14d, eax
+    bts     r14d, ecx                   ; set bit ecx in target_mask
 .not_on:
     inc     ecx
     inc     r12
@@ -132,12 +140,22 @@ solve_p1_machine:
     mov     [rbp-16], r14d              ; target mask
     inc     r12                         ; skip ']'
 
-    ; Parse buttons
+    ; Initialize matrix rows to 0
+    lea     rdi, [rbp-80]
+    xor     eax, eax
+    mov     ecx, 16
+.zero_matrix:
+    mov     [rdi], eax
+    add     rdi, 4
+    dec     ecx
+    jnz     .zero_matrix
+
+    ; Parse buttons and build matrix
+    ; Matrix[light][button] = 1 if button affects light
+    ; We store transposed: matrix[light] is a bitmask of which buttons affect it
     xor     r15d, r15d                  ; button count
-    lea     rbx, [rbp-80]               ; button_masks array
 
 .parse_buttons:
-    ; Find next '(' or end of line
     cmp     r12, r13
     jge     .buttons_done
     movzx   eax, byte [r12]
@@ -152,7 +170,6 @@ solve_p1_machine:
 
 .found_button:
     inc     r12                         ; skip '('
-    mov     dword [rbp-80 + r15*4], 0   ; Initialize this button's mask to 0
 
 .parse_button_indices:
     cmp     r12, r13
@@ -161,33 +178,30 @@ solve_p1_machine:
     cmp     al, ')'
     je      .button_done
     cmp     al, ','
-    je      .skip_comma
+    je      .skip_char
     cmp     al, ' '
-    je      .skip_comma
+    je      .skip_char
     cmp     al, '0'
-    jb      .skip_other
+    jb      .skip_char
     cmp     al, '9'
-    ja      .skip_other
+    ja      .skip_char
 
-    ; Parse index
-    push    r15                         ; save button count
+    ; Parse light index
+    push    r15
     mov     rdi, r12
     mov     rsi, r13
     call    parse_int
     mov     r12, rdi
     pop     r15
 
-    ; Set bit if index < lights
-    cmp     eax, [rbp-8]
+    ; Set bit r15 (button index) in matrix[eax] (light row)
+    cmp     eax, [rbp-8]                ; check light index < lights
     jge     .parse_button_indices
-    mov     ecx, eax
-    mov     edx, 1
-    shl     edx, cl
-    or      [rbp-80 + r15*4], edx
+    lea     rdi, [rbp-80]
+    bts     dword [rdi + rax*4], r15d   ; matrix[light] |= (1 << button)
     jmp     .parse_button_indices
 
-.skip_comma:
-.skip_other:
+.skip_char:
     inc     r12
     jmp     .parse_button_indices
 
@@ -195,87 +209,330 @@ solve_p1_machine:
     cmp     r12, r13
     jge     .buttons_done
     inc     r12                         ; skip ')'
-    inc     r15d                        ; button count++
+    inc     r15d
     cmp     r15d, MAX_BUTTONS
     jl      .parse_buttons
 
 .buttons_done:
+    mov     [rbp-12], r15d              ; save button count
+
     ; Skip to end of line
 .skip_to_eol:
     cmp     r12, r13
-    jge     .solve_p1
+    jge     .do_rref
     movzx   eax, byte [r12]
     inc     r12
     cmp     al, 10
     jne     .skip_to_eol
 
-.solve_p1:
-    ; Enumerate all 2^n button subsets
-    mov     [rbp-84], r15d              ; save button count
-    mov     ecx, r15d
-    mov     eax, 1
-    shl     eax, cl                     ; 2^n
-    mov     [rbp-88], eax               ; total subsets
+.do_rref:
+    ;==========================================================================
+    ; GF(2) Gaussian elimination to RREF
+    ; r8d = current row (rank so far)
+    ; r9d = current column
+    ; Matrix at rbp-80, target at rbp-16
+    ;==========================================================================
 
-    mov     dword [rbp-92], 999         ; best = large value (infinity)
+    ; Initialize pivot_cols to -1
+    lea     rdi, [rbp-144]
+    mov     eax, -1
+    mov     ecx, 16
+.init_pivots:
+    mov     [rdi], eax
+    add     rdi, 4
+    dec     ecx
+    jnz     .init_pivots
+
+    xor     r8d, r8d                    ; row = 0
+    xor     r9d, r9d                    ; col = 0
+    mov     r10d, [rbp-8]               ; lights (rows)
+    mov     r11d, [rbp-12]              ; buttons (cols)
+
+.rref_col_loop:
+    cmp     r8d, r10d                   ; row < lights?
+    jge     .rref_done
+    cmp     r9d, r11d                   ; col < buttons?
+    jge     .rref_done
+
+    ; Find pivot: first row >= r8 with bit r9 set
+    mov     ecx, r8d                    ; search from row r8
+    lea     rdi, [rbp-80]
+.find_pivot:
+    cmp     ecx, r10d
+    jge     .no_pivot_in_col
+    mov     eax, [rdi + rcx*4]          ; matrix[row]
+    bt      eax, r9d                    ; test bit r9
+    jc      .found_pivot
+    inc     ecx
+    jmp     .find_pivot
+
+.no_pivot_in_col:
+    ; No pivot in this column, try next column (same row)
+    inc     r9d
+    jmp     .rref_col_loop
+
+.found_pivot:
+    ; ecx = pivot row, swap with row r8 if different
+    cmp     ecx, r8d
+    je      .no_swap_needed
+
+    ; Swap matrix[r8] and matrix[ecx]
+    lea     rdi, [rbp-80]
+    mov     eax, [rdi + r8*4]
+    mov     edx, [rdi + rcx*4]
+    mov     [rdi + r8*4], edx
+    mov     [rdi + rcx*4], eax
+
+    ; Swap target bits r8 and ecx
+    mov     eax, [rbp-16]
+    mov     edx, eax
+    bt      eax, r8d                    ; CF = target[r8]
+    setc    bl                          ; bl = target[r8]
+    bt      edx, ecx                    ; CF = target[ecx]
+    setc    bh                          ; bh = target[ecx]
+    ; Set target[r8] = bh, target[ecx] = bl
+    btr     eax, r8d
+    btr     eax, ecx
+    test    bh, bh
+    jz      .no_set_r8
+    bts     eax, r8d
+.no_set_r8:
+    test    bl, bl
+    jz      .no_set_ecx
+    bts     eax, ecx
+.no_set_ecx:
+    mov     [rbp-16], eax
+
+.no_swap_needed:
+    ; Store pivot column for this row
+    lea     rdi, [rbp-144]
+    mov     [rdi + r8*4], r9d           ; pivot_cols[r8] = r9
+
+    ; Eliminate: XOR all other rows that have bit r9 set
+    lea     rdi, [rbp-80]
+    mov     ebx, [rdi + r8*4]           ; pivot row value
+    xor     ecx, ecx                    ; row index
+.elim_loop:
+    cmp     ecx, r10d                   ; row < lights?
+    jge     .elim_done
+    cmp     ecx, r8d                    ; skip pivot row
+    je      .elim_next
+
+    mov     eax, [rdi + rcx*4]
+    bt      eax, r9d                    ; test if bit r9 set
+    jnc     .elim_next
+
+    ; XOR with pivot row (using pxor would need xmm, just use xor for 32-bit)
+    xor     eax, ebx
+    mov     [rdi + rcx*4], eax
+
+    ; XOR target bits
+    mov     eax, [rbp-16]
+    mov     edx, eax
+    bt      edx, r8d                    ; pivot target bit
+    jnc     .elim_next                  ; if pivot target is 0, XOR doesn't change
+    btc     eax, ecx                    ; toggle target[ecx]
+    mov     [rbp-16], eax
+
+.elim_next:
+    inc     ecx
+    jmp     .elim_loop
+
+.elim_done:
+    inc     r8d                         ; next row
+    inc     r9d                         ; next column
+    jmp     .rref_col_loop
+
+.rref_done:
+    mov     [rbp-148], r8d              ; rank = r8
+
+    ; Check consistency: for rows >= rank, if target bit set but row is zero -> no solution
+    mov     ecx, r8d
+    lea     rdi, [rbp-80]
+.check_consistency:
+    cmp     ecx, r10d
+    jge     .consistency_ok
+    mov     eax, [rdi + rcx*4]
+    test    eax, eax                    ; row all zeros?
+    jnz     .next_consistency           ; not zero, ok
+    mov     eax, [rbp-16]
+    bt      eax, ecx                    ; target[row] set?
+    jc      .no_solution                ; 0 = 1 is inconsistent
+.next_consistency:
+    inc     ecx
+    jmp     .check_consistency
+
+.consistency_ok:
+    ;==========================================================================
+    ; Find free columns (columns without pivots)
+    ;==========================================================================
+    lea     rsi, [rbp-144]              ; pivot_cols
+    lea     rdi, [rbp-216]              ; free_cols
+    xor     r14d, r14d                  ; free_count = 0
+    xor     ecx, ecx                    ; column index
+
+.find_free_cols:
+    cmp     ecx, r11d                   ; col < buttons?
+    jge     .free_cols_done
+
+    ; Check if column ecx is a pivot column
+    xor     edx, edx                    ; row index
+    mov     r9d, [rbp-148]              ; rank
+.check_pivot:
+    cmp     edx, r9d
+    jge     .is_free                    ; not found as pivot -> free
+    cmp     [rsi + rdx*4], ecx          ; pivot_cols[row] == col?
+    je      .not_free
+    inc     edx
+    jmp     .check_pivot
+
+.is_free:
+    mov     [rdi + r14*4], ecx          ; free_cols[free_count] = col
+    inc     r14d
+
+.not_free:
+    inc     ecx
+    jmp     .find_free_cols
+
+.free_cols_done:
+    mov     [rbp-152], r14d             ; save free_count
+
+    ;==========================================================================
+    ; Enumerate 2^free_count combinations of free variables
+    ; For each, back-substitute to get solution and count presses
+    ;==========================================================================
+    mov     dword [rbp-156], 999        ; best = infinity
+
+    ; If free_count > 20, just use greedy (set free vars to 0)
+    cmp     r14d, 20
+    jg      .greedy_only
+
+    mov     ecx, r14d
+    mov     eax, 1
+    shl     eax, cl                     ; 2^free_count
+    mov     [rbp-160], eax              ; total combinations
     xor     ebx, ebx                    ; mask = 0
 
-.enum_subsets:
-    cmp     ebx, [rbp-88]
-    jge     .p1_done
+.enum_free:
+    cmp     ebx, [rbp-160]
+    jge     .enum_done
 
-    ; Compute XOR state for this subset
-    xor     r8d, r8d                    ; state = 0
-    xor     ecx, ecx                    ; i = 0
-.apply_buttons:
-    cmp     ecx, [rbp-84]
-    jge     .check_match
+    ; Build solution: start with free variable assignments
+    xor     r8d, r8d                    ; solution bitmask
+    xor     ecx, ecx                    ; popcount
+    lea     rdi, [rbp-216]              ; free_cols
 
-    mov     eax, ebx
-    shr     eax, cl
-    and     eax, 1
-    jz      .next_button
+    ; Set free variables according to mask bits
+    xor     edx, edx
+.set_free_vars:
+    cmp     edx, r14d                   ; free_count
+    jge     .back_substitute
+    bt      ebx, edx                    ; test bit edx in mask
+    jnc     .next_free_var
+    mov     eax, [rdi + rdx*4]          ; free_cols[edx]
+    bts     r8d, eax                    ; solution |= (1 << free_col)
+    inc     ecx                         ; popcount++
+.next_free_var:
+    inc     edx
+    jmp     .set_free_vars
 
-    xor     r8d, [rbp-80 + rcx*4]       ; state ^= button_masks[i]
+.back_substitute:
+    ; For each pivot row (rank-1 down to 0), compute pivot variable
+    mov     edx, [rbp-148]              ; rank
+    dec     edx                         ; start from rank-1
+    lea     rsi, [rbp-144]              ; pivot_cols
+    lea     rdi, [rbp-80]               ; matrix
 
-.next_button:
-    inc     ecx
-    jmp     .apply_buttons
+.back_sub_loop:
+    cmp     edx, 0
+    jl      .back_sub_done
 
-.check_match:
-    cmp     r8d, [rbp-16]               ; state == target_mask?
-    jne     .next_subset
+    mov     eax, [rsi + rdx*4]          ; pivot_col = pivot_cols[row]
+    cmp     eax, -1
+    je      .next_back_sub
 
-    ; Count bits in mask (popcount)
-    mov     eax, ebx
-    xor     ecx, ecx
-.popcount:
-    test    eax, eax
-    jz      .popcount_done
-    mov     edx, eax
-    and     edx, 1
-    add     ecx, edx
-    shr     eax, 1
-    jmp     .popcount
+    ; val = target[row] ^ (matrix[row] & solution & ~(1 << pivot_col))
+    mov     r9d, [rdi + rdx*4]          ; matrix[row]
+    btr     r9d, eax                    ; clear pivot column bit
+    and     r9d, r8d                    ; matrix[row] & solution (without pivot)
+    popcnt  r10d, r9d                   ; count overlapping bits
+    and     r10d, 1                     ; parity (XOR of all)
 
-.popcount_done:
-    cmp     ecx, [rbp-92]
-    jge     .next_subset
-    mov     [rbp-92], ecx               ; best = presses
+    mov     r9d, [rbp-16]               ; target
+    bt      r9d, edx                    ; target[row]
+    setc    r11b
+    xor     r10b, r11b                  ; val = target[row] ^ parity
 
-.next_subset:
+    ; Set solution[pivot_col] = val
+    test    r10b, r10b
+    jz      .next_back_sub
+    bts     r8d, eax                    ; solution |= (1 << pivot_col)
+    inc     ecx                         ; popcount++
+
+.next_back_sub:
+    dec     edx
+    jmp     .back_sub_loop
+
+.back_sub_done:
+    ; ecx = popcount (number of button presses)
+    cmp     ecx, [rbp-156]
+    jge     .next_enum
+    mov     [rbp-156], ecx              ; best = popcount
+
+.next_enum:
     inc     ebx
-    jmp     .enum_subsets
+    jmp     .enum_free
 
-.p1_done:
-    mov     eax, [rbp-92]
+.greedy_only:
+    ; Set all free variables to 0, just back-substitute
+    xor     r8d, r8d                    ; solution = 0
+    xor     ecx, ecx                    ; popcount = 0
+
+    mov     edx, [rbp-148]              ; rank
+    dec     edx
+    lea     rsi, [rbp-144]              ; pivot_cols
+    lea     rdi, [rbp-80]               ; matrix
+
+.greedy_back_sub:
+    cmp     edx, 0
+    jl      .greedy_done
+
+    mov     eax, [rsi + rdx*4]          ; pivot_col
+    cmp     eax, -1
+    je      .next_greedy
+
+    mov     r9d, [rdi + rdx*4]          ; matrix[row]
+    btr     r9d, eax                    ; clear pivot bit
+    and     r9d, r8d
+    popcnt  r10d, r9d
+    and     r10d, 1
+
+    mov     r9d, [rbp-16]
+    bt      r9d, edx
+    setc    r11b
+    xor     r10b, r11b
+
+    test    r10b, r10b
+    jz      .next_greedy
+    bts     r8d, eax
+    inc     ecx
+
+.next_greedy:
+    dec     edx
+    jmp     .greedy_back_sub
+
+.greedy_done:
+    mov     [rbp-156], ecx
+
+.enum_done:
+    mov     eax, [rbp-156]
     cmp     eax, 999
     jne     .have_solution
-    xor     eax, eax                    ; no solution found
+    xor     eax, eax
 .have_solution:
-    mov     rdi, r12                    ; return updated position
+    mov     rdi, r12
 
-    add     rsp, 128
+    add     rsp, 224
     pop     rbp
     pop     r15
     pop     r14
@@ -285,9 +542,17 @@ solve_p1_machine:
     ret
 
 .no_solution:
-    mov     rdi, r13
+    mov     rdi, r12
+    cmp     r12, r13
+    jge     .no_sol_ret
+.skip_to_eol2:
+    movzx   eax, byte [r12]
+    inc     r12
+    cmp     al, 10
+    jne     .skip_to_eol2
+.no_sol_ret:
     xor     eax, eax
-    add     rsp, 128
+    add     rsp, 224
     pop     rbp
     pop     r15
     pop     r14
@@ -301,16 +566,21 @@ solve_p1_machine:
 ; Input: rdi = start of line, rsi = end of file
 ; Output: rax = min presses for counters, rdi = next line
 ; Stack layout (non-overlapping):
-;   rbp-64:  targets[16] (64 bytes, int)
-;   rbp-128: solution[16] (64 bytes, int)
-;   rbp-132: n_counters (4 bytes)
-;   rbp-136: n_buttons (4 bytes)
-;   rbp-144: temp storage (8 bytes)
-;   rbp-152: temp for debug (8 bytes)
-;   rbp-216: pivot_cols[16] (64 bytes, int)
-;   rbp-472: button_lists[16][16] (256 bytes)
-;   rbp-536: button_lens[16] (64 bytes)
+;   rbp-64:   targets[16] (64 bytes, int)
+;   rbp-128:  solution[16] (64 bytes, int)
+;   rbp-132:  n_counters (4 bytes)
+;   rbp-136:  n_buttons (4 bytes)
+;   rbp-140:  n_counters copy (4 bytes)
+;   rbp-144:  temp storage (8 bytes)
+;   rbp-216:  pivot_cols[16] (64 bytes, int)
+;   rbp-472:  button_lists[16][16] (256 bytes)
+;   rbp-536:  button_lens[16] (64 bytes)
 ;   rbp-2712: matrix[16][17] as doubles (2176 bytes)
+;   rbp-2720: n_free (4 bytes)
+;   rbp-2724: best_sum (4 bytes)
+;   rbp-2788: free_cols[16] (64 bytes)
+;   rbp-2852: free_vals[16] (64 bytes)
+;   rbp-2916: best_sol[16] (64 bytes)
 ;------------------------------------------------------------------------------
 solve_p2_machine:
     push    rbx
@@ -320,7 +590,7 @@ solve_p2_machine:
     push    r15
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 2880                       ; Enough for all variables
+    sub     rsp, 2928                       ; Enough for all variables
 
     mov     r12, rdi
     mov     r13, rsi
@@ -481,8 +751,9 @@ solve_p2_machine:
     ; Matrix is 16 rows x 17 cols of doubles at rbp-2712
     ; Matrix layout: row r, col c at offset (r*17 + c)*8
 
-    mov     ecx, [rbp-132]              ; n = n_counters
-    mov     [rbp-140], ecx
+    ; r14d = actual count of targets parsed (the real n_counters for Part 2)
+    mov     [rbp-132], r14d             ; update n_counters to target count
+    mov     [rbp-140], r14d
 
     ; Zero the matrix (doubles)
     lea     rdi, [rbp-2712]
@@ -511,12 +782,16 @@ solve_p2_machine:
     cmp     edx, ecx
     jge     .p2_next_fill_button
     movzx   eax, byte [r10 + rdx]       ; counter index c
+    ; Check if c < n_counters (like C does)
+    cmp     eax, [rbp-140]              ; n_counters
+    jge     .p2_fill_row_next           ; skip if out of bounds
     ; A[c][b] at offset (c*17 + b)*8
     imul    r9d, eax, 17
     add     r9d, r8d
     lea     rdi, [rbp-2712]
     mov     rax, 0x3FF0000000000000     ; 1.0 as double
     mov     [rdi + r9*8], rax
+.p2_fill_row_next:
     inc     edx
     jmp     .p2_fill_row
 
@@ -724,8 +999,8 @@ solve_p2_machine:
 
 .p2_back_sub:
     ; Find free columns (columns without pivots)
-    ; Store at rbp-2720: n_free, rbp-2736: free_cols[4]
-    lea     rdi, [rbp-2736]
+    ; Store at rbp-2720: n_free, rbp-2788: free_cols[16]
+    lea     rdi, [rbp-2788]
     xor     ecx, ecx                    ; n_free = 0
     xor     edx, edx                    ; column index
     mov     r10d, [rbp-136]             ; n_buttons
@@ -744,7 +1019,7 @@ solve_p2_machine:
     inc     eax
     jmp     .p2_check_pivot_col
 .p2_is_free:
-    cmp     ecx, 4                      ; max 4 free vars
+    cmp     ecx, 4                      ; max 4 free vars to enumerate (rest stay 0)
     jge     .p2_not_free
     mov     [rdi + rcx*4], edx
     inc     ecx
@@ -755,20 +1030,61 @@ solve_p2_machine:
 .p2_free_done:
     mov     [rbp-2720], ecx             ; n_free
 
-    ; Initialize best_sum to large value
-    mov     dword [rbp-2740], 999999
+    ; Initialize best_sum to sum of targets
+    lea     r8, [rbp-64]                ; targets array
+    mov     r9d, [rbp-140]              ; n_counters
+    xor     eax, eax
+    xor     edx, edx
+.p2_sum_targets:
+    cmp     edx, r9d
+    jge     .p2_sum_targets_done
+    add     eax, [r8 + rdx*4]
+    inc     edx
+    jmp     .p2_sum_targets
+.p2_sum_targets_done:
+    ; Use sum of targets as initial upper bound
+    mov     [rbp-2724], eax             ; best_sum = sum of targets
+
+    ; Initialize found_solution flag to 0 (no solution found yet)
+    xor     eax, eax
+    mov     [rbp-2920], eax             ; found_solution = 0
 
     ; Initialize free variable values to 0
-    xor     eax, eax
-    mov     [rbp-2756], eax             ; free_val[0]
-    mov     [rbp-2752], eax             ; free_val[1]
-    mov     [rbp-2748], eax             ; free_val[2]
-    mov     [rbp-2744], eax             ; free_val[3]
+    ; free_vals array at rbp-2852 (16 entries)
+    lea     rdi, [rbp-2852]
+    mov     ecx, 16
+.p2_init_free_vals:
+    mov     [rdi + rcx*4 - 4], eax
+    dec     ecx
+    jnz     .p2_init_free_vals
+
+    ; Simple iterative DFS: use counter-style but with dynamic bounds
+    ; At each step: try incrementing free_val[0], if exceeds maxv reset and carry
+    ; maxv for index i = best_sum - sum(free_val[0..i-1])
 
 .p2_enum_loop:
+    ; Calculate current sum of free variables
+    mov     ecx, [rbp-2720]             ; n_free
+    test    ecx, ecx
+    jz      .p2_do_eval                 ; no free vars, just evaluate once
+
+    lea     r8, [rbp-2852]              ; free_vals
+    xor     eax, eax                    ; sum = 0
+    xor     edx, edx
+.p2_calc_sum:
+    cmp     edx, ecx
+    jge     .p2_check_prune
+    add     eax, [r8 + rdx*4]
+    inc     edx
+    jmp     .p2_calc_sum
+
+.p2_check_prune:
+    ; If sum >= best, skip evaluation and try to increment
+    cmp     eax, [rbp-2724]
+    jge     .p2_next_enum
+
+.p2_do_eval:
     ; Compute solution for current free variable values
-    ; x[free_col[i]] = free_val[i]
-    ; x[pivot_col[row]] = A[row][n] - sum(A[row][free_col[j]] * free_val[j])
     lea     rdi, [rbp-128]              ; solution array
     lea     rsi, [rbp-2712]             ; matrix
     mov     r10d, [rbp-136]             ; n_buttons
@@ -788,8 +1104,8 @@ solve_p2_machine:
     mov     ecx, [rbp-2720]             ; n_free
     test    ecx, ecx
     jz      .p2_compute_deps
-    lea     r8, [rbp-2736]              ; free_cols
-    lea     r9, [rbp-2756]              ; free_vals
+    lea     r8, [rbp-2788]              ; free_cols
+    lea     r9, [rbp-2852]              ; free_vals
     xor     edx, edx
 .p2_set_free_loop:
     cmp     edx, ecx
@@ -824,7 +1140,7 @@ solve_p2_machine:
     mov     ecx, [rbp-2720]             ; n_free
     test    ecx, ecx
     jz      .p2_round_dep
-    lea     r10, [rbp-2736]             ; free_cols
+    lea     r10, [rbp-2788]             ; free_cols
     lea     r11, [rbp-2756]             ; free_vals
     xor     edx, edx
 .p2_sub_free:
@@ -844,7 +1160,17 @@ solve_p2_machine:
     jmp     .p2_sub_free
 
 .p2_round_dep:
-    ; Round to nearest int
+    ; xmm0 = v (computed dependent variable value)
+    ; Check v >= -EPS (allow small negative due to FP error)
+    mov     rax, 0xBE112E0BE826D695     ; -1e-9 as double
+    movq    xmm3, rax
+    ucomisd xmm0, xmm3
+    jb      .p2_next_enum               ; v < -EPS, invalid solution
+
+    ; Save original v for integrality check
+    movsd   xmm4, xmm0
+
+    ; Round to nearest int using floor(v + 0.5) for positive, ceil(v - 0.5) for negative
     xorpd   xmm2, xmm2
     ucomisd xmm0, xmm2
     jb      .p2_round_neg2
@@ -852,13 +1178,31 @@ solve_p2_machine:
     movq    xmm1, rax
     addsd   xmm0, xmm1
     cvttsd2si eax, xmm0
-    jmp     .p2_store_dep
+    jmp     .p2_check_integ
 
 .p2_round_neg2:
     mov     rax, 0x3FE0000000000000     ; 0.5
     movq    xmm1, rax
     subsd   xmm0, xmm1
     cvttsd2si eax, xmm0
+
+.p2_check_integ:
+    ; Check |v - round(v)| <= EPS
+    cvtsi2sd xmm1, eax                  ; xmm1 = iv (rounded value as double)
+    subsd   xmm4, xmm1                  ; xmm4 = v - iv
+    ; Get absolute value
+    xorpd   xmm2, xmm2
+    ucomisd xmm4, xmm2
+    jae     .p2_check_eps
+    ; xmm4 is negative, negate it
+    xorpd   xmm5, xmm5
+    subsd   xmm5, xmm4
+    movsd   xmm4, xmm5
+.p2_check_eps:
+    mov     rax, 0x3E112E0BE826D695     ; 1e-9 as double (EPS)
+    movq    xmm3, rax
+    ucomisd xmm4, xmm3
+    ja      .p2_next_enum               ; |v - iv| > EPS, not an integer
 
 .p2_store_dep:
     mov     [rdi + r9*4], eax
@@ -883,11 +1227,12 @@ solve_p2_machine:
     jmp     .p2_valid_loop
 
 .p2_update_best:
-    cmp     eax, [rbp-2740]
+    cmp     eax, [rbp-2724]
     jge     .p2_next_enum
-    mov     [rbp-2740], eax             ; new best sum
-    ; Copy solution to best_sol at rbp-2820
-    lea     r8, [rbp-2820]
+    mov     [rbp-2724], eax             ; new best sum
+    mov     dword [rbp-2920], 1         ; found_solution = 1
+    ; Copy solution to best_sol at rbp-2916
+    lea     r8, [rbp-2916]
     xor     ecx, ecx
 .p2_copy_best:
     cmp     ecx, r10d
@@ -898,23 +1243,52 @@ solve_p2_machine:
     jmp     .p2_copy_best
 
 .p2_next_enum:
-    ; Increment free variable values (like counting in base MAX_FREE_VAL)
-    ; free_val[0]++, if >= MAX, reset and carry
+    ; Increment free variable values with dynamic bounds
+    ; free_val[0]++, if exceeds maxv, reset and carry to next
+    ; maxv[i] = best_sum - sum(free_val[i+1..n-1]) (suffix sum, not prefix!)
     mov     ecx, [rbp-2720]             ; n_free
     test    ecx, ecx
-    jz      .p2_enum_done               ; no free vars, done after one iteration
+    jz      .p2_enum_done               ; no free vars, done
 
-    lea     r8, [rbp-2756]              ; free_vals
-    xor     edx, edx                    ; index
+    lea     r8, [rbp-2852]              ; free_vals
+    xor     edx, edx                    ; index (start from 0, fastest changing)
+
 .p2_inc_free:
     cmp     edx, ecx
     jge     .p2_enum_done               ; all overflowed, done
+
+    ; Calculate suffix_sum = sum(free_vals[idx+1..n-1])
+    xor     r9d, r9d                    ; suffix_sum = 0
+    mov     r11d, edx
+    inc     r11d                        ; start from idx+1
+.p2_calc_suffix:
+    cmp     r11d, ecx
+    jge     .p2_suffix_done
+    add     r9d, [r8 + r11*4]
+    inc     r11d
+    jmp     .p2_calc_suffix
+.p2_suffix_done:
+
+    ; maxv = best_sum - suffix_sum
+    mov     r10d, [rbp-2724]            ; best_sum
+    sub     r10d, r9d                   ; maxv = best_sum - suffix_sum
+
+    ; Cap maxv at 500 per variable to prevent runaway search
+    cmp     r10d, 500
+    jle     .p2_maxv_ok
+    mov     r10d, 500
+.p2_maxv_ok:
+
+    ; Try incrementing
     mov     eax, [r8 + rdx*4]
     inc     eax
-    cmp     eax, 200                    ; MAX_FREE_VAL
-    jl      .p2_store_inc
-    ; Overflow, reset and carry
-    mov     dword [r8 + rdx*4], 0
+
+    ; Check if within bounds (value <= maxv, allows sum == best which gets pruned later)
+    cmp     eax, r10d
+    jle     .p2_store_inc               ; valid, store and continue
+
+    ; Overflow: reset this var, carry to next
+    mov     dword [r8 + rdx*4], 0       ; reset to 0
     inc     edx
     jmp     .p2_inc_free
 
@@ -923,13 +1297,16 @@ solve_p2_machine:
     jmp     .p2_enum_loop
 
 .p2_enum_done:
-    ; Use best solution if found
-    cmp     dword [rbp-2740], 999999
-    je      .p2_no_solution
+    ; Check if any solution was found
+    mov     eax, [rbp-2920]             ; found_solution flag
+    test    eax, eax
+    jz      .p2_no_solution             ; no solution found, return 0
+
+    ; Best solution is in best_sum (initialized to sum of targets, updated if better found)
 
     ; Copy best_sol to solution
     lea     rdi, [rbp-128]
-    lea     r8, [rbp-2820]
+    lea     r8, [rbp-2916]
     mov     r10d, [rbp-136]
     xor     ecx, ecx
 .p2_copy_final:
@@ -970,7 +1347,7 @@ solve_p2_machine:
     mov     eax, [rbp-24]
     mov     rdi, r12
 
-    add     rsp, 2880
+    add     rsp, 2928
     pop     rbp
     pop     r15
     pop     r14
@@ -982,7 +1359,7 @@ solve_p2_machine:
 .p2_no_solution:
     mov     rdi, r13
     xor     eax, eax
-    add     rsp, 2880
+    add     rsp, 2928
     pop     rbp
     pop     r15
     pop     r14

@@ -111,16 +111,6 @@ def part2(machines)
     sum_targets = targets.sum
     best_total = sum_targets
     free_vals = Array.new(free_count, 0)
-    bounds = Array.new(free_count, best_total)
-    (0...free_count).each do |f|
-      (0...rank).each do |r|
-        a = coef[r][f]
-        if a > eps
-          limit = (rhs[r] / a + eps).floor
-          bounds[f] = limit if limit < bounds[f]
-        end
-      end
-    end
 
     evaluate = lambda do |cur|
       return if cur >= best_total
@@ -145,9 +135,8 @@ def part2(machines)
         evaluate.call(cur)
         return
       end
-      lim = [cap, bounds[idx]].min
-      return if lim < 0
-      (0..lim).each do |v|
+      (0..cap).each do |v|
+        break if cur + v >= best_total
         free_vals[idx] = v
         quick.call(idx + 1, cur + v, cap)
       end
@@ -162,8 +151,7 @@ def part2(machines)
         evaluate.call(cur)
         return
       end
-      maxv = [best_total - cur, bounds[idx]].min
-      return if maxv < 0
+      maxv = best_total - cur
       (0..maxv).each do |v|
         free_vals[idx] = v
         dfs.call(idx + 1, cur + v)

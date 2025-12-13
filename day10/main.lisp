@@ -138,7 +138,6 @@
                       (when (< pos lights)
                         (setf (bit (nth pos matrix) idx) (logxor (bit (nth pos matrix) idx) 1)))))
             (multiple-value-bind (rank pivot-cols) (rref-binary matrix target lights button-count)
-              ;; check consistency
               (let ((ok t))
                 (loop for r from rank below lights do
                   (let ((row (nth r matrix)))
@@ -149,79 +148,113 @@
                   (incf total (solve-min-presses matrix target lights button-count rank pivot-cols)))))))))
     total))
 
-;; ---------- Part B (integer system) ----------
-(defun rref-rational (aug rows cols)
-  (let ((pivot-cols (make-array rows :initial-element -1))
-        (rank 0))
-    (loop for col from 0 below cols while (< rank rows) do
-      (let ((pivot -1))
-        (loop for r from rank below rows do
-          (unless (zerop (aref aug r col))
-            (setf pivot r)
-            (return)))
-        (when (>= pivot 0)
-          (when (/= pivot rank)
-            (loop for c from col to cols do
-              (rotatef (aref aug rank c) (aref aug pivot c))))
-          (let ((piv (aref aug rank col)))
-            (loop for c from col to cols do
-              (setf (aref aug rank c) (/ (aref aug rank c) piv))))
-          (loop for r from 0 below rows do
-            (unless (= r rank)
-              (let ((factor (aref aug r col)))
-                (when (/= factor 0)
-                  (loop for c from col to cols do
-                    (decf (aref aug r c) (* factor (aref aug rank c)))))))))
-          (setf (aref pivot-cols rank) col)
-          (incf rank)))
-    (values rank pivot-cols)))
+;; ---------- Part B (floating-point RREF) ----------
+(defconstant +eps+ 1.0d-9)
 
-(defun integer-solution (aug rows cols targets)
-  (multiple-value-bind (rank pivot-cols) (rref-rational aug rows cols)
-    ;; consistency check
-    (loop for r from rank below rows do
-      (let ((all-zero t))
-        (loop for c from 0 below cols do
-          (unless (zerop (aref aug r c)) (setf all-zero nil)))
-        (when (and all-zero (not (zerop (aref aug r cols))))
-          (return-from integer-solution nil))))
-    (let ((pivot-set (make-hash-table))
-          (free-cols '()))
-      (loop for i from 0 below rank do
-        (when (>= (aref pivot-cols i) 0)
-          (setf (gethash (aref pivot-cols i) pivot-set) t)))
-      (loop for c from 0 below cols do
-        (unless (gethash c pivot-set) (push c free-cols)))
-      (setf free-cols (nreverse free-cols))
-      (let* ((free-count (length free-cols))
-             (rhs (make-array rank))
-             (coef (make-array (list rank free-count) :initial-element 0)))
-        (loop for r from 0 below rank do
-          (setf (aref rhs r) (aref aug r cols))
-          (loop for f from 0 below free-count do
-            (setf (aref coef r f) (aref aug r (nth f free-cols)))))
-        (let ((best nil)
-              (assign (make-array free-count))
-              (cap (max 10 (apply #'max targets))))
-          (labels ((dfs (idx sum-so-far)
-                     (when (and best (>= sum-so-far best)) (return-from dfs nil))
-                     (if (= idx free-count)
-                         (let ((total sum-so-far))
-                           (loop for r from 0 below rank do
-                             (let ((val (aref rhs r)))
-                               (loop for f from 0 below free-count do
-                                 (decf val (* (aref coef r f) (aref assign f))))
-                               (when (or (< val 0) (not (integerp val)))
-                                 (return-from dfs nil))
-                               (incf total val)))
-                           (when (or (null best) (< total best))
-                             (setf best total))
-                           nil)
-                         (loop for v from 0 to cap do
-                           (setf (aref assign idx) v)
-                           (dfs (1+ idx) (+ sum-so-far v))))))
-            (dfs 0 0)
-            best))))))
+(defun solve-machine-part2 (targets buttons)
+  (let* ((counters (length targets))
+         (n-buttons (length buttons)))
+    (when (or (zerop counters) (zerop n-buttons))
+      (return-from solve-machine-part2 0))
+    ;; Build matrix counters x buttons
+    (let ((mat (make-array (list counters n-buttons) :element-type 'double-float :initial-element 0.0d0))
+          (rhs (make-array counters :element-type 'double-float)))
+      (loop for i from 0 below counters do
+        (setf (aref rhs i) (coerce (nth i targets) 'double-float)))
+      (loop for cidx from 0 below n-buttons
+            for btn in buttons do
+        (dolist (t-idx btn)
+          (when (and (>= t-idx 0) (< t-idx counters))
+            (setf (aref mat t-idx cidx) 1.0d0))))
+      ;; RREF
+      (let ((pivot-cols (make-array counters :initial-element -1))
+            (row 0))
+        (loop for col from 0 below n-buttons while (< row counters) do
+          (let ((pivot -1)
+                (best-val 0.0d0))
+            (loop for r from row below counters do
+              (let ((val (abs (aref mat r col))))
+                (when (and (> val +eps+) (> val best-val))
+                  (setf best-val val pivot r))))
+            (when (>= pivot 0)
+              (when (/= pivot row)
+                (loop for c from 0 below n-buttons do
+                  (rotatef (aref mat row c) (aref mat pivot c)))
+                (rotatef (aref rhs row) (aref rhs pivot)))
+              (let ((piv (aref mat row col)))
+                (loop for c from col below n-buttons do
+                  (setf (aref mat row c) (/ (aref mat row c) piv)))
+                (setf (aref rhs row) (/ (aref rhs row) piv)))
+              (loop for r from 0 below counters do
+                (unless (= r row)
+                  (let ((f (aref mat r col)))
+                    (when (> (abs f) +eps+)
+                      (loop for c from col below n-buttons do
+                        (decf (aref mat r c) (* f (aref mat row c))))
+                      (decf (aref rhs r) (* f (aref rhs row)))))))
+              (setf (aref pivot-cols row) col)
+              (incf row))))
+        (let ((rank row))
+          ;; Consistency check
+          (loop for r from rank below counters do
+            (let ((maxv 0.0d0))
+              (loop for c from 0 below n-buttons do
+                (setf maxv (max maxv (abs (aref mat r c)))))
+              (when (and (< maxv +eps+) (> (abs (aref rhs r)) +eps+))
+                (return-from solve-machine-part2 nil))))
+          ;; Find free columns
+          (let ((used (make-array n-buttons :initial-element nil)))
+            (loop for i from 0 below rank do
+              (when (>= (aref pivot-cols i) 0)
+                (setf (aref used (aref pivot-cols i)) t)))
+            (let ((free-cols (loop for c from 0 below n-buttons unless (aref used c) collect c)))
+              (let* ((free-count (length free-cols))
+                     (coef (make-array (list rank free-count) :element-type 'double-float :initial-element 0.0d0)))
+                (loop for r from 0 below rank do
+                  (loop for f from 0 below free-count do
+                    (setf (aref coef r f) (aref mat r (nth f free-cols)))))
+                (let ((sum-targets (reduce #'+ targets))
+                      (best 0)
+                      (free-vals (make-array free-count :initial-element 0)))
+                  (setf best sum-targets)
+                  (labels ((evaluate (cur)
+                             (when (>= cur best) (return-from evaluate))
+                             (let ((sum cur))
+                               (loop for r from 0 below rank do
+                                 (let ((v (aref rhs r)))
+                                   (loop for f from 0 below free-count do
+                                     (decf v (* (aref coef r f) (aref free-vals f))))
+                                   (when (< v (- +eps+)) (return-from evaluate))
+                                   (let ((iv (round v)))
+                                     (when (> (abs (- iv v)) +eps+) (return-from evaluate))
+                                     (incf sum iv)
+                                     (when (>= sum best) (return-from evaluate)))))
+                               (when (< sum best)
+                                 (setf best sum))))
+                           (quick (idx cur cap)
+                             (when (>= cur best) (return-from quick))
+                             (if (= idx free-count)
+                                 (evaluate cur)
+                                 (loop for v from 0 to cap do
+                                   (when (>= (+ cur v) best) (return))
+                                   (setf (aref free-vals idx) v)
+                                   (quick (1+ idx) (+ cur v) cap))))
+                           (dfs (idx cur)
+                             (when (>= cur best) (return-from dfs))
+                             (if (= idx free-count)
+                                 (evaluate cur)
+                                 (let ((maxv (- best cur)))
+                                   (loop for v from 0 to maxv do
+                                     (setf (aref free-vals idx) v)
+                                     (dfs (1+ idx) (+ cur v)))))))
+                    (evaluate 0)
+                    (let ((seed-cap (min 400 best)))
+                      (when (and (> free-count 0) (> seed-cap 0))
+                        (quick 0 0 seed-cap)))
+                    (if (> free-count 0)
+                        (dfs 0 0)
+                        (evaluate 0)))
+                  best)))))))))
 
 (defun part2 (lines)
   (let ((total 0))
@@ -229,17 +262,9 @@
       (let ((targets (parse-targets line))
             (buttons (parse-buttons line)))
         (when (and targets buttons)
-          (let* ((rows (length targets))
-                 (cols (length buttons))
-                 (aug (make-array (list rows (1+ cols)) :initial-element 0)))
-            (loop for r from 0 below rows do
-              (setf (aref aug r cols) (nth r targets)))
-            (loop for c from 0 below cols do
-              (dolist (idx (nth c buttons))
-                (when (< idx rows)
-                  (incf (aref aug idx c)))))
-            (let ((best (integer-solution aug rows cols targets)))
-              (when best (incf total best)))))))
+          (let ((result (solve-machine-part2 targets buttons)))
+            (when result
+              (incf total result))))))
     total))
 
 (defun main ()

@@ -9,3 +9,4 @@ path = "main.rs"
 
 [dependencies]
 regex = "1"
+nalgebra = "0.33"

@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gonum.org/v1/gonum/mat"
 )
 
 type Machine struct {
@@ -59,64 +61,183 @@ func loadMachines(path string) []Machine {
 	return m
 }
 
+// GF(2) Gaussian elimination for Part 1 using gonum for matrix storage
+func gf2Solve(buttons [][]int, target []uint8, lights int) int {
+	nButtons := len(buttons)
+	if nButtons == 0 {
+		allZero := true
+		for _, t := range target {
+			if t != 0 {
+				allZero = false
+				break
+			}
+		}
+		if allZero {
+			return 0
+		}
+		return -1
+	}
+
+	// Build augmented matrix [A | b] over GF(2) using gonum for storage
+	augData := make([]float64, lights*(nButtons+1))
+	for bIdx, btn := range buttons {
+		for _, light := range btn {
+			if light < lights {
+				augData[light*(nButtons+1)+bIdx] = 1
+			}
+		}
+	}
+	for i, t := range target {
+		augData[i*(nButtons+1)+nButtons] = float64(t)
+	}
+	aug := mat.NewDense(lights, nButtons+1, augData)
+
+	// Gaussian elimination over GF(2)
+	pivotCols := []int{}
+	row := 0
+	for col := 0; col < nButtons; col++ {
+		pivot := -1
+		for r := row; r < lights; r++ {
+			if int(aug.At(r, col))%2 == 1 {
+				pivot = r
+				break
+			}
+		}
+		if pivot == -1 {
+			continue
+		}
+		if pivot != row {
+			for c := 0; c <= nButtons; c++ {
+				v1, v2 := aug.At(row, c), aug.At(pivot, c)
+				aug.Set(row, c, v2)
+				aug.Set(pivot, c, v1)
+			}
+		}
+		pivotCols = append(pivotCols, col)
+		for r := 0; r < lights; r++ {
+			if r != row && int(aug.At(r, col))%2 == 1 {
+				for c := 0; c <= nButtons; c++ {
+					aug.Set(r, c, float64((int(aug.At(r, c))+int(aug.At(row, c)))%2))
+				}
+			}
+		}
+		row++
+	}
+
+	rank := len(pivotCols)
+
+	for r := rank; r < lights; r++ {
+		if int(aug.At(r, nButtons))%2 == 1 {
+			return -1
+		}
+	}
+
+	pivotSet := make(map[int]bool)
+	for _, pc := range pivotCols {
+		pivotSet[pc] = true
+	}
+	freeCols := []int{}
+	for c := 0; c < nButtons; c++ {
+		if !pivotSet[c] {
+			freeCols = append(freeCols, c)
+		}
+	}
+	nFree := len(freeCols)
+
+	best := -1
+	for mask := 0; mask < (1 << nFree); mask++ {
+		sol := make([]int, nButtons)
+		for i, fc := range freeCols {
+			sol[fc] = (mask >> i) & 1
+		}
+
+		for i := rank - 1; i >= 0; i-- {
+			pc := pivotCols[i]
+			val := int(aug.At(i, nButtons))
+			for c := pc + 1; c < nButtons; c++ {
+				val ^= int(aug.At(i, c)) * sol[c]
+			}
+			sol[pc] = val % 2
+		}
+
+		weight := 0
+		for _, v := range sol {
+			weight += v
+		}
+		if best == -1 || weight < best {
+			best = weight
+		}
+	}
+
+	return best
+}
+
 func part1(ms []Machine) int {
 	total := 0
 	for _, m := range ms {
 		lights := len(m.pattern)
-		target := 0
+		target := make([]uint8, lights)
 		for i, ch := range m.pattern {
 			if ch == '#' {
-				target |= 1 << i
+				target[i] = 1
 			}
 		}
-		buttonMasks := make([]int, len(m.buttons))
-		for i, b := range m.buttons {
-			mask := 0
-			for _, idx := range b {
-				if idx < lights {
-					mask ^= 1 << idx
-				}
-			}
-			buttonMasks[i] = mask
+		result := gf2Solve(m.buttons, target, lights)
+		if result >= 0 {
+			total += result
 		}
-		best := -1
-		n := len(buttonMasks)
-		for mask := 0; mask < (1 << n); mask++ {
-			state := 0
-			presses := 0
-			for i := 0; i < n; i++ {
-				if mask>>i&1 == 1 {
-					state ^= buttonMasks[i]
-					presses++
-				}
-			}
-			if state == target {
-				if best == -1 || presses < best {
-					best = presses
-				}
-			}
-		}
-		total += best
 	}
 	return total
 }
 
+// Part 2 using gonum for matrix storage and float64 RREF with DFS search
 func part2(ms []Machine) int {
 	total := 0
 	const EPS = 1e-9
 
-	rref := func(mat [][]float64, rhs []float64, cols int) (int, []int, bool) {
-		rows := len(mat)
-		pivot := make([]int, rows)
-		for i := range pivot {
-			pivot[i] = -1
+	for _, m := range ms {
+		counters := len(m.targets)
+		buttons := len(m.buttons)
+		if counters == 0 || buttons == 0 {
+			continue
+		}
+
+		// Build matrix using gonum
+		data := make([]float64, counters*buttons)
+		for cidx, b := range m.buttons {
+			for _, t := range b {
+				if t >= 0 && t < counters {
+					data[t*buttons+cidx] = 1.0
+				}
+			}
+		}
+		A := mat.NewDense(counters, buttons, data)
+
+		// Extract to slices for RREF
+		matSlice := make([][]float64, counters)
+		for i := 0; i < counters; i++ {
+			matSlice[i] = make([]float64, buttons)
+			for j := 0; j < buttons; j++ {
+				matSlice[i][j] = A.At(i, j)
+			}
+		}
+
+		rhs := make([]float64, counters)
+		for i, v := range m.targets {
+			rhs[i] = float64(v)
+		}
+
+		// RREF
+		pivotCols := make([]int, counters)
+		for i := range pivotCols {
+			pivotCols[i] = -1
 		}
 		row := 0
-		for col := 0; col < cols && row < rows; col++ {
+		for col := 0; col < buttons && row < counters; col++ {
 			pivotRow := -1
 			best := 0.0
-			for r := row; r < rows; r++ {
-				val := math.Abs(mat[r][col])
+			for r := row; r < counters; r++ {
+				val := math.Abs(matSlice[r][col])
 				if val > EPS && val > best {
 					best = val
 					pivotRow = r
@@ -126,74 +247,52 @@ func part2(ms []Machine) int {
 				continue
 			}
 			if pivotRow != row {
-				mat[row], mat[pivotRow] = mat[pivotRow], mat[row]
+				matSlice[row], matSlice[pivotRow] = matSlice[pivotRow], matSlice[row]
 				rhs[row], rhs[pivotRow] = rhs[pivotRow], rhs[row]
 			}
-			piv := mat[row][col]
-			for c := col; c < cols; c++ {
-				mat[row][c] /= piv
+			piv := matSlice[row][col]
+			for c := col; c < buttons; c++ {
+				matSlice[row][c] /= piv
 			}
 			rhs[row] /= piv
-			for r := 0; r < rows; r++ {
+			for r := 0; r < counters; r++ {
 				if r == row {
 					continue
 				}
-				f := mat[r][col]
+				f := matSlice[r][col]
 				if math.Abs(f) < EPS {
 					continue
 				}
-				for c := col; c < cols; c++ {
-					mat[r][c] -= f * mat[row][c]
+				for c := col; c < buttons; c++ {
+					matSlice[r][c] -= f * matSlice[row][c]
 				}
 				rhs[r] -= f * rhs[row]
 			}
-			pivot[row] = col
+			pivotCols[row] = col
 			row++
 		}
+
 		rank := row
-		for r := rank; r < len(mat); r++ {
+
+		// Check consistency
+		bad := false
+		for r := rank; r < counters; r++ {
 			maxv := 0.0
-			for c := 0; c < cols; c++ {
-				if v := math.Abs(mat[r][c]); v > maxv {
+			for c := 0; c < buttons; c++ {
+				if v := math.Abs(matSlice[r][c]); v > maxv {
 					maxv = v
 				}
 			}
 			if maxv < EPS && math.Abs(rhs[r]) > EPS {
-				return rank, pivot, true
+				bad = true
+				break
 			}
 		}
-		return rank, pivot, false
-	}
-
-	for _, m := range ms {
-		counters := len(m.targets)
-		buttons := len(m.buttons)
-		if counters == 0 || buttons == 0 {
-			continue
-		}
-
-		mat := make([][]float64, counters)
-		for i := 0; i < counters; i++ {
-			mat[i] = make([]float64, buttons)
-		}
-		for cidx, b := range m.buttons {
-			for _, t := range b {
-				if t >= 0 && t < counters {
-					mat[t][cidx] = 1.0
-				}
-			}
-		}
-
-		rhs := make([]float64, counters)
-		for i, v := range m.targets {
-			rhs[i] = float64(v)
-		}
-
-		rank, pivotCols, bad := rref(mat, rhs, buttons)
 		if bad {
 			continue
 		}
 
+		// Free variables
 		used := make([]bool, buttons)
 		for i := 0; i < rank; i++ {
 			if pivotCols[i] >= 0 {
@@ -212,7 +311,7 @@ func part2(ms []Machine) int {
 		for r := 0; r < rank; r++ {
 			coef[r] = make([]float64, freeCount)
 			for f := 0; f < freeCount; f++ {
-				coef[r][f] = mat[r][freeCols[f]]
+				coef[r][f] = matSlice[r][freeCols[f]]
 			}
 		}
 
@@ -222,18 +321,6 @@ func part2(ms []Machine) int {
 		}
 		best := sumTargets
 		freeVals := make([]int, freeCount)
-		bounds := make([]int, freeCount)
-		for f := 0; f < freeCount; f++ {
-			bounds[f] = best
-			for r := 0; r < rank; r++ {
-				if coef[r][f] > EPS {
-					limit := int(math.Floor(rhs[r]/coef[r][f] + EPS))
-					if limit < bounds[f] {
-						bounds[f] = limit
-					}
-				}
-			}
-		}
 
 		evaluate := func(cur int) {
 			if cur >= best {
@@ -273,14 +360,10 @@ func part2(ms []Machine) int {
 				evaluate(cur)
 				return
 			}
-			lim := cap
-			if bounds[idx] < lim {
-				lim = bounds[idx]
-			}
-			if lim < 0 {
-				return
-			}
-			for v := 0; v <= lim; v++ {
+			for v := 0; v <= cap; v++ {
+				if cur+v >= best {
+					break
+				}
 				freeVals[idx] = v
 				quick(idx+1, cur+v, cap)
 			}
@@ -304,12 +387,6 @@ func part2(ms []Machine) int {
 				return
 			}
 			maxv := best - cur
-			if bounds[idx] < maxv {
-				maxv = bounds[idx]
-			}
-			if maxv < 0 {
-				return
-			}
 			for v := 0; v <= maxv; v++ {
 				freeVals[idx] = v
 				dfs(idx+1, cur+v)
@@ -321,9 +398,7 @@ func part2(ms []Machine) int {
 		} else {
 			evaluate(0)
 		}
-		if best < math.MaxInt64 {
-			total += best
-		}
+		total += best
 	}
 	return total
 }
