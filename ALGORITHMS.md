@@ -50,6 +50,23 @@ Find IDs within given ranges that consist of a digit sequence repeated k times (
   - Check if first `len/k` digits repeat exactly k times
 - Part 2: Check for any k ≥ 2 that divides the digit count
 
+### Algorithm Notes
+
+**Performance tip:** Avoid `log10`/`pow` for digit counting. Use string length instead:
+```c
+char buf[20]; sprintf(buf, "%llu", n);
+int len = strlen(buf);
+// Compare halves with strncmp instead of math
+```
+
+**Faster alternative (precomputation):** For large ranges, precompute all valid repeated-pattern numbers:
+1. Generate all k-repeated patterns (k=2,3,...) up to max range value
+2. Store in sorted array (~100k-1M numbers depending on max)
+3. For each range query, binary search to count matches
+4. Converts O(range_size × digit_checks) → O(log(valid_patterns))
+
+This is especially effective when ranges are large or queries are repeated.
+
 ### Idiomatic Suggestions
 
 | Language | Approach |
@@ -140,6 +157,11 @@ Grid of paper rolls (`@`). Part 1: Count rolls accessible by forklift (fewer tha
 - SIMD parallel processing of grid rows
 - Consider spatial locality: process in cache-line-sized chunks
 
+**Bitfield packing optimization:** Instead of `int neighbors[MAX][MAX]` (16MB for 4K×4K):
+- Pack neighbor count as 3-bit field (values 0-8) → 1 byte per cell
+- Or use separate "accessible" bitfield for O(1) threshold check
+- Reduces memory footprint 4-16x, improves cache utilization
+
 ---
 
 ## Day 5: Fresh Paint (Interval Merging)
@@ -153,6 +175,18 @@ Given painted intervals with IDs, find "fresh" IDs (those whose paint is still v
 - Merge overlapping intervals, tracking which IDs get covered
 - Part 1: Binary search to find smallest uncovered ID
 - Part 2: Count all IDs that remain visible after merging
+
+### Algorithm Notes
+
+**Faster Part 1 alternative (two-pointer merge):** Instead of binary search per ID:
+1. Sort ID list once: O(ids × log ids)
+2. Merge-walk sorted IDs with sorted intervals using two pointers
+3. For each ID, advance interval pointer until ID is covered or past current interval
+4. Complexity: O(ids × log ids + ids + intervals) vs O(ids × log intervals)
+
+For the typical case (698 IDs, ~100 merged intervals):
+- Current: 698 × log(100) ≈ 4600 comparisons
+- Two-pointer: 698 + 100 ≈ 800 comparisons (after initial sort)
 
 ### Idiomatic Suggestions
 
@@ -212,11 +246,15 @@ Parse vertical math problems from ASCII art. Part 1: Numbers are in rows (read h
 Simulate beams of light through a grid of mirrors and splitters. Count how many cells each configuration illuminates.
 
 ### C Algorithm
-- BFS/simulation tracking beam position and direction
-- Handle mirrors (`/`, `\`) by direction change
-- Handle splitters (`|`, `-`) by spawning two beams
-- Track visited (position, direction) pairs to avoid cycles
-- Count unique positions visited
+The C implementation uses **row-by-row simulation** (not generic BFS):
+- Process grid row by row, tracking active beam columns per row
+- Beams always move downward; splitters spawn left/right within same row
+- Part 1: Track unique illuminated cells with deduplication
+- Part 2: Track count of "ways to reach each column" (quantum timelines)
+  - When hitting splitter, count doubles (branches into two timelines)
+  - Sum counts at final row for total paths
+
+This row-by-row approach is more cache-friendly than generic BFS.
 
 ### Idiomatic Suggestions
 
@@ -232,9 +270,15 @@ Simulate beams of light through a grid of mirrors and splitters. Count how many 
 | **Haskell** | `Data.Set` for visited; `Seq` for BFS queue |
 
 ### Assembly Optimization
+For row-by-row simulation (matching C implementation):
+- Use SIMD (`vpaddd`) for parallel column count updates within a row
+- Pack active columns as bitmask for fast splitter propagation
+- `popcnt` for counting active beams per row
+- Branchless splitter handling with lookup tables for left/right expansion
+
+For generic BFS approach (alternative):
 - Pack direction in 2 bits, position in remaining bits for single-word state
 - Use `bt`/`bts` for bitset visited tracking
-- Branchless direction updates with lookup tables
 
 ---
 
@@ -330,10 +374,14 @@ Grid of lights with toggle rules. Part 1: Find button presses to turn all lights
 | **Haskell** | `hmatrix` for linear algebra; `glpk-hs` for ILP |
 
 ### Assembly Optimization
-- Use `pxor` (SSE2) for fast XOR row operations
-- `tzcnt`/`lzcnt` for pivot finding
-- Process 64 columns at once with bitwise operations
-- AVX-512 for 512-bit row operations
+- Use `pxor` (SSE2) for fast XOR row operations (128-bit)
+- `vpxor` (AVX2) for 256-bit row operations
+- `vpxorq` (AVX-512) for 512-bit row operations - process 512 lights in single instruction
+- `tzcnt`/`lzcnt` for pivot finding in bitpacked rows
+- Process 64 columns at once with bitwise operations using GPRs
+- For systems > 64 lights: use multi-word bitmasks with SIMD
+
+**Part 2 ILP optimization:** Consider LP relaxation bounds to prune DFS branches earlier.
 
 ---
 
@@ -361,10 +409,22 @@ Count paths in a directed acyclic graph from sources to sinks.
 | **Julia** | `Memoize.jl` package; or `Dict` for manual memoization |
 | **Haskell** | **Ideal:** Lazy evaluation provides natural memoization with `fix`; `Data.Map` for explicit |
 
+### Algorithm Notes
+
+**ASM-friendly alternative (level-synchronous DP):** Instead of recursive memoized DFS:
+1. Assign topological level to each node (distance from sources)
+2. Process nodes level-by-level in forward order
+3. For each node, sum path counts from all predecessors
+4. Benefits: sequential memory access, naturally parallelizable across nodes in same level, no recursion overhead
+
+This converts O(V + E) recursive with stack overhead to O(V + E) iterative with better cache locality.
+
 ### Assembly Optimization
 - Linearize DAG for sequential memory access
-- Use gather instructions for predecessor lookup
+- Use gather instructions (`vpgatherdd`) for predecessor lookup
 - Unroll DP loop for better pipelining
+- **Level-synchronous:** Process all nodes at same level in parallel with SIMD
+- Prefetch next level's predecessor lists while processing current level
 
 ---
 
@@ -381,6 +441,23 @@ Pack given polyomino shapes into rectangular regions. Count regions that can be 
   - Each cell must be covered exactly once
   - Each piece copy must be placed exactly once
 - Early termination with reachability check
+
+### Recommended Alternative: Dancing Links (DLX)
+
+For exact cover problems like polyomino packing, **Dancing Links (DLX)** is the standard optimal algorithm:
+
+1. **Doubly-linked matrix representation:** Each constraint (cell coverage, piece usage) is a column; each placement is a row
+2. **Cover/uncover operations:** O(1) removal and restoration of matrix rows/columns
+3. **Knuth's Algorithm X:** Select column with fewest 1s (MRV heuristic), try each row, recurse
+
+**Why DLX is faster (5-100x typical):**
+- Efficient constraint propagation: removing a row automatically updates all related columns
+- MRV heuristic naturally prunes search tree aggressively
+- O(1) backtracking via pointer restoration (no copying)
+
+**Complexity:** Still exponential worst-case, but with much smaller constants and better pruning than naive backtracking.
+
+**Implementation:** Most languages have DLX libraries (see Idiomatic Suggestions below).
 
 ### Idiomatic Suggestions
 
