@@ -105,32 +105,40 @@ Given a sequence of digits, select exactly k digits (in order) to form the large
 ## Day 4: Paper Rolls Grid
 
 ### Problem Summary
-Grid of paper rolls. Part 1: Count rolls with <4 orthogonal neighbors. Part 2: Iteratively remove rolls with <2 neighbors until stable; count remaining.
+Grid of paper rolls (`@`). Part 1: Count rolls accessible by forklift (fewer than 4 of 8 adjacent neighbors). Part 2: Iteratively remove accessible rolls until none remain; count total removed.
 
 ### C Algorithm
 - Parse grid into 2D array
-- Part 1: Count neighbors for each cell; sum cells with count < 4
-- Part 2:
-  - Repeat until no changes: mark cells with <2 neighbors for removal
-  - Count remaining cells
+- Precompute neighbor count for each roll (8-directional)
+- **Part 1:** Count cells with neighbor count < 4
+- **Part 2:** BFS wavefront removal:
+  1. Enqueue all initially accessible rolls
+  2. Dequeue a roll, remove it, increment count
+  3. Decrement neighbor counts of adjacent rolls
+  4. If any neighbor's count drops below 4, enqueue it
+  5. Repeat until queue empty
+- Complexity: O(rows × cols) - each cell processed at most once
+
+**Key insight:** The naive approach (rescan entire grid each iteration) is O(iterations × n). BFS ensures O(n) by only processing cells when they become newly accessible.
 
 ### Idiomatic Suggestions
 
 | Language | Approach |
 |----------|----------|
-| **Python** | NumPy: `scipy.ndimage.convolve` with cross kernel; boolean masking |
-| **Go** | 2D slice; goroutines for parallel neighbor counting |
-| **Rust** | `ndarray` crate; iterator over neighbors with `filter_map` |
-| **TypeScript** | 2D array; `flatMap` for neighbor coordinates |
-| **Ruby** | Matrix class or 2D array; `select`/`count` with block |
-| **Lisp** | 2D array with `aref`; `loop` over coordinates |
-| **Julia** | Native 2D array; `sum(neighbors .> 0)` with broadcasting |
-| **Haskell** | `Data.Array` or `Vector`; `fix` for iterative removal |
+| **Python** | `collections.deque` for BFS; NumPy for neighbor counting with `scipy.ndimage.convolve` |
+| **Go** | Slice-based queue; 2D slice for grid and neighbor counts |
+| **Rust** | `VecDeque` for BFS; `ndarray` or flat `Vec` with index math |
+| **TypeScript** | Array as queue (shift/push); `Map` for neighbor counts |
+| **Ruby** | Array queue; `each` with 8-direction offsets |
+| **Lisp** | List-based queue or `cl-containers`; 2D array with `aref` |
+| **Julia** | `DataStructures.Queue`; native 2D array with CartesianIndex |
+| **Haskell** | `Data.Sequence` for O(1) queue; `Data.Array` for grid |
 
 ### Assembly Optimization
 - Pack grid into bitfield for cache efficiency
 - Use `popcnt` for neighbor counting with bitmasks
 - SIMD parallel processing of grid rows
+- Consider spatial locality: process in cache-line-sized chunks
 
 ---
 

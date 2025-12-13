@@ -3,65 +3,29 @@
 #include <string.h>
 #include <time.h>
 
-#define LINE_BUF 4096
-#define GRID_SIZE 2048
+#define MAX_SIZE 4096
 
-static inline int parta(char grid[GRID_SIZE][GRID_SIZE], int height, int width ) {
-    int moveable_rolls = 0;
+char grid[MAX_SIZE][MAX_SIZE];
+int neighbors[MAX_SIZE][MAX_SIZE];
+int rows = 0, cols = 0;
 
-    for (int i1 = 0; i1 < height; i1++) {
-        for (int j2=0; j2 < width; j2++) {
-            if (grid[i1][j2] != '@') continue;
+// BFS queue
+int q_row[MAX_SIZE * MAX_SIZE];
+int q_col[MAX_SIZE * MAX_SIZE];
+int q_head = 0, q_tail = 0;
+char in_queue[MAX_SIZE][MAX_SIZE];
 
-            int roll = 0;
-            for (int a1=-1; a1 <= 1; a1++) {
-                for (int b2=-1; b2 <= 1; b2++) {
-                    if (a1 == 0 && b2 == 0) continue;
-                    if (i1 + a1 < 0 || i1 + a1 >= height || j2 + b2 < 0 || j2 + b2 >= width) continue;
-                    if (grid[i1+a1][j2+b2] == '@') {
-                        roll++;
-                    }
-                }
-            }
-        //    printf("%d rolls at %d, %d\n", roll, i1, j2);
-            if (roll < 4) {
-                moveable_rolls++;
-            }
-        }
+// 8 directions
+const int dr[] = {-1, -1, -1, 0, 0, 1, 1, 1};
+const int dc[] = {-1, 0, 1, -1, 1, -1, 0, 1};
+
+void enqueue(int r, int c) {
+    if (!in_queue[r][c]) {
+        in_queue[r][c] = 1;
+        q_row[q_tail] = r;
+        q_col[q_tail] = c;
+        q_tail++;
     }
-
-    // printf("Best: %s, %d\n", buf, best);
-    return moveable_rolls;
-}
-
-
-static inline int partb(char grid[GRID_SIZE][GRID_SIZE], int height, int width ) {
-    int moveable_rolls = 0;
-
-    for (int i1 = 0; i1 < height; i1++) {
-        for (int j2=0; j2 < width; j2++) {
-            if (grid[i1][j2] != '@') continue;
-
-            int roll = 0;
-            for (int a1=-1; a1 <= 1; a1++) {
-                for (int b2=-1; b2 <= 1; b2++) {
-                    if (a1 == 0 && b2 == 0) continue;
-                    if (i1 + a1 < 0 || i1 + a1 >= height || j2 + b2 < 0 || j2 + b2 >= width) continue;
-                    if (grid[i1+a1][j2+b2] == '@') {
-                        roll++;
-                    }
-                }
-            }
-            //printf("%d rolls at %d, %d\n", roll, i1, j2);
-            if (roll < 4) {
-                grid[i1][j2] = 'x';
-                moveable_rolls++;
-            }
-        }
-    }
-
-    // printf("Best: %s, %d\n", buf, best);
-    return moveable_rolls;
 }
 
 static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
@@ -75,47 +39,76 @@ int main(void) {
         return EXIT_FAILURE;
     }
 
-    char buf[LINE_BUF];
-    int num_rolls  = 0;
-    int cul_num_rolls  = 0;
-    char grid[GRID_SIZE][GRID_SIZE];
-    int width = -1;
-    int height = 0;
-
+    char buf[MAX_SIZE + 2];
     while (fgets(buf, sizeof(buf), fp)) {
-        int new_width = strlen(buf);
-        if (new_width != width) {
-           // printf("WIDTH MISMATCH ln: %d\n", height);
-            width = strlen(buf);
+        size_t len = strcspn(buf, "\r\n");
+        if (len == 0) continue;
+        if (cols == 0) {
+            cols = (int)len;
         }
-        strcpy(grid[height++], buf);
+        memcpy(grid[rows], buf, len);
+        rows++;
     }
+    fclose(fp);
 
     struct timespec t0, t1;
     clock_gettime(CLOCK_MONOTONIC, &t0);
 
-    num_rolls = parta(grid, height, width);
-    int rolls_to_remove = partb(grid, height, width);
-    cul_num_rolls = rolls_to_remove;
+    // Precompute neighbor counts for all rolls
+    for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < cols; c++) {
+            if (grid[r][c] != '@') continue;
+            int count = 0;
+            for (int d = 0; d < 8; d++) {
+                int nr = r + dr[d], nc = c + dc[d];
+                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols)
+                    if (grid[nr][nc] == '@') count++;
+            }
+            neighbors[r][c] = count;
+        }
+    }
 
-    int cycles = 0;
-    while(rolls_to_remove > 0) {
-      //  printf("%d:  %d removed\n", cycles, rolls_to_remove);
-        rolls_to_remove = partb(grid, height, width);
-        cul_num_rolls += rolls_to_remove;
-        cycles++;
+    // Part 1: Count initially accessible rolls, enqueue them for Part 2
+    int part1 = 0;
+    for (int r = 0; r < rows; r++) {
+        for (int c = 0; c < cols; c++) {
+            if (grid[r][c] == '@' && neighbors[r][c] < 4) {
+                part1++;
+                enqueue(r, c);
+            }
+        }
+    }
+
+    // Part 2: BFS removal - process queue, update neighbors, enqueue newly accessible
+    int part2 = 0;
+    while (q_head < q_tail) {
+        int r = q_row[q_head], c = q_col[q_head];
+        q_head++;
+
+        if (grid[r][c] != '@') continue;  // Already removed
+
+        // Remove this roll
+        grid[r][c] = '.';
+        part2++;
+
+        // Update neighbors and enqueue newly accessible rolls
+        for (int d = 0; d < 8; d++) {
+            int nr = r + dr[d], nc = c + dc[d];
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                if (grid[nr][nc] == '@') {
+                    neighbors[nr][nc]--;
+                    if (neighbors[nr][nc] < 4) {
+                        enqueue(nr, nc);
+                    }
+                }
+            }
+        }
     }
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("accessible=%d removable_total=%d elapsed_ms=%.3f\n", num_rolls, cul_num_rolls, ns_since(&t0, &t1) / 1e6);
+    printf("accessible=%d removable_total=%d elapsed_ms=%.3f\n",
+           part1, part2, ns_since(&t0, &t1) / 1e6);
 
-    if (ferror(fp)) {
-        perror("read error");
-        fclose(fp);
-        return EXIT_FAILURE;
-    }
-
-    fclose(fp);
     return EXIT_SUCCESS;
 }
