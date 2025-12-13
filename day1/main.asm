@@ -1,6 +1,12 @@
 ; Day 1 solution in x86-64 assembly (SysV ABI)
-; Uses branchless techniques where beneficial.
-; Uses C stdio/stdlib for file IO and parsing.
+;
+; Hand-written ASM style:
+; - No frame pointer (rbp) - uses rsp-relative addressing only when needed
+; - Register-centric: state variables kept in callee-saved registers, not memory
+; - Branchless techniques for all conditional arithmetic
+; - Clean, intentional register allocation documented at function entry
+;
+; Uses C stdio/stdlib for file IO and timing.
 
 global main
 extern clock_gettime
@@ -20,21 +26,34 @@ one_million:   dq 1000000.0
 
 section .bss
 buf:           resb BUF_SIZE
-ts0:           resq 2                ; struct timespec { tv_sec, tv_nsec }
-ts1:           resq 2
-at_var:        resd 1
-zero_var:      resd 1
-cross_var:     resd 1
+ts0:           resq 2                ; struct timespec for start time
+ts1:           resq 2                ; struct timespec for end time
 
 section .text
 
+;------------------------------------------------------------------------------
+; main - entry point
+;
+; Register allocation (callee-saved, persist across calls):
+;   r12d = at (current dial position, starts at 50)
+;   r13d = zero_count (times dial lands on 0)
+;   r14d = cross_count (times dial crosses 0)
+;   r15  = end pointer (buf + bytes_read)
+;   rsi  = current buffer pointer (caller-saved but no calls in hot loop)
+;   ebx  = magnitude (caller-saved but no calls in hot loop)
+;
+; Scratch registers (reset each iteration):
+;   eax, ecx, edx, r8d, r9d
+;------------------------------------------------------------------------------
 main:
-    push    rbp
-    mov     rbp, rsp
+    ; Save callee-saved registers (no frame pointer - hand-written style)
+    push    rbx
     push    r12
     push    r13
     push    r14
     push    r15
+    ; 5 pushes = 40 bytes, plus 8 for return addr = 48 bytes
+    ; RSP is now 0 mod 16 (correct for function calls)
 
     ; read entire file into buffer
     lea     rdi, [rel input_file]
@@ -43,22 +62,23 @@ main:
     call    read_file_all
     cmp     rax, 0
     jl      .open_fail
-    mov     r13, rax                ; bytes read
+    mov     r15, rax                ; save bytes_read in r15 temporarily
 
-    mov     dword [at_var], 50
-    mov     dword [zero_var], 0
-    mov     dword [cross_var], 0
+    ; Initialize state in registers (no memory variables - hand-written style)
+    mov     r12d, 50                ; at = 50 (starting dial position)
+    xor     r13d, r13d              ; zero_count = 0
+    xor     r14d, r14d              ; cross_count = 0
 
     ; clock_gettime(CLOCK_MONOTONIC, &ts0)
     mov     edi, CLOCK_MONOTONIC
     lea     rsi, [rel ts0]
     call    clock_gettime
 
-    cmp     r13, 0
+    ; Set up pointers now (r15 still has bytes_read, clock_gettime preserves it)
+    test    r15, r15
     jle     .after_read
     lea     rsi, [rel buf]          ; ptr
-    lea     r15, [rel buf]
-    add     r15, r13                ; end pointer
+    add     r15, rsi                ; r15 = buf + bytes_read (end pointer)
 
 .line_loop:
     cmp     rsi, r15
@@ -99,7 +119,7 @@ main:
     mov     ebx, eax                ; mag in ebx
 
     ; Branchless first calculation: first = (sign==1) ? 100-at : at
-    mov     eax, [at_var]           ; eax = at (for sign == -1)
+    mov     eax, r12d               ; eax = at (for sign == -1)
     mov     ecx, 100
     sub     ecx, eax                ; ecx = 100 - at (for sign == 1)
     cmp     r8d, 1
@@ -124,10 +144,10 @@ main:
     inc     eax
     mov     edx, eax
 .hits_skip:
-    add     [cross_var], edx
+    add     r14d, edx               ; cross_count += hits
 
     ; Position update: pos = (at + sign*mag) % 100
-    mov     eax, [at_var]
+    mov     eax, r12d               ; eax = at
     imul    ebx, r8d                ; ebx = sign * mag
     add     eax, ebx                ; eax = at + sign*mag
     cdq
@@ -139,13 +159,13 @@ main:
     add     edx, 100                ; edx = remainder + 100
     test    eax, eax
     cmovns  edx, eax                ; if original >= 0, use original
-    mov     [at_var], edx
+    mov     r12d, edx               ; at = new position
 
-    ; Branchless zero counting: zero_var += (pos == 0)
+    ; Branchless zero counting: zero_count += (pos == 0)
     xor     eax, eax
     test    edx, edx
     setz    al                      ; al = 1 if pos==0, else 0
-    add     [zero_var], eax
+    add     r13d, eax               ; zero_count += (pos == 0)
     jmp     .line_loop
 
 .skip_line:
@@ -172,11 +192,12 @@ main:
     movsd   xmm1, [rel one_million]
     divsd   xmm0, xmm1
 
-    ; printf
+    ; printf (using register values directly)
     lea     rdi, [rel fmt_out]
-    mov     esi, [zero_var]
-    mov     edx, [cross_var]
-    mov     ecx, [at_var]
+    mov     esi, r13d               ; zero_count
+    mov     edx, r14d               ; cross_count
+    mov     ecx, r12d               ; at (final position)
+    mov     eax, 1                  ; 1 XMM register used
     call    printf
 
     xor     eax, eax
@@ -185,7 +206,7 @@ main:
     pop     r14
     pop     r13
     pop     r12
-    pop     rbp
+    pop     rbx
     ret
 
-section .note.GNU-stack noalloc nobits progbits align=1
+section .note.GNU-stack noalloc noexec nobits
