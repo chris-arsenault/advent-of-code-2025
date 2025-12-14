@@ -101,22 +101,21 @@ def run_all(
             complexities[lang].append(complexity_val)
 
             cmd = resolve_command(day, lang, cfg, day_dir)
-            code, out, err, mem_kb = run_cmd(cmd, day_dir, measure_memory)
+            code, out, err, mem_kb, elapsed_ms = run_cmd(cmd, day_dir, measure_memory)
 
             if out:
                 print(f"[{lang}] {out}")
             if err:
                 print(err, file=sys.stderr)
 
-            elapsed = extract_elapsed(out) if code == 0 else None
-            ok = code == 0 and elapsed is not None
-            day_results[lang] = {"elapsed": elapsed, "ok": ok, "out": out, "mem_kb": mem_kb if ok else None}
-            timings[lang].append(elapsed if ok else None)
-            memory[lang].append(mem_kb if ok else None)
-            ok_flags[lang].append(ok)
+            elapsed = elapsed_ms if elapsed_ms is not None else (extract_elapsed(out) if code == 0 else None)
+            ok_exec = code == 0
+            day_results[lang] = {"elapsed": elapsed, "ok": ok_exec, "out": out, "mem_kb": mem_kb if ok_exec else None}
+            timings[lang].append(elapsed if ok_exec else None)
+            memory[lang].append(mem_kb if ok_exec else None)
+            ok_flags[lang].append(ok_exec)
 
         base_out = day_results.get("c", {}).get("out")
-        base_elapsed = day_results.get("c", {}).get("elapsed")
         base_answers = extract_answers(base_out) if base_out else None
         for lang, res in day_results.items():
             if lang == "c":
@@ -140,14 +139,6 @@ def run_all(
                 timings[lang][-1] = None
                 memory[lang][-1] = None
                 ok_flags[lang][-1] = False
-
-        base = base_elapsed
-        if base is not None:
-            for lang, res in day_results.items():
-                if lang == "c":
-                    continue
-                if res["elapsed"] is not None:
-                    print(f"delta_ms ({lang} - c): {res['elapsed'] - base:.3f}")
 
         if any(not res.get("ok", False) for res in day_results.values()):
             any_fail = True

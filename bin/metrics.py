@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -34,9 +35,13 @@ def extract_max_rss(stderr_text: str) -> Optional[int]:
     return None
 
 
-def run_cmd(cmd: str, cwd: Path, measure_memory: bool) -> Tuple[int, str, str, Optional[int]]:
-    use_time = measure_memory and shutil.which("/usr/bin/time") is not None
-    timed_cmd = f"/usr/bin/time -f 'max_rss_kb=%M' {cmd}" if use_time else cmd
+def run_cmd(cmd: str, cwd: Path, measure_memory: bool) -> Tuple[int, str, str, Optional[int], Optional[float]]:
+    """Run command, timing externally with perf_counter_ns; optionally capture RSS via /usr/bin/time."""
+    time_bin = shutil.which("/usr/bin/time")
+    use_time = measure_memory and time_bin is not None
+    fmt = "max_rss_kb=%M"
+    timed_cmd = f"{time_bin} -f '{fmt}' {cmd}" if use_time else cmd
+    t0 = time.perf_counter_ns()
     result = subprocess.run(
         timed_cmd,
         shell=True,
@@ -45,12 +50,17 @@ def run_cmd(cmd: str, cwd: Path, measure_memory: bool) -> Tuple[int, str, str, O
         stderr=subprocess.PIPE,
         text=True,
     )
+    elapsed_ms = (time.perf_counter_ns() - t0) / 1e6
     stderr_text = result.stderr.strip()
     mem_kb = extract_max_rss(stderr_text) if use_time else None
     if use_time and stderr_text:
-        stderr_lines = [line for line in stderr_text.splitlines() if not line.strip().startswith("max_rss_kb=")]
+        stderr_lines = [
+            line
+            for line in stderr_text.splitlines()
+            if not line.strip().startswith("max_rss_kb=")
+        ]
         stderr_text = "\n".join(stderr_lines).strip()
-    return result.returncode, result.stdout.strip(), stderr_text, mem_kb
+    return result.returncode, result.stdout.strip(), stderr_text, mem_kb, elapsed_ms
 
 
 def count_loc(path: Path | None) -> Optional[int]:

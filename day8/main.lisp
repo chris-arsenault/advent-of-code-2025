@@ -109,10 +109,10 @@
     last-prod))
 
 (defun main ()
-  (let* ((lines (read-lines "input.txt"))
+  (let* ((t0 (get-internal-real-time))
+         (lines (read-lines "input.txt"))
          (pts (load-points lines))
          (edges (build-edges pts))
-         (t0 (get-internal-real-time))
          (p1 (part1 (length pts) edges 1000))
          (p2 (part2 pts edges))
          (t1 (get-internal-real-time))
