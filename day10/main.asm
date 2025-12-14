@@ -46,6 +46,8 @@ extern read_file_all
 ; Part 1 temporary storage (semantic names for clarity)
 %define SCR_P1_NBUTTONS    4848      ; n_buttons during parsing/elimination
 %define SCR_P1_COMBOS      4852      ; 2^free_count during enumeration
+%define SCR_P1_RANK        4856      ; rank for enumeration (survives r11d clobber)
+%define SCR_P1_PIVOT_MASK  4860      ; pivot bitmask for O(1) free column discovery
 %define SCR_P1_RESULT      4848      ; result (overlaps NBUTTONS after reuse)
 ; Main loop temporaries
 %define SCR_LINE_SAVE      4880      ; save line position between p1/p2 calls
@@ -223,13 +225,14 @@ solve_p1_machine:
     ; r8d = n_buttons, ebp = n_lights, r14d = target
     mov     [r15 + SCR_P1_NBUTTONS], r8d
 
-    ; Initialize pivot_cols to 0xFF
+    ; Initialize pivot_cols to 0xFF and pivot_mask to 0
     lea     rdi, [r15 + SCR_P1_PIVOT]
     mov     eax, 0xFFFFFFFF
     mov     [rdi], eax
     mov     [rdi+4], eax
     mov     [rdi+8], eax
     mov     [rdi+12], eax
+    mov     dword [r15 + SCR_P1_PIVOT_MASK], 0
 
     ; GF(2) Gaussian elimination to RREF
     xor     r9d, r9d                ; row = 0
@@ -265,28 +268,27 @@ solve_p1_machine:
     mov     rdx, [rsi + rcx*8]
     mov     [rsi + r9*8], rdx
     mov     [rsi + rcx*8], rax
-    ; Swap target bits (using full-width registers to avoid partial-reg stalls)
+    ; Swap target bits using xor-swap trick: only flip if bits differ
     mov     eax, r14d
     bt      eax, r9d
-    sbb     r8d, r8d                ; r8d = -1 if bit at r9d was set, else 0
+    setc    dl                      ; dl = bit_i
     bt      eax, ecx
-    sbb     r11d, r11d              ; r11d = -1 if bit at ecx was set, else 0
-    btr     r14d, r9d
-    btr     r14d, ecx
-    test    r11d, r11d
-    jz      .no_set1
-    bts     r14d, r9d
-.no_set1:
-    test    r8d, r8d
-    jz      .no_swap
-    bts     r14d, ecx
+    setc    al                      ; al = bit_j
+    xor     dl, al                  ; dl = 1 if bits differ, 0 if same
+    jz      .no_swap                ; if same, no swap needed
+    btc     r14d, r9d               ; flip bit i
+    btc     r14d, ecx               ; flip bit j
 .no_swap:
-    ; Record pivot
+    ; Record pivot (both in array for back-sub and in bitmask for free col discovery)
     lea     rdi, [r15 + SCR_P1_PIVOT]
     mov     [rdi + r9], r10b
+    bts     dword [r15 + SCR_P1_PIVOT_MASK], r10d
 
     ; Eliminate all other rows with bit r10 set
     mov     rbx, [rsi + r9*8]       ; pivot row
+    ; HOISTED: check pivot target bit once, not per iteration
+    bt      r14d, r9d
+    setc    r11b                    ; r11b = 1 if pivot target set, 0 otherwise
     xor     ecx, ecx
 .elim_loop:
     cmp     ecx, ebp
@@ -298,9 +300,9 @@ solve_p1_machine:
     jnc     .elim_next
     xor     rax, rbx
     mov     [rsi + rcx*8], rax
-    ; XOR target bit if pivot's target bit is set
-    bt      r14d, r9d
-    jnc     .elim_next
+    ; XOR target bit if pivot's target bit is set (using hoisted value)
+    test    r11b, r11b
+    jz      .elim_next
     btc     r14d, ecx
 .elim_next:
     inc     ecx
@@ -329,29 +331,17 @@ solve_p1_machine:
     jmp     .check_cons
 
 .cons_ok:
-    ; Find free columns (non-pivot) -> build free_mask
+    ; Find free columns using pivot bitmask - O(1) instead of O(n_buttons * rank)
     mov     r8d, [r15 + SCR_P1_NBUTTONS]
-    lea     rdi, [r15 + SCR_P1_PIVOT]
-    xor     ebx, ebx                ; free_mask
-    xor     r9d, r9d                ; free_count
-    xor     ecx, ecx                ; col
-.find_free:
-    cmp     ecx, r8d
-    jge     .free_done
-    xor     edx, edx                ; row
-.check_pivot:
-    cmp     edx, r11d
-    jge     .is_free
-    cmp     [rdi + rdx], cl
-    je      .not_free
-    inc     edx
-    jmp     .check_pivot
-.is_free:
-    bts     ebx, ecx
-    inc     r9d
-.not_free:
-    inc     ecx
-    jmp     .find_free
+    mov     eax, [r15 + SCR_P1_PIVOT_MASK]
+    not     eax                     ; ~pivot_mask
+    mov     ecx, r8d
+    mov     edx, 1
+    shl     edx, cl
+    dec     edx                     ; (1 << n_buttons) - 1
+    and     eax, edx                ; free_mask = (~pivot_mask) & ((1<<n_buttons)-1)
+    mov     ebx, eax
+    popcnt  r9d, eax                ; free_count = popcnt(free_mask)
 
 .free_done:
     ; Enumerate 2^free_count solutions (limit to 20)
@@ -363,6 +353,7 @@ solve_p1_machine:
     mov     eax, 1
     shl     eax, cl                 ; combos = 2^free_count
     mov     [r15 + SCR_P1_COMBOS], eax
+    mov     [r15 + SCR_P1_RANK], r11d  ; save rank (r11d gets clobbered in back_sub)
     xor     ecx, ecx                ; mask
 
 .enum_loop:
@@ -375,7 +366,7 @@ solve_p1_machine:
 
     ; Back-substitute for pivot variables
     push    rcx
-    mov     ecx, r11d               ; rank
+    mov     ecx, [r15 + SCR_P1_RANK]  ; load rank from memory (r11d gets clobbered)
     dec     ecx                     ; start from rank-1
 .back_sub:
     test    ecx, ecx
@@ -527,7 +518,7 @@ solve_p2_machine:
     inc     r12
     mov     [rsp], ebp              ; save n_counters
 
-    ; Zero augmented matrix
+    ; Zero augmented matrix (simple unrolled loop is fastest for this size)
     lea     rdi, [r15 + SCR_P2_AUG]
     xor     eax, eax
     mov     ecx, MAX_N * MAX_COLS
@@ -744,21 +735,21 @@ solve_p2_machine:
     lea     rsi, [r15 + SCR_P2_PIVOT]
     mov     [rsi + r8], r9b
 
-    ; Normalize row
+    ; HOISTED: compute pivot row base pointer once
     imul    eax, r8d, MAX_COLS
-    add     eax, r9d
-    movsd   xmm1, [rdi + rax*8]
+    lea     rbx, [rdi + rax*8]      ; rbx = &aug[pivot_row][0]
+
+    ; Normalize row (pivot value at rbx + r9*8)
+    movsd   xmm1, [rbx + r9*8]      ; pivot value
     mov     ecx, r14d
     inc     ecx
     xor     eax, eax
 .norm_loop:
     cmp     eax, ecx
     jge     .elim_rows
-    imul    edx, r8d, MAX_COLS
-    add     edx, eax
-    movsd   xmm0, [rdi + rdx*8]
+    movsd   xmm0, [rbx + rax*8]     ; use hoisted pointer
     divsd   xmm0, xmm1
-    movsd   [rdi + rdx*8], xmm0
+    movsd   [rbx + rax*8], xmm0
     inc     eax
     jmp     .norm_loop
 
@@ -769,24 +760,21 @@ solve_p2_machine:
     jge     .next_col
     cmp     r10d, r8d
     je      .next_erow
+    ; HOISTED: compute target row base pointer once per row
     imul    eax, r10d, MAX_COLS
-    add     eax, r9d
-    movsd   xmm1, [rdi + rax*8]
+    lea     rsi, [rdi + rax*8]      ; rsi = &aug[target_row][0]
+    movsd   xmm1, [rsi + r9*8]      ; factor = aug[target_row][pivot_col]
     mov     ecx, r14d
     inc     ecx
     xor     r11d, r11d
 .elim_col:
     cmp     r11d, ecx
     jge     .next_erow
-    imul    eax, r8d, MAX_COLS
-    add     eax, r11d
-    movsd   xmm0, [rdi + rax*8]
-    mulsd   xmm0, xmm1
-    imul    eax, r10d, MAX_COLS
-    add     eax, r11d
-    movsd   xmm2, [rdi + rax*8]
+    movsd   xmm0, [rbx + r11*8]     ; aug[pivot_row][col] - hoisted pivot ptr
+    mulsd   xmm0, xmm1              ; * factor
+    movsd   xmm2, [rsi + r11*8]     ; aug[target_row][col] - hoisted target ptr
     subsd   xmm2, xmm0
-    movsd   [rdi + rax*8], xmm2
+    movsd   [rsi + r11*8], xmm2
     inc     r11d
     jmp     .elim_col
 .next_erow:
