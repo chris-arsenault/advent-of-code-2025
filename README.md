@@ -31,7 +31,43 @@ One of the younger Elves built a contraption that runs everything at once:
 ./run_all.py --install
 ```
 
-The machine will compile what needs compiling, execute each solution, and compare outputs to ensure all the Elves got the same answers.
+The machine will compile what needs compiling, execute each solution, compare outputs to the C reference, and emit summary tables for timings, memory usage, line counts, and a simple cyclomatic complexity heuristic.
+
+### Target a subset of days
+```bash
+# Comma-separated list
+./run_all.py --day 1,3,5
+```
+
+### Control which stats print
+```bash
+# Disable memory and complexity tables
+./run_all.py --no-memory --no-complexity
+```
+
+All tables include per-day averages and per-language averages at the bottom. Failed runs are excluded from averages.
+
+### Safety note
+When validating changes locally, prefer running a single early day (e.g., `--day 1`) instead of the full suite to avoid long or flaky runs.
+
+## Docker Usage
+
+A container recipe is provided for a consistent toolchain.
+
+Build:
+```bash
+docker build -t aoc2025 .
+```
+
+Run (installs/builds, then executes the suite):
+```bash
+docker run --rm -it aoc2025
+```
+
+Run a specific subset (e.g., day 1 only) inside the container:
+```bash
+docker run --rm -it aoc2025 python3 run_all.py --day 1
+```
 
 ## Workshop Documents
 

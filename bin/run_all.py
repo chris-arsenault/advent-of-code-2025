@@ -12,12 +12,12 @@ if __package__ is None or __package__ == "":
     from bin.build import do_installs
     from bin.config import DAYS, LANGS, ROOT
     from bin.metrics import count_loc, estimate_cyclomatic, extract_answers, extract_elapsed, run_cmd
-    from bin.reporting import format_complexity, format_loc, format_mem, format_ms, render_table
+    from bin.reporting import coerce_float, coerce_int, format_complexity, format_loc, format_mem, format_ms, render_table
 else:
     from .build import do_installs
     from .config import DAYS, LANGS, ROOT
     from .metrics import count_loc, estimate_cyclomatic, extract_answers, extract_elapsed, run_cmd
-    from .reporting import format_complexity, format_loc, format_mem, format_ms, render_table
+    from .reporting import coerce_float, coerce_int, format_complexity, format_loc, format_mem, format_ms, render_table
 
 
 def parse_days(day_arg: str | None) -> List[str]:
@@ -181,13 +181,13 @@ def cli_main() -> None:
 
     langs = list(LANGS)
     if not args.no_time:
-        render_table("Summary (ms)", days, langs, timings, ok_flags, format_ms)
+        render_table("Summary (ms)", days, langs, timings, ok_flags, format_ms, coerce_float)
     if not args.no_memory:
-        render_table("Memory (KiB)", days, langs, memory, ok_flags, format_mem)
+        render_table("Memory (KiB)", days, langs, memory, ok_flags, format_mem, coerce_int)
     if not args.no_loc:
-        render_table("Line Count", days, langs, locs, None, format_loc)
+        render_table("Line Count", days, langs, locs, None, format_loc, coerce_int)
     if not args.no_complexity:
-        render_table("Cyclomatic Complexity", days, langs, complexities, None, format_complexity)
+        render_table("Cyclomatic Complexity", days, langs, complexities, None, format_complexity, coerce_int)
 
     if any_fail:
         print("Some runs failed or missing elapsed_ms; see logs above.")

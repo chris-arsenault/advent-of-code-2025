@@ -65,7 +65,7 @@ Documents the shared x86-64 assembly utilities in `shared/utils.asm`. This is a 
 
 ### run_all.py
 
-The test runner executes all solutions across all days and languages.
+The test runner executes solutions across days and languages and also reports timing, memory, line counts, and a simple cyclomatic complexity heuristic.
 
 **Basic usage:**
 ```bash
@@ -76,6 +76,19 @@ The test runner executes all solutions across all days and languages.
 ```bash
 ./run_all.py --install
 ```
+
+**Single-day verification (preferred for local checks):**
+```bash
+# Run only an early day to verify changes; avoid full-suite automation
+./run_all.py --day 1
+```
+
+**Disable optional stats if desired:**
+```bash
+./run_all.py --day 1 --no-memory --no-complexity
+```
+
+> Important: Do not run the full suite automatically in CI-style loops. For quick validation, use a single day (1–3) unless a full sweep is explicitly requested.
 
 **What it does:**
 
@@ -97,7 +110,8 @@ The test runner executes all solutions across all days and languages.
    - Shows timing delta (language - C) for each solution
 
 4. **Summary:**
-   - Prints timing table across all days and languages
+   - Prints timing, memory, line count, and complexity tables across all days and languages
+   - Includes per-day and per-language averages
    - Marks failed/missing runs as ERR
 
 **Output Format:**
