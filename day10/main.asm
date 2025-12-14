@@ -487,7 +487,15 @@ solve_p2_machine:
     push    r13
     push    r14
     push    rbp
-    sub     rsp, 48                 ; small local frame for temporaries
+    sub     rsp, 80                 ; expanded frame: +32 bytes for free_vals[0..3]
+    ; Stack layout:
+    ; [rsp+0]  = n_counters (ebp)
+    ; [rsp+8]  = rank
+    ; [rsp+12] = free_count
+    ; [rsp+16] = best_sum
+    ; [rsp+20] = result
+    ; [rsp+24] = current_sum
+    ; [rsp+32..63] = free_vals[0..3] (4 qwords, replacing SCR_P2_FREE_VALS)
 
     mov     r12, rdi
     mov     r13, rsi
@@ -853,27 +861,29 @@ solve_p2_machine:
     jmp     .prep_coef
 
 .dfs_init:
-    ; Zero free_vals
-    lea     rdi, [r15 + SCR_P2_FREE_VALS]
+    ; Zero free_vals (stack-based, unrolled for free_count <= 4)
     xor     eax, eax
-    mov     ecx, MAX_N
-.zero_free:
-    mov     qword [rdi + rcx*8 - 8], rax
-    dec     ecx
-    jnz     .zero_free
+    mov     [rsp + 32], rax             ; free_vals[0] = 0
+    mov     [rsp + 40], rax             ; free_vals[1] = 0
+    mov     [rsp + 48], rax             ; free_vals[2] = 0
+    mov     [rsp + 56], rax             ; free_vals[3] = 0
 
 .dfs_loop:
-    ; Sum free vals
-    lea     r8, [r15 + SCR_P2_FREE_VALS]
-    mov     ecx, [rsp + 12]
+    ; Sum free vals (unrolled for free_count <= 4)
+    mov     ecx, [rsp + 12]             ; free_count
     xor     eax, eax
-    xor     edx, edx
-.sum_free:
-    cmp     edx, ecx
-    jge     .check_prune
-    add     rax, [r8 + rdx*8]
-    inc     edx
-    jmp     .sum_free
+    test    ecx, ecx
+    jz      .check_prune
+    add     rax, [rsp + 32]             ; free_vals[0]
+    cmp     ecx, 1
+    je      .check_prune
+    add     rax, [rsp + 40]             ; free_vals[1]
+    cmp     ecx, 2
+    je      .check_prune
+    add     rax, [rsp + 48]             ; free_vals[2]
+    cmp     ecx, 3
+    je      .check_prune
+    add     rax, [rsp + 56]             ; free_vals[3]
 
 .check_prune:
     cmp     eax, [rsp + 16]
@@ -896,18 +906,29 @@ solve_p2_machine:
     jmp     .zero_sol
 
 .set_free:
+    ; Copy free_vals to solution (unrolled for free_count <= 4)
     lea     rbx, [r15 + SCR_P2_FREE_COLS]
     mov     ecx, [rsp + 12]
-    lea     r8, [r15 + SCR_P2_FREE_VALS]
-    xor     edx, edx
-.set_free_loop:
-    cmp     edx, ecx
-    jge     .compute_deps
-    movzx   eax, byte [rbx + rdx]
-    mov     rsi, [r8 + rdx*8]
+    test    ecx, ecx
+    jz      .compute_deps
+    movzx   eax, byte [rbx]
+    mov     rsi, [rsp + 32]             ; free_vals[0]
     mov     [rdi + rax*8], rsi
-    inc     edx
-    jmp     .set_free_loop
+    cmp     ecx, 1
+    je      .compute_deps
+    movzx   eax, byte [rbx + 1]
+    mov     rsi, [rsp + 40]             ; free_vals[1]
+    mov     [rdi + rax*8], rsi
+    cmp     ecx, 2
+    je      .compute_deps
+    movzx   eax, byte [rbx + 2]
+    mov     rsi, [rsp + 48]             ; free_vals[2]
+    mov     [rdi + rax*8], rsi
+    cmp     ecx, 3
+    je      .compute_deps
+    movzx   eax, byte [rbx + 3]
+    mov     rsi, [rsp + 56]             ; free_vals[3]
+    mov     [rdi + rax*8], rsi
 
 .compute_deps:
     lea     r9, [r15 + SCR_P2_RHS]
@@ -922,19 +943,32 @@ solve_p2_machine:
 
     movsd   xmm0, [r9 + r8*8]
     mov     ecx, [rsp + 12]
-    xor     edx, edx
-.sub_free:
-    cmp     edx, ecx
-    jge     .round_dep
-    imul    eax, r8d, MAX_N
-    add     eax, edx
-    movsd   xmm1, [r11 + rax*8]
-    lea     rsi, [r15 + SCR_P2_FREE_VALS]
-    cvtsi2sd xmm2, qword [rsi + rdx*8]
+    ; Unrolled back-substitution for free_count <= 4
+    imul    eax, r8d, MAX_N             ; base = row * MAX_N
+    test    ecx, ecx
+    jz      .round_dep
+    movsd   xmm1, [r11 + rax*8]         ; coef[row][0]
+    cvtsi2sd xmm2, qword [rsp + 32]     ; free_vals[0]
     mulsd   xmm1, xmm2
     subsd   xmm0, xmm1
-    inc     edx
-    jmp     .sub_free
+    cmp     ecx, 1
+    je      .round_dep
+    movsd   xmm1, [r11 + rax*8 + 8]     ; coef[row][1]
+    cvtsi2sd xmm2, qword [rsp + 40]     ; free_vals[1]
+    mulsd   xmm1, xmm2
+    subsd   xmm0, xmm1
+    cmp     ecx, 2
+    je      .round_dep
+    movsd   xmm1, [r11 + rax*8 + 16]    ; coef[row][2]
+    cvtsi2sd xmm2, qword [rsp + 48]     ; free_vals[2]
+    mulsd   xmm1, xmm2
+    subsd   xmm0, xmm1
+    cmp     ecx, 3
+    je      .round_dep
+    movsd   xmm1, [r11 + rax*8 + 24]    ; coef[row][3]
+    cvtsi2sd xmm2, qword [rsp + 56]     ; free_vals[3]
+    mulsd   xmm1, xmm2
+    subsd   xmm0, xmm1
 
 .round_dep:
     ; Check v >= -eps (reject if too negative)
@@ -981,31 +1015,56 @@ solve_p2_machine:
     mov     [rsp + 16], eax
 
 .next_dfs:
-    mov     ecx, [rsp + 12]
+    ; Unrolled increment cascade for free_count <= 4
+    mov     ecx, [rsp + 12]             ; free_count
     test    ecx, ecx
     jz      .dfs_done
-    lea     r8, [r15 + SCR_P2_FREE_VALS]
-    xor     edx, edx
-
-.inc_free:
-    cmp     edx, ecx
-    jge     .dfs_done
-    ; Cap free variable growth to avoid runaway DFS (heuristic cutoff)
-    mov     r10d, [rsp + 16]
+    ; Compute max_val (capped at 500)
+    mov     r10d, [rsp + 16]            ; best_sum
     cmp     r10d, 500
-    jle     .maxv_ok
+    jle     .inc_f0
     mov     r10d, 500
-.maxv_ok:
-    mov     rax, [r8 + rdx*8]
+.inc_f0:
+    mov     rax, [rsp + 32]             ; free_vals[0]
     inc     rax
     cmp     eax, r10d
-    jle     .store_inc
-    mov     qword [r8 + rdx*8], 0
-    inc     edx
-    jmp     .inc_free
-
-.store_inc:
-    mov     [r8 + rdx*8], rax
+    jle     .store_f0
+    mov     qword [rsp + 32], 0         ; reset free_vals[0]
+    cmp     ecx, 1
+    je      .dfs_done                   ; only 1 free var, done
+    ; Try free_vals[1]
+    mov     rax, [rsp + 40]
+    inc     rax
+    cmp     eax, r10d
+    jle     .store_f1
+    mov     qword [rsp + 40], 0         ; reset free_vals[1]
+    cmp     ecx, 2
+    je      .dfs_done                   ; only 2 free vars, done
+    ; Try free_vals[2]
+    mov     rax, [rsp + 48]
+    inc     rax
+    cmp     eax, r10d
+    jle     .store_f2
+    mov     qword [rsp + 48], 0         ; reset free_vals[2]
+    cmp     ecx, 3
+    je      .dfs_done                   ; only 3 free vars, done
+    ; Try free_vals[3]
+    mov     rax, [rsp + 56]
+    inc     rax
+    cmp     eax, r10d
+    jle     .store_f3
+    jmp     .dfs_done                   ; all 4 overflowed, done
+.store_f0:
+    mov     [rsp + 32], rax
+    jmp     .dfs_loop
+.store_f1:
+    mov     [rsp + 40], rax
+    jmp     .dfs_loop
+.store_f2:
+    mov     [rsp + 48], rax
+    jmp     .dfs_loop
+.store_f3:
+    mov     [rsp + 56], rax
     jmp     .dfs_loop
 
 .dfs_done:
@@ -1027,7 +1086,7 @@ solve_p2_machine:
 .p2_return:
     mov     eax, [rsp + 20]
     mov     rdi, r12
-    add     rsp, 48
+    add     rsp, 80
     pop     rbp
     pop     r14
     pop     r13
@@ -1038,7 +1097,7 @@ solve_p2_machine:
 .p2_no_solution:
     mov     rdi, r13
     xor     eax, eax
-    add     rsp, 48
+    add     rsp, 80
     pop     rbp
     pop     r14
     pop     r13
