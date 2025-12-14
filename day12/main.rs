@@ -186,7 +186,7 @@ fn solve(shapes: &[Shape], regions: &[(i32, i32)], counts: &[Vec<i32>]) -> i32 {
 }
 
 fn main() {
-    let (shapes, regions, counts) = parse_input("input.xt");
+    let (shapes, regions, counts) = parse_input("input.txt");
     let start = Instant::now();
     let ans = solve(&shapes, &regions, &counts);
     let elapsed = start.elapsed().as_secs_f64() * 1000.0;

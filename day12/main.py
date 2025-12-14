@@ -144,7 +144,7 @@ def solve(lines: List[str]) -> int:
 
 
 def main() -> None:
-    input_path = Path(__file__).with_name("input.xt")
+    input_path = Path(__file__).with_name("input.txt")
     lines = input_path.read_text().splitlines()
     t0 = time.perf_counter()
     count = solve(lines)

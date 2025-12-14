@@ -24,7 +24,7 @@ This repository implements solutions to Advent of Code 2025 puzzles in multiple 
 ```
 advant-code-2025/
 ├── day1/ ... day12/     # Each day's solutions
-│   ├── input.txt        # Puzzle input (or input.xt for day 12)
+│   ├── input.txt        # Puzzle input
 │   ├── problem.txt      # Problem statement
 │   ├── main.c           # C implementation (reference)
 │   ├── main.py          # Python
@@ -218,9 +218,6 @@ Force evaluation before timing ends using `seq`:
 ```haskell
 p1 `seq` p2 `seq` return ()
 ```
-
-### Input File Names
-Most days use `input.txt`, but day 12 uses `input.xt`. Always verify the filename in the C reference.
 
 ### Timing Accuracy
 Use CPU time, not wall time, for consistent measurements:

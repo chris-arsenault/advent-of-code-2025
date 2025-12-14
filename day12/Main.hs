@@ -172,7 +172,7 @@ solveAll ls =
 
 main :: IO ()
 main = do
-  ls <- lines <$> readFile "input.xt"
+  ls <- lines <$> readFile "input.txt"
   t0 <- getCPUTime
   let !ans = solveAll ls
   t1 <- getCPUTime

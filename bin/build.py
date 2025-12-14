@@ -57,7 +57,12 @@ def ensure_built(day_dir: Path, day: str) -> None:
 def install_requirements(day_dir: Path) -> None:
     req = day_dir / "requirements.txt"
     if req.exists() and req.read_text().strip():
-        subprocess.run(f"pip install -q -r {req}", shell=True, cwd=day_dir, check=True)
+        subprocess.run(
+            f"PIP_BREAK_SYSTEM_PACKAGES=1 pip install -q --break-system-packages -r {req}",
+            shell=True,
+            cwd=day_dir,
+            check=True,
+        )
     # Node.js packages
     pkg_json = day_dir / "package.json"
     if pkg_json.exists():
@@ -75,12 +80,13 @@ def do_installs(days: list[str]) -> bool:
         try:
             ensure_built(day_dir, day)
         except subprocess.CalledProcessError as e:
-            print(f"[build error day{day}] {e.stderr.strip()}")
+            stderr = e.stderr.strip() if e.stderr else str(e)
+            print(f"[build error day{day}] {stderr}")
             ok = False
         try:
             install_requirements(day_dir)
         except subprocess.CalledProcessError as e:
-            print(f"[pip error day{day}] {e.stderr.strip()}")
+            stderr = e.stderr.strip() if e.stderr else str(e)
+            print(f"[pip error day{day}] {stderr}")
             ok = False
     return ok
-

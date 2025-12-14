@@ -14,11 +14,16 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     golang \
     nodejs npm \
     ruby-full \
-    ghc cabal-install \
+    ghc cabal-install libghc-vector-dev \
     sbcl \
-    julia \
     nasm \
     && rm -rf /var/lib/apt/lists/*
+
+# Julia (binary install; package not available in some Ubuntu repos)
+ARG JULIA_VERSION=1.10.5
+RUN curl -L https://julialang-s3.julialang.org/bin/linux/x64/1.10/julia-${JULIA_VERSION}-linux-x86_64.tar.gz \
+    | tar -xz -C /opt && \
+    ln -s /opt/julia-${JULIA_VERSION}/bin/julia /usr/local/bin/julia
 
 # Rust (rustup)
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
@@ -41,10 +46,13 @@ RUN cargo fetch --locked --manifest-path /tmp/day10/Cargo.toml
 COPY day10/go.mod /tmp/day10/
 RUN cd /tmp/day10 && GO111MODULE=on go mod download
 
-RUN cabal update
+RUN cabal update && cabal install --lib vector intervalmap
 
 # 4) Application sources
 WORKDIR /app
 COPY . /app
+
+# Allow system pip installs inside container (PEP 668)
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 CMD ["python3", "run_all.py", "--install"]

@@ -37,7 +37,7 @@ end
 shapes = []
 regions = []
 counts = []
-lines = File.read('input.xt').split("\n")
+lines = File.read('input.txt').split("\n")
 i = 0
 while i < lines.size
   line = lines[i].strip

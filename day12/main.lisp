@@ -263,7 +263,7 @@
       fits)))
 
 (defun main ()
-  (let* ((lines (read-lines "input.xt"))
+  (let* ((lines (read-lines "input.txt"))
          (t0 (get-internal-run-time))
          (ans (solve lines))
          (t1 (get-internal-run-time))

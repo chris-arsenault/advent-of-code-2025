@@ -137,7 +137,7 @@ function solve(lines)
 end
 
 function main()
-    lines = readlines("input.xt")
+    lines = readlines("input.txt")
     t0 = time_ns()
     ans = solve(lines)
     elapsed_ms = (time_ns() - t0)/1e6

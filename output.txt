@@ -1,288 +1,207 @@
 == Day 1 ==
-[c] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.090
-[py] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=1.095
-[go] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.930
-[rs] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.035
-[ts] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.782
-[rb] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=1.903
-[lisp] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.220
-[jl] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.163
-[hs] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=3.323
-delta_ms (py - c): 1.005
-delta_ms (go - c): 0.840
-delta_ms (rs - c): -0.055
-delta_ms (ts - c): 0.692
-delta_ms (rb - c): 1.813
-delta_ms (lisp - c): 0.130
-delta_ms (jl - c): 0.073
-delta_ms (hs - c): 3.233
+[c] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.086
+[py] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=1.040
+[go] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.922
+[rs] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.034
+[ts] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.743
+[rb] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=2.457
+[asm] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.042
+[lisp] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.217
+[jl] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=0.315
+[hs] zero_landings=1026 crossings=5923 final_pos=32 elapsed_ms=3.231
 
 == Day 2 ==
-[c] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=109.464
-[py] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=59.169
-[go] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=20.747
-[rs] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=6.894
-[ts] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=39.394
-[rb] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=37.446
-[lisp] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=32.000
-[jl] repeated-halves-sum=19118432629 repeated-pattern-sum=21927715887 elapsed_ms=12.1
-[hs] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=237.471
-[mismatch] day 2 jl output differs from C
-  C:    repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645
-  jl: repeated-halves-sum=19118432629 repeated-pattern-sum=21927715887
-delta_ms (py - c): -50.295
-delta_ms (go - c): -88.717
-delta_ms (rs - c): -102.570
-delta_ms (ts - c): -70.070
-delta_ms (rb - c): -72.018
-delta_ms (lisp - c): -77.464
-delta_ms (hs - c): 128.007
+[c] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=105.904
+[py] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=55.059
+[go] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=19.385
+[rs] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=6.719
+[ts] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=42.467
+[rb] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=36.169
+[asm] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=1.428
+[lisp] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=30.931
+[jl] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=14.027
+[hs] repeated-halves-sum=19128774598 repeated-pattern-sum=21932258645 elapsed_ms=32.932
 
 == Day 3 ==
-[c] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=4.991
-[py] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=8.379
-[go] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=0.186
-[rs] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=0.172
-[ts] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=4.611
-[rb] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=9.070
-[lisp] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=2.079
-[jl] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=0.567
-[hs] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=23.944
-delta_ms (py - c): 3.388
-delta_ms (go - c): -4.805
-delta_ms (rs - c): -4.819
-delta_ms (ts - c): -0.380
-delta_ms (rb - c): 4.079
-delta_ms (lisp - c): -2.912
-delta_ms (jl - c): -4.424
-delta_ms (hs - c): 18.953
+[c] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=4.945
+[py] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=7.194
+[go] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=0.211
+[rs] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=0.167
+[ts] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=3.548
+[rb] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=8.780
+[asm] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=0.151
+[lisp] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=2.153
+[jl] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=0.542
+[hs] max-2-digit-sum=16993 max-12-digit-sum=168617068915447 elapsed_ms=3.192
 
 == Day 4 ==
-[c] accessible=2303 removable_total=2303 elapsed_ms=32.303
-[py] accessible=1424 removable_total=8727 elapsed_ms=25.926
-[go] accessible=1424 removable_total=8727 elapsed_ms=4.768
-[rs] accessible=1424 removable_total=8727 elapsed_ms=1.943
-[ts] accessible=1424 removable_total=8727 elapsed_ms=16.181
-[rb] accessible=1424 removable_total=8727 elapsed_ms=32.941
-[lisp] accessible=1424 removable_total=8727 elapsed_ms=16.000
-[jl] accessible=1424 removable_total=8727 elapsed_ms=5.776
-[hs] accessible=2303 removable_total=2303 elapsed_ms=4011.665
-[mismatch] day 4 py output differs from C
-  C:    accessible=2303 removable_total=2303
-  py: accessible=1424 removable_total=8727
-[mismatch] day 4 go output differs from C
-  C:    accessible=2303 removable_total=2303
-  go: accessible=1424 removable_total=8727
-[mismatch] day 4 rs output differs from C
-  C:    accessible=2303 removable_total=2303
-  rs: accessible=1424 removable_total=8727
-[mismatch] day 4 ts output differs from C
-  C:    accessible=2303 removable_total=2303
-  ts: accessible=1424 removable_total=8727
-[mismatch] day 4 rb output differs from C
-  C:    accessible=2303 removable_total=2303
-  rb: accessible=1424 removable_total=8727
-[mismatch] day 4 lisp output differs from C
-  C:    accessible=2303 removable_total=2303
-  lisp: accessible=1424 removable_total=8727
-[mismatch] day 4 jl output differs from C
-  C:    accessible=2303 removable_total=2303
-  jl: accessible=1424 removable_total=8727
-delta_ms (hs - c): 3979.362
+[c] accessible=1424 removable_total=8727 elapsed_ms=1.109
+[py] accessible=1424 removable_total=8727 elapsed_ms=24.447
+[go] accessible=1424 removable_total=8727 elapsed_ms=4.857
+[rs] accessible=1424 removable_total=8727 elapsed_ms=1.772
+[ts] accessible=1424 removable_total=8727 elapsed_ms=16.188
+[rb] accessible=1424 removable_total=8727 elapsed_ms=30.515
+[asm] accessible=1424 removable_total=8727 elapsed_ms=0.680
+[lisp] accessible=1424 removable_total=8727 elapsed_ms=19.332
+[jl] accessible=1424 removable_total=8727 elapsed_ms=5.725
+[hs] accessible=1424 removable_total=8727 elapsed_ms=26.846
 
 == Day 5 ==
-[c] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.039
-[py] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.603
-[go] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.173
-[rs] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.092
-[ts] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.860
-[rb] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.249
-[lisp] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.675
-[jl] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.246
-[hs] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=2.0e-3
-delta_ms (py - c): 0.564
-delta_ms (go - c): 0.134
-delta_ms (rs - c): 0.053
-delta_ms (ts - c): 0.821
-delta_ms (rb - c): 0.210
-delta_ms (lisp - c): 0.636
-delta_ms (jl - c): 0.207
-delta_ms (hs - c): -0.037
+[c] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.035
+[py] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=3.363
+[go] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.204
+[rs] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.118
+[ts] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.850
+[rb] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.244
+[asm] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.082
+[lisp] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.618
+[jl] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=0.252
+[hs] available_fresh=698 total_fresh_ids=352807801032167 elapsed_ms=3.0e-3
 
 == Day 6 ==
-[c] loaded 1000 problems with 4 digits
-grand_total=5316572080628 quantum_total=5316572080628 elapsed_ms=0.005
-[py] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=2.392
-[go] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=1.180
-[rs] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.117
-[ts] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=2.207
-[rb] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=7.903
-[lisp] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.678
-[jl] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.61
-[hs] grand_total=5316572080628 quantum_total=11472781373773 elapsed_ms=231.353
-[mismatch] day 6 py output differs from C
-  C:    grand_total=5316572080628 quantum_total=5316572080628
-  py: grand_total=5316572080628 quantum_total=11299263623062
-[mismatch] day 6 go output differs from C
-  C:    grand_total=5316572080628 quantum_total=5316572080628
-  go: grand_total=5316572080628 quantum_total=11299263623062
-[mismatch] day 6 rs output differs from C
-  C:    grand_total=5316572080628 quantum_total=5316572080628
-  rs: grand_total=5316572080628 quantum_total=11299263623062
-[mismatch] day 6 ts output differs from C
-  C:    grand_total=5316572080628 quantum_total=5316572080628
-  ts: grand_total=5316572080628 quantum_total=11299263623062
-[mismatch] day 6 rb output differs from C
-  C:    grand_total=5316572080628 quantum_total=5316572080628
-  rb: grand_total=5316572080628 quantum_total=11299263623062
-[mismatch] day 6 lisp output differs from C
-  C:    grand_total=5316572080628 quantum_total=5316572080628
-  lisp: grand_total=5316572080628 quantum_total=11299263623062
-[mismatch] day 6 jl output differs from C
-  C:    grand_total=5316572080628 quantum_total=5316572080628
-  jl: grand_total=5316572080628 quantum_total=11299263623062
-[mismatch] day 6 hs output differs from C
-  C:    grand_total=5316572080628 quantum_total=5316572080628
-  hs: grand_total=5316572080628 quantum_total=11472781373773
+[c] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.057
+[py] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=2.236
+[go] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=1.138
+[rs] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.114
+[ts] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=2.201
+[rb] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=7.765
+[asm] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.062
+[lisp] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.679
+[jl] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=0.47
+[hs] grand_total=5316572080628 quantum_total=11299263623062 elapsed_ms=5.595
 
 == Day 7 ==
-[c] splits=1566 timelines=5921061943075 elapsed_ms=0.093
-[py] splits=1566 timelines=5921061943075 elapsed_ms=1.341
-[go] splits=1566 timelines=5921061943075 elapsed_ms=1.189
-[rs] splits=1566 timelines=5921061943075 elapsed_ms=0.519
-[ts] splits=1566 timelines=5921061943075 elapsed_ms=1.992
-[rb] splits=1566 timelines=5921061943075 elapsed_ms=4.708
-[lisp] splits=1566 timelines=5921061943075 elapsed_ms=2.298
-[jl] splits=1566 timelines=5921061943075 elapsed_ms=0.603
-[hs] splits=1566 timelines=5921061943075 elapsed_ms=4.727
-delta_ms (py - c): 1.248
-delta_ms (go - c): 1.096
-delta_ms (rs - c): 0.426
-delta_ms (ts - c): 1.899
-delta_ms (rb - c): 4.615
-delta_ms (lisp - c): 2.205
-delta_ms (jl - c): 0.510
-delta_ms (hs - c): 4.634
+[c] splits=1566 timelines=5921061943075 elapsed_ms=0.100
+[py] splits=1566 timelines=5921061943075 elapsed_ms=1.314
+[go] splits=1566 timelines=5921061943075 elapsed_ms=8.334
+[rs] splits=1566 timelines=5921061943075 elapsed_ms=0.553
+[ts] splits=1566 timelines=5921061943075 elapsed_ms=2.084
+[rb] splits=1566 timelines=5921061943075 elapsed_ms=5.980
+[asm] splits=1566 timelines=5921061943075 elapsed_ms=0.065
+[lisp] splits=1566 timelines=5921061943075 elapsed_ms=2.529
+[jl] splits=1566 timelines=5921061943075 elapsed_ms=1.654
+[hs] splits=1566 timelines=5921061943075 elapsed_ms=6.101
 
 == Day 8 ==
-[c] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=34.163
-[py] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=239.246
-[go] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=0.106
-[rs] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=0.067
-[ts] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=2.192
-[rb] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=1.848
-[lisp] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=52.003
-[jl] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=134.064
-[hs] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=684.389
-delta_ms (py - c): 205.083
-delta_ms (go - c): -34.057
-delta_ms (rs - c): -34.096
-delta_ms (ts - c): -31.971
-delta_ms (rb - c): -32.315
-delta_ms (lisp - c): 17.840
-delta_ms (jl - c): 99.901
-delta_ms (hs - c): 650.226
+[c] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=32.987
+[py] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=1776.771
+[go] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=0.105
+[rs] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=0.351
+[ts] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=1.621
+[rb] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=2.689
+[asm] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=26.434
+[lisp] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=750.227
+[jl] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=502.076
+[hs] top3_product=127551 final_join_x_product=2347225200 elapsed_ms=1285.632
 
 == Day 9 ==
-[c] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=76.718
-[py] max_rect_area=4737970575 max_green_rect_area=1513685922 elapsed_ms=2962.929
-[go] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=156.142
-[rs] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=165.338
-[ts] max_rect_area=4737970575 max_green_rect_area=4520624632 elapsed_ms=185.956
-[rb] max_rect_area=4737970575 max_green_rect_area=4520624632 elapsed_ms=5699.396
-[lisp] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=1339.994
-[jl] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=171.329
-[hs] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=829.754
-[mismatch] day 9 py output differs from C
-  C:    max_green_rect_area=1513792010 max_rect_area=4738108384
-  py: max_green_rect_area=1513685922 max_rect_area=4737970575
-[mismatch] day 9 ts output differs from C
-  C:    max_green_rect_area=1513792010 max_rect_area=4738108384
-  ts: max_green_rect_area=4520624632 max_rect_area=4737970575
-[mismatch] day 9 rb output differs from C
-  C:    max_green_rect_area=1513792010 max_rect_area=4738108384
-  rb: max_green_rect_area=4520624632 max_rect_area=4737970575
-delta_ms (go - c): 79.424
-delta_ms (rs - c): 88.620
-delta_ms (lisp - c): 1263.276
-delta_ms (jl - c): 94.611
-delta_ms (hs - c): 753.036
+[c] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=76.965
+[py] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=8697.440
+[go] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=146.096
+[rs] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=146.652
+[ts] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=233.529
+[rb] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=9676.941
+[asm] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=111.325
+[lisp] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=2865.214
+[jl] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=167.899
+[hs] max_rect_area=4738108384 max_green_rect_area=1513792010 elapsed_ms=815.172
 
 == Day 10 ==
-[c] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=202.278
-[py] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=574.971
-[go] min_lights_presses=484 min_counter_presses=27646 elapsed_ms=6.445
-[rs] min_lights_presses=484 min_counter_presses=27646 elapsed_ms=5.315
-[ts] min_lights_presses=484 min_counter_presses=27646 elapsed_ms=17.752
-[rb] min_lights_presses=484 min_counter_presses=27646 elapsed_ms=223.956
-[lisp] min_lights_presses=484 min_counter_presses=15769 elapsed_ms=3359.998
-[jl] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=7284.824
-[hs] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=4534.754
-[mismatch] day 10 go output differs from C
-  C:    min_counter_presses=19210 min_lights_presses=484
-  go: min_counter_presses=27646 min_lights_presses=484
-[mismatch] day 10 rs output differs from C
-  C:    min_counter_presses=19210 min_lights_presses=484
-  rs: min_counter_presses=27646 min_lights_presses=484
-[mismatch] day 10 ts output differs from C
-  C:    min_counter_presses=19210 min_lights_presses=484
-  ts: min_counter_presses=27646 min_lights_presses=484
-[mismatch] day 10 rb output differs from C
-  C:    min_counter_presses=19210 min_lights_presses=484
-  rb: min_counter_presses=27646 min_lights_presses=484
-[mismatch] day 10 lisp output differs from C
-  C:    min_counter_presses=19210 min_lights_presses=484
-  lisp: min_counter_presses=15769 min_lights_presses=484
-delta_ms (py - c): 372.693
-delta_ms (jl - c): 7082.546
-delta_ms (hs - c): 4332.476
+[c] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=198.527
+[py] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=483.436
+[go] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=286.949
+[rs] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=305.243
+[ts] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=544.904
+[rb] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=29670.660
+[asm] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=182.798
+[lisp] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=2218.197
+[jl] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=7203.888
+[hs] min_lights_presses=484 min_counter_presses=19210 elapsed_ms=4481.797
 
 == Day 11 ==
 [c] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.032
-[py] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.922
-[go] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.300
-[rs] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.211
-[ts] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.672
-[rb] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=1.061
-[lisp] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.876
-[jl] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=40.151
-[hs] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=4.265
-delta_ms (py - c): 0.890
-delta_ms (go - c): 0.268
-delta_ms (rs - c): 0.179
-delta_ms (ts - c): 0.640
-delta_ms (rb - c): 1.029
-delta_ms (lisp - c): 0.844
-delta_ms (jl - c): 40.119
-delta_ms (hs - c): 4.233
+[py] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=1.058
+[go] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.274
+[rs] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.208
+[ts] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.856
+[rb] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=1.010
+[asm] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.026
+[lisp] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=0.777
+[jl] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=33.13
+[hs] paths_you_to_out=714 paths_svr_via_dac_fft=333852915427200 elapsed_ms=3.741
 
 == Day 12 ==
-fopen: No such file or directory
-[py] regions_that_fit=557 elapsed_ms=2.086
-[go] regions_that_fit=557 elapsed_ms=0.009
+[c] regions_that_fit=557 elapsed_ms=31.826
+[py] regions_that_fit=557 elapsed_ms=2.040
+[go] regions_that_fit=557 elapsed_ms=0.505
 [rs] regions_that_fit=557 elapsed_ms=0.008
-[ts] regions_that_fit=557 elapsed_ms=0.560
-[rb] regions_that_fit=557 elapsed_ms=1.230
-[lisp] regions_that_fit=557 elapsed_ms=0.000
-[jl] regions_that_fit=557 elapsed_ms=189.675
-day12_hs: Uncaught exception ghc-internal:GHC.Internal.IO.Exception.IOException:
-
-input.txt: openFile: does not exist (No such file or directory)
-
-HasCallStack backtrace:
-  ioError, called at libraries/ghc-internal/src/GHC/Internal/Foreign/C/Error.hs:291:5 in ghc-internal:GHC.Internal.Foreign.C.Error
+[ts] regions_that_fit=557 elapsed_ms=0.512
+[rb] regions_that_fit=557 elapsed_ms=1.079
+[asm] regions_that_fit=557 elapsed_ms=0.113
+[lisp] regions_that_fit=557 elapsed_ms=0.634
+[jl] regions_that_fit=557 elapsed_ms=186.738
+[hs] regions_that_fit=557 elapsed_ms=7405.812
 
 == Summary (ms) ==
-         Day             C            PY            GO            RS            TS            RB          LISP            JL            HS
-           1         0.090         1.095         0.930         0.035         0.782         1.903         0.220         0.163         3.323
-           2       109.464        59.169        20.747         6.894        39.394        37.446        32.000        12.100       237.471
-           3         4.991         8.379         0.186         0.172         4.611         9.070         2.079         0.567        23.944
-           4        32.303        25.926         4.768         1.943        16.181        32.941        16.000         5.776      4011.665
-           5         0.039         0.603         0.173         0.092         0.860         0.249         0.675         0.246         0.002
-           6         0.005         2.392         1.180         0.117         2.207         7.903         0.678         0.610       231.353
-           7         0.093         1.341         1.189         0.519         1.992         4.708         2.298         0.603         4.727
-           8        34.163       239.246         0.106         0.067         2.192         1.848        52.003       134.064       684.389
-           9        76.718      2962.929       156.142       165.338       185.956      5699.396      1339.994       171.329       829.754
-          10       202.278       574.971         6.445         5.315        17.752       223.956      3359.998      7284.824      4534.754
-          11         0.032         0.922         0.300         0.211         0.672         1.061         0.876        40.151         4.265
-          12           ERR         2.086         0.009         0.008         0.560         1.230         0.000       189.675           ERR
+         Day             C            PY            GO            RS            TS            RB           ASM          LISP            JL            HS           AVG
+           1         1.618        17.403        47.417         1.871       489.831        36.254         1.475        11.001       189.477         5.481        80.183
+           2       107.837        73.154        71.215         8.485       544.752        69.115         3.120        58.290       372.338        35.140       134.345
+           3         6.537        24.584        45.644         1.742       495.442        41.435         1.830        19.068       276.920         5.457        91.866
+           4         2.880        43.746        53.822         5.044       546.713       109.590         2.449        42.075       387.076        28.811       122.220
+           5         1.602        25.800        49.243         1.675       504.649        33.801         1.650        13.349       427.877         5.707       106.535
+           6         3.793        23.783        54.503         1.700       495.650        44.060         1.519        20.151       597.857         8.134       125.115
+           7         3.498        19.222        61.406         2.273       519.804        41.356         1.681        29.343       360.153         8.648       104.738
+           8        35.180      1947.873       139.049        32.159       709.372       188.878        28.558       773.313      2033.731      1279.407       716.752
+           9        79.114      8714.896       192.377       148.552       753.102      9709.463       113.128      2884.159       445.066       804.546      2384.440
+          10       201.205       603.105       341.500       323.543      1098.430     29706.727       184.369      2328.681      8213.681      4468.517      4746.976
+          11         2.250        18.368        49.674         1.949       521.015        36.938         1.681        16.434       287.264         6.036        94.161
+          12        33.481        30.461        57.780         1.726       528.069        37.267         1.428        52.966      1148.326      6912.720       880.422
+         AVG        39.916       961.866        96.969        44.227       600.569      3337.907        28.574       520.736      1228.314      1130.717       798.979
+
+== Memory (KiB) ==
+         Day             C            PY            GO            RS            TS            RB           ASM          LISP            JL            HS           AVG
+           1          1536         11328         19200          2304        207252         12864          1344         28416        279168          7872         57128
+           2          2112         24688         18952          5324        224008         18304          3456         59520        319640         19500         69550
+           3          1536         11136         19320          1920        207696         12288          1344         33600        290496          7872         58720
+           4          3264         14480         19008          2880        220892         16456          1536         52608        308352         13056         65253
+           5          1536         12480         18576          2112        209008         12672          1344         30336        321984          8448         61849
+           6          7872         11904         19536          1920        212628         13056          1344         35520        325984          9024         63878
+           7          5760         11136         19260          2112        213868         12672          1344         42048        307548          9792         62554
+           8          9408        256940         43824         31104        259992         47424          9216         68928        436940        181440        134521
+           9          3072         11136         19304          1920        215012         12864          1344         45504        295740          8256         61415
+          10          4032         31296         20660          3980        220812         12864          1344         89024        374032         10176         76822
+          11          1728         11328         18568          2112        204964         12864          1344         31872        290880          8448         58410
+          12          1536         13824         18964          2112        216444         13440          1344         59904        356752         11720         69604
+         AVG          3616         35139         21264          4983        217714         16480          2192         48106        325626         24633         69975
+
+== Line Count ==
+         Day             C            PY            GO            RS            TS            RB           ASM          LISP            JL            HS           AVG
+           1            49            35            60            38            29            23           185            33            28            35            51
+           2            90            72           105            98            82            71           556           124            96           117           141
+           3            77            51            72            56            46            40           303            56            50            58            80
+           4            96            61            95           106            85            62           932            75            61            70           164
+           5           143            33            88            84            67            37           585            80            65            67           124
+           6           135            79           142           121            81            78           400            81            85            80           128
+           7           152            72           160            89            72            63           378            82            73            84           122
+           8           159            53           112            69            86            68           413           109            70            92           123
+           9           134           105           161           133           100            94           682           127           109           118           176
+          10           414           117           378           341           190           158          1103           265           271           320           355
+          11           107            41            54            59            46            27           519            61            43            63           102
+          12           298           126           264           182           148           125          1410           256           137           164           311
+         AVG           154            70           140           114            86            70           622           112            90           105           156
+
+== Cyclomatic Complexity ==
+         Day             C            PY            GO            RS            TS            RB           ASM          LISP            JL            HS           AVG
+           1             8             9            11             8             6             6            19             9             6             8             9
+           2            16            16            16            12            14             7            12            19            17             6            13
+           3            11            17            14            11            10             6            16            13            14             4            11
+           4            31            19            18            16            14             5            74            13            14             9            21
+           5            27             9            17            12             8            10            21            12            17             7            14
+           6            35            28            33            30            22            12            12            24            25             5            22
+           7            34            18            25            15            19            11            17            20            18            12            18
+           8            28            11            16             9            14             7            15            19            13             8            14
+           9            49            41            44            38            40            28            41            30            38            32            38
+          10           139            46           101            58            58            35            56           101            88            46            72
+          11            18             6             6             7             6             4            26             8             5             6             9
+          12            83            48            59            37            33            18           101            55            51            31            51
+         AVG            39            22            30            21            20            12            34            26            25            14            24

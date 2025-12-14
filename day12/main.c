@@ -231,7 +231,7 @@ static inline int partb(void) {
 }
 
 int main(void) {
-    FILE *fp = fopen("input.xt", "r");
+    FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
         return EXIT_FAILURE;

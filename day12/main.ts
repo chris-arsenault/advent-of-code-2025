@@ -153,7 +153,7 @@ function solve(shapes: Shape[], regions: Array<[number, number]>, counts: number
   return good;
 }
 
-const [shapes, regions, counts] = parseInput("input.xt");
+const [shapes, regions, counts] = parseInput("input.txt");
 const t0 = performance.now();
 const ans = solve(shapes, regions, counts);
 const elapsed = performance.now() - t0;

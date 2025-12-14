@@ -52,7 +52,7 @@ extern sort_u64
 %define SCRATCH_SIZE       33072
 
 section .data
-input_file:    db "input.xt", 0
+input_file:    db "input.txt", 0
 fmt_out:       db "regions_that_fit=%d elapsed_ms=%.3f", 10, 0
 err_open:      db "open", 0
 one_million:   dq 1000000.0

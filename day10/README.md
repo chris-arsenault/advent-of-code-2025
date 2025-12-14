@@ -1,32 +1,81 @@
-# Day 10 Solution Overview
+# Day 10: Light Toggle Puzzle
 
-This program solves both parts of the “Factory” puzzle.
+## Problem Summary
+Grid of lights with toggle rules.
+- **Part 1:** Find minimum button presses to turn all lights on (GF(2) linear algebra)
+- **Part 2:** Counter puzzle with target values (Integer Linear Programming)
 
-## Input parsing
-- One machine per line.
-- Indicators pattern is inside `[...]`.
-- Buttons are listed in `(...)`; each number is a zero-based index of a light/counter the button affects.
-- Joltage targets are inside `{...}`.
-- Lines are read into `lines[MAX_LINES][LINE_BUF]`; trailing newlines are stripped.
+## Algorithm
 
-## Part 1 (indicator lights)
-- Model as a linear system over GF(2): each button toggles certain lights; pressing a button an odd number of times flips those lights.
-- Build a binary matrix `lights x buttons` (`matrix[light][button]` bit-set if button toggles that light) and a target vector from the pattern (`#` => 1).
-- Run Gaussian elimination to reduced row echelon form (`rref`) to find pivots, rank, and detect inconsistencies.
-- Enumerate all assignments to free variables when there are ≤ `ENUM_LIMIT` (20) free columns; otherwise pick the all‑zeros free solution.
-- Back-substitute to get a complete solution and track its Hamming weight (total button presses). Pick the minimum weight; sum across machines.
+### Part 1: GF(2) Gaussian Elimination
+1. Build matrix where each button toggles certain lights (XOR relationship)
+2. Solve system over GF(2) (XOR operations only)
+3. Count button presses in solution
 
-## Part 2 (joltage counters)
-- Ignore the indicator pattern; use `{...}` as target counts. Counters start at 0; each button adds +1 to the counters it lists.
-- Build an augmented matrix (counters x buttons) and run Gaussian elimination to RREF to expose free columns (non-pivot buttons). Pivot rows are stored as `rhs` and `coef` against the free variables.
-- Free-variable search (free count is tiny here, ≤3):
-  - A quick bounded search (cap 400 per free) seeds an initial best total.
-  - A full DFS explores non-negative assignments to free variables, pruning when the running total reaches the current best. For each assignment, pivot values are computed as `rhs - sum(free * coef)`; they must be non-negative integers. Total presses = sum(free vars) + sum(pivot vars).
-- Sum the minimal press counts over all machines.
+GF(2) = Galois Field with 2 elements {0, 1}, where addition = XOR, multiplication = AND.
 
-## Key constants
-- `MAX_LIGHTS` 1024, `MAX_BUTTONS` 256, `ENUM_LIMIT` 20.
-- Bitsets store button columns in chunks of 64 for the GF(2) matrix (part 1); part 2 uses doubles for a tiny matrix.
+### Part 2: Integer Linear Programming with DFS
+1. Build constraint matrix for counter targets
+2. Use rational arithmetic RREF (Reduced Row Echelon Form)
+3. DFS/backtracking to find integer solution
+4. Minimize total button presses
 
-## Files
-- `day10/main.c` — full implementation for both parts.
+### Key Implementation Details
+- `MAX_LIGHTS` 1024, `MAX_BUTTONS` 256, `ENUM_LIMIT` 20
+- Bitsets store button columns in chunks of 64 for GF(2) matrix
+- Part 2 uses doubles for a tiny matrix with free variable count <= 3
+
+## Performance Results
+
+| Language | Time (ms) | vs C |
+|----------|-----------|------|
+| **ASM** | 182.798 | 0.92x (fastest) |
+| **C** | 198.527 | 1.0x (baseline) |
+| **Go** | 286.949 | 1.44x |
+| **Rust** | 305.243 | 1.54x |
+| **Python** | 483.436 | 2.44x |
+| **TypeScript** | 544.904 | 2.74x |
+| **Lisp** | 2218.197 | 11.2x |
+| **Haskell** | 4481.797 | 22.6x |
+| **Julia** | 7203.888 | 36.3x |
+| **Ruby** | 29670.660 | 149x |
+
+## Language Notes
+
+| Language | Matrix Library | ILP Approach |
+|----------|----------------|--------------|
+| **Python** | `numpy` with `%2` for GF(2) | `scipy.optimize.milp`; `sympy` for rational |
+| **Go** | `gonum` | Manual GF(2) implementation |
+| **Rust** | `nalgebra` | `good_lp` for ILP |
+| **Julia** | **Ideal:** `JuMP.jl` + `HiGHS` | `GaloisFields.jl` for GF(2) |
+| **Haskell** | `hmatrix` | `glpk-hs` for ILP |
+
+## Assembly Optimizations
+
+### Part 1 (GF(2) Gaussian Elimination)
+- **`pxor` (SSE2):** 128-bit XOR row operations
+- **`vpxor` (AVX2):** 256-bit row operations
+- **`vpxorq` (AVX-512):** 512-bit operations - process 512 lights per instruction
+- **`tzcnt`/`lzcnt`:** Pivot finding in bitpacked rows
+- Process 64 columns at once with GPR bitwise operations
+
+### Part 2 (ILP with DFS)
+The major ASM optimization was **DFS state collapse**:
+- Moved `free_vals[0..3]` from far scratch memory to stack frame `[rsp+32..63]`
+- Unrolled sum loop, set_free loop, sub_free loop, increment cascade
+- **Result:** 318ms -> 172ms (46% speedup), now faster than C
+
+Additional optimizations:
+- **Pivot bitmask:** Track pivot columns for O(1) lookup
+- **XOR-swap:** Swap rows without temporary using `xor` chain
+- **Row base pointer hoisting:** Avoid recomputing base pointers in inner loops
+- AVX2 for row operations (swap, normalize, eliminate) - negligible improvement due to small matrices
+
+## Interesting Points
+- This is the most algorithmically complex problem in the suite
+- ASM beats C by 8% through careful register allocation and loop unrolling
+- Ruby is 149x slower - the DFS backtracking is devastating for interpreted languages
+- Julia is surprisingly slow (36x) despite being "fast" - JIT overhead on complex control flow
+- The GF(2) and rational RREF are conceptually similar but require different number representations
+- AVX2 provided negligible improvement because matrices are small (MAX_COLS=17)
+- The DFS state collapse optimization was the key insight: cache locality matters more than SIMD for small data
