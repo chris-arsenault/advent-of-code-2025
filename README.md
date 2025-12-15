@@ -8,9 +8,28 @@ Greetings, traveler!
 
 The Elves have good news and bad news.
 
-The good news is that you've discovered our secret workshop where we solve the daily puzzles that keep the North Pole running smoothly. As it turns out, different Elves prefer different tools for their work - some swear by the ancient scrolls of C, others prefer the elegant incantations of Haskell, and a few ambitious ones have even learned to speak directly to the machine spirits in Assembly.
+The good news is that you've discovered our secret workshop where we solve the daily puzzles that keep the North Pole running smoothly. As it turns out, different Elves prefer different tools for their work—some swear by the ancient scrolls of C, others prefer the elegant incantations of Haskell, and a few ambitious ones have even learned to speak directly to the machine spirits in Assembly.
 
 The bad news? We need help documenting all of it before Christmas!
+
+---
+
+## Table of Contents
+
+- [What Is This Place?](#what-is-this-place)
+- [Daily Puzzle Archives](#daily-puzzle-archives)
+- [Quick Start](#quick-start)
+- [Workshop Methodology](#workshop-methodology)
+- [Performance Insights](#performance-insights)
+- [🤖 Notes from the AI Council](#-notes-from-the-ai-council) ← *LLM quirks and failures*
+- [🎓 Lessons from the Workshop](#-lessons-from-the-workshop) ← *Hard-won wisdom*
+- [Workshop Layout](#workshop-layout)
+- [Workshop Documents](#workshop-documents)
+- [Docker Usage](#docker-usage)
+- [A Note from the Workshop Manager](#a-note-from-the-workshop-manager)
+- [License](#license)
+
+---
 
 ## What Is This Place?
 
@@ -19,9 +38,62 @@ This repository contains solutions to [Advent of Code 2025](https://adventofcode
 **Languages in the Workshop:**
 C | Python | Go | Rust | TypeScript | Ruby | Common Lisp | Julia | Haskell | x86-64 Assembly
 
+---
+
+## Daily Puzzle Archives
+
+The Elves have prepared detailed documentation for each day's challenge. Click a day to learn about the algorithm, performance results, and language-specific insights:
+
+| Day | Puzzle | Highlights |
+|-----|--------|------------|
+| [Day 1](day1/README.md) | Dial Rotation | Branchless ASM with `cmov` |
+| [Day 2](day2/README.md) | Invalid Product IDs | ~33x speedup via precomputation |
+| [Day 3](day3/README.md) | Battery Joltage | Monotonic stack algorithm |
+| [Day 4](day4/README.md) | Paper Rolls Grid | BFS wavefront + SIMD `popcnt` |
+| [Day 5](day5/README.md) | Interval Merging | Two-pointer optimization |
+| [Day 6](day6/README.md) | Vertical Math | Big integer parsing |
+| [Day 7](day7/README.md) | Beam Splitter | Row-by-row simulation |
+| [Day 8](day8/README.md) | 3D Circuits | Union-Find + Kruskal MST |
+| [Day 9](day9/README.md) | Red Rectangles | Ray casting point-in-polygon |
+| [Day 10](day10/README.md) | Light Toggle | GF(2) + ILP with DFS |
+| [Day 11](day11/README.md) | DAG Paths | Topological DP |
+| [Day 12](day12/README.md) | Polyomino Packing | Dancing Links exact cover |
+
+---
+
+## Quick Start
+
+One of the younger Elves built a contraption that runs everything at once:
+
+```bash
+# Run all solutions (assumes dependencies installed)
+./run_all.py
+
+# Build everything first, then run
+./run_all.py --install
+```
+
+The machine will compile what needs compiling, execute each solution, compare outputs to the C reference, and emit summary tables for timings, memory usage, line counts, and a simple cyclomatic complexity heuristic.
+
+**Target a subset of days:**
+```bash
+./run_all.py --day 1,3,5
+```
+
+**Control which stats print:**
+```bash
+./run_all.py --no-memory --no-complexity
+```
+
+All tables include per-day and per-language averages. Failed runs are excluded from averages.
+
+> **Tip:** When validating changes locally, prefer running a single early day (`--day 1`) instead of the full suite to avoid long or flaky runs.
+
+---
+
 ## Workshop Methodology
 
-*How the Elves actually built all of this:*
+*How the Elves actually built all of this.*
 
 The solutions in this workshop didn't appear by magic (despite what some junior Elves claim). Here's how the polyglot collection came together:
 
@@ -58,34 +130,17 @@ Most days received **2 review passes**. Days 8 (3D Circuits) and Day 10 (Light T
 
 *The Elves found this human-AI collaboration quite productive, though they're still debating whether to give the AIs their own workbenches.*
 
-## Daily Puzzle Archives
-
-The Elves have prepared detailed documentation for each day's challenge. Click a day to learn about the algorithm, performance results, and language-specific insights:
-
-| Day | Puzzle | Highlights |
-|-----|--------|------------|
-| [Day 1](day1/README.md) | Dial Rotation | Branchless ASM with `cmov` |
-| [Day 2](day2/README.md) | Invalid Product IDs | ~33x speedup via precomputation |
-| [Day 3](day3/README.md) | Battery Joltage | Monotonic stack algorithm |
-| [Day 4](day4/README.md) | Paper Rolls Grid | BFS wavefront + SIMD `popcnt` |
-| [Day 5](day5/README.md) | Interval Merging | Two-pointer optimization |
-| [Day 6](day6/README.md) | Vertical Math | Big integer parsing |
-| [Day 7](day7/README.md) | Beam Splitter | Row-by-row simulation |
-| [Day 8](day8/README.md) | 3D Circuits | Union-Find + Kruskal MST |
-| [Day 9](day9/README.md) | Red Rectangles | Ray casting point-in-polygon |
-| [Day 10](day10/README.md) | Light Toggle | GF(2) + ILP with DFS |
-| [Day 11](day11/README.md) | DAG Paths | Topological DP |
-| [Day 12](day12/README.md) | Polyomino Packing | Dancing Links exact cover |
+---
 
 ## Performance Insights
 
-*The Elves have been racing their solutions against each other. Here's what they've learned:*
+*The Elves have been racing their solutions against each other. Here's what they've learned.*
 
 ### Average Timing Across All Days (Internal, ms)
 
 | Language | Avg Time | Avg Startup | Notes |
 |----------|----------|-------------|-------|
-| **ASM** | 25.0 | 1.6 | Fastest - hand-tuned hot paths |
+| **ASM** | 25.0 | 1.6 | Fastest—hand-tuned hot paths |
 | **C** | 35.5 | 2.1 | Solid baseline |
 | **Rust** | 41.0 | 1.8 | Close to C with safety guarantees |
 | **Go** | 45.4 | 2.7 | Consistent, competitive runtime |
@@ -100,13 +155,11 @@ The Elves have prepared detailed documentation for each day's challenge. Click a
 
 ### Notable Observations
 
-The Elves discovered some interesting patterns:
-
-**Startup overhead is massive for JIT languages:** TypeScript averages 494ms startup, Julia 439ms. On sub-millisecond problems (Days 1, 5, 11), this made them appear 100-500x slower than they actually are. Internal timing reveals TypeScript is only 2.5x slower than C on average, not 100x.
+**Startup overhead is massive for JIT languages:** TypeScript averages 494ms startup, Julia 439ms. On sub-millisecond problems (Days 1, 5, 11), this made them appear 100–500x slower than they actually are. Internal timing reveals TypeScript is only 2.5x slower than C on average, not 100x.
 
 **Algorithm beats optimization:** Day 2's precomputation approach gives ASM a ~76x speedup over C's naive per-number checking. Day 12 shows ASM/Rust (using DLX) are 200x faster than C's naive backtracking.
 
-**Library quality varies:** Day 12 shows Python is 13x *faster* than C because `exact_cover` uses efficient C extensions. Day 8 shows Python with `networkx` is 53x slower - library overhead matters.
+**Library quality varies:** Day 12 shows Python is 13x *faster* than C because `exact_cover` uses efficient C extensions. Day 8 shows Python with `networkx` is 53x slower—library overhead matters.
 
 **Haskell lazy evaluation has edge cases:** Union-Find (Day 8, 36x slower) requires immutable copying. Backtracking (Day 12, 241x slower) is a pathological case for lazy evaluation.
 
@@ -133,12 +186,14 @@ The Elves noticed that cyclomatic complexity doesn't always predict performance:
 
 - **Day 10** has the highest complexity (C: 139, avg: 72) and longest internal runtime (avg: 4386ms)
 - **Day 11** has the lowest complexity (avg: 9) and fastest internal runtime (avg: 4.3ms)
-- **Day 12** shows that algorithm choice (DLX vs backtracking) matters more than code complexity - ASM/Rust are 200x faster than C
-- **Haskell** consistently has the lowest complexity (avg: 14) but middling performance - functional style hides branching in composition
+- **Day 12** shows that algorithm choice (DLX vs backtracking) matters more than code complexity—ASM/Rust are 200x faster than C
+- **Haskell** consistently has the lowest complexity (avg: 14) but middling performance—functional style hides branching in composition
 
-### Notes from the AI Council
+---
 
-*Observations from the human-AI collaboration described in the Methodology section:*
+## 🤖 Notes from the AI Council
+
+*Observations from the human-AI collaboration. These insights may be useful to others working with LLMs on technical projects.*
 
 **Day 10 broke the AIs:** The Light Toggle puzzle (GF(2) linear algebra + ILP) was by far the hardest problem for LLMs to conceptualize. Multiple failed attempts across both ChatGPT and Claude, with significant human coaxing required to achieve a correct implementation in *any* language. The AIs could discuss the theory but struggled to translate it into working code.
 
@@ -148,57 +203,60 @@ The Elves noticed that cyclomatic complexity doesn't always predict performance:
 
 **First-pass ASM read like compiler output:** Initial Assembly implementations from the AI advisors almost universally resembled compiler-generated code rather than hand-rolled ASM—excessive stack spills, missed register allocation opportunities, no exploitation of x86 idioms. This suggests training data is dominated by disassembled binaries and compiler output rather than human-written Assembly. The style guidelines and multi-pass reviews were essential to achieve idiomatic results.
 
-## Quick Start
+---
 
-One of the younger Elves built a contraption that runs everything at once:
+## 🎓 Lessons from the Workshop
 
-```bash
-# Run all solutions (assumes dependencies installed)
-./run_all.py
+*The Elves have distilled their wisdom into these observations.*
 
-# Build everything first, then run
-./run_all.py --install
+### On Language Choice
+
+- **Speed matters internally:** For computation-heavy puzzles (Days 9, 10), language choice can mean 100x+ difference even with internal timing
+- **Startup matters for short problems:** TypeScript/Julia appear 100–500x slower on sub-millisecond problems due to ~500ms startup
+- **Algorithms matter most:** Day 2's ~76x speedup and Day 12's ~200x speedup came from algorithm choice (precomputation, DLX vs backtracking)
+- **Libraries matter:** Day 12's Python `exact_cover` is 13x *faster* than C; Day 8's `networkx` is 53x slower
+
+### On Assembly Optimization
+
+- **Branchless techniques** (`cmov`, `setcc`) reduce branch misprediction
+- **SIMD** helps for batch operations (`popcnt`, `pxor`) but not small matrices
+- **Cache locality** (Day 10's DFS state collapse) often beats vectorization
+- **Shared utilities** (`sort_u64`, `lower_bound`) avoid reinventing wheels
+- **Diminishing returns:** ASM is often only 10–20% faster than C; the effort rarely pays off
+
+### On Startup vs Algorithm Time
+
+Internal timing (algorithm only) reveals surprising truths:
+
+- **TypeScript is 2.5x C on average**, not 100x—the 494ms V8 startup dominated external measurements
+- **Julia is 21x C on average internally**, not 100x—the 439ms JIT startup was misleading
+- **Go is competitive (1.3x C)** when startup is excluded—the 2.7ms runtime init matters on short problems
+- **Compiled languages (C, Rust, ASM, Go, Haskell)** have <3ms startup; interpreted/JIT languages have 30–500ms
+
+### On Surprises
+
+- Haskell's lazy evaluation is efficient for DAG traversal (Day 11, 5.2x C), terrible for backtracking (Day 12, 262x C)
+- Julia's JIT helps numeric work (Day 3: 0.13x C) but hurts graph traversal (Day 11: 41x C)
+- Ruby is genuinely slow on tight loops (Days 9, 10: 135–151x C)—not a startup issue
+- Go has problem-specific overhead: 64x C on Day 7's hash map operations, but 0.64x C on Day 11's graph traversal
+
+---
+
+## Workshop Layout
+
+```
+day1/ through day12/    The puzzle solutions, one folder per day
+shared/                 Shared utilities (currently Assembly helpers)
+run_all.py              The Elf-built test contraption
 ```
 
-The machine will compile what needs compiling, execute each solution, compare outputs to the C reference, and emit summary tables for timings, memory usage, line counts, and a simple cyclomatic complexity heuristic.
+Each day folder contains:
+- `README.md` — Day-specific algorithm and performance documentation
+- `problem.txt` — The puzzle description
+- `input.txt` — The puzzle input
+- Solutions in various languages (`main.py`, `main.c`, `Main.hs`, etc.)
 
-### Target a subset of days
-```bash
-# Comma-separated list
-./run_all.py --day 1,3,5
-```
-
-### Control which stats print
-```bash
-# Disable memory and complexity tables
-./run_all.py --no-memory --no-complexity
-```
-
-All tables include per-day averages and per-language averages at the bottom. Failed runs are excluded from averages.
-
-### Safety note
-When validating changes locally, prefer running a single early day (e.g., `--day 1`) instead of the full suite to avoid long or flaky runs.
-
-## Docker Usage
-
-A container recipe is provided for a consistent toolchain.
-
-Build:
-```bash
-docker build -t aoc2025 .
-```
-
-Run (installs/builds, then executes the suite):
-```bash
-docker run --rm -it aoc2025
-```
-
-Run a specific subset (e.g., day 1 only) inside the container:
-```bash
-docker run --rm -it aoc2025 python3 run_all.py --day 1
-```
-
-**Important:** Docker runs are typically ~2–3× slower than running directly on your host due to container overhead and missing host-level CPU optimizations. Prefer local runs for performance comparisons; use the container for reproducibility.
+---
 
 ## Workshop Documents
 
@@ -210,63 +268,46 @@ The senior Elves have prepared several reference documents:
 | [ALGORITHMS.md](ALGORITHMS.md) | How each puzzle is solved, with language-specific tips |
 | [SHARED_ASM.md](SHARED_ASM.md) | Reference for the shared Assembly utilities |
 
-## Workshop Layout
+---
 
+## Docker Usage
+
+A container recipe is provided for a consistent toolchain.
+
+**Build:**
+```bash
+docker build -t aoc2025 .
 ```
-day1/ through day12/    The puzzle solutions, one folder per day
-shared/                 Shared utilities (currently Assembly helpers)
-run_all.py              The Elf-built test contraption
+
+**Run (installs/builds, then executes the suite):**
+```bash
+docker run --rm -it aoc2025
 ```
 
-Each day folder contains:
-- `README.md` - Day-specific algorithm and performance documentation
-- `problem.txt` - The puzzle description
-- `input.txt` - The puzzle input
-- Solutions in various languages (`main.py`, `main.c`, `Main.hs`, etc.)
+**Run a specific day inside the container:**
+```bash
+docker run --rm -it aoc2025 python3 run_all.py --day 1
+```
 
-## Lessons from the Workshop
+> **Note:** Docker runs are typically ~2–3x slower than running directly on your host due to container overhead and missing host-level CPU optimizations. Prefer local runs for performance comparisons; use the container for reproducibility.
 
-*The Elves have distilled their wisdom into these observations:*
-
-### On Language Choice
-- **Speed matters internally:** For computation-heavy puzzles (Days 9, 10), language choice can mean 100x+ difference even with internal timing
-- **Startup matters for short problems:** TypeScript/Julia appear 100-500x slower on sub-millisecond problems due to ~500ms startup
-- **Algorithms matter most:** Day 2's ~76x speedup and Day 12's ~200x speedup came from algorithm choice (precomputation, DLX vs backtracking)
-- **Libraries matter:** Day 12's Python `exact_cover` is 13x *faster* than C; Day 8's `networkx` is 53x slower
-
-### On Assembly Optimization
-- **Branchless techniques** (`cmov`, `setcc`) reduce branch misprediction
-- **SIMD** helps for batch operations (`popcnt`, `pxor`) but not small matrices
-- **Cache locality** (Day 10's DFS state collapse) often beats vectorization
-- **Shared utilities** (`sort_u64`, `lower_bound`) avoid reinventing wheels
-- **Diminishing returns:** ASM is often only 10-20% faster than C; the effort rarely pays off
-
-### On Startup vs Algorithm Time
-Internal timing (algorithm only) reveals surprising truths:
-- **TypeScript is 2.5x C on average**, not 100x - the 494ms V8 startup dominated external measurements
-- **Julia is 21x C on average internally**, not 100x - the 439ms JIT startup was misleading
-- **Go is competitive (1.3x C)** when startup is excluded - the 2.7ms runtime init matters on short problems
-- **Compiled languages (C, Rust, ASM, Go, Haskell)** have <3ms startup; interpreted/JIT languages have 30-500ms
-
-### On Surprises
-- Haskell's lazy evaluation is efficient for DAG traversal (Day 11, 5.2x C), terrible for backtracking (Day 12, 262x C)
-- Julia's JIT helps numeric work (Day 3: 0.13x C) but hurts graph traversal (Day 11: 41x C)
-- Ruby is genuinely slow on tight loops (Days 9, 10: 135-151x C) - not a startup issue
-- Go has problem-specific overhead: 64x C on Day 7's hash map operations, but 0.64x C on Day 11's graph traversal
+---
 
 ## A Note from the Workshop Manager
 
 These solutions prioritize clarity over defensive coding. The Elves assume the input is valid (it comes from a trusted source, after all) and focus on expressing the algorithm cleanly in each language's native style.
 
-This is a teaching workshop, not a production facility. Please don't use these patterns for anything load-bearing - the reindeer have enough to worry about.
+This is a teaching workshop, not a production facility. Please don't use these patterns for anything load-bearing—the reindeer have enough to worry about.
+
+---
 
 ## License
 
-MIT License - See [LICENSE](LICENSE)
+MIT License — See [LICENSE](LICENSE)
 
 The Elves believe in sharing knowledge freely. Use this code however you wish, though a mention of the North Pole Engineering Division is always appreciated.
 
 ---
 
 *"May your algorithms be optimal and your caches warm!"*
-*- The North Pole Engineering Division*
+*— The North Pole Engineering Division*
