@@ -5,7 +5,7 @@ import Data.Char (isDigit, isSpace)
 import Data.List (sort)
 import qualified Data.Set as Set
 import qualified Data.Vector as V
-import System.CPUTime (getCPUTime)
+import GHC.Clock (getMonotonicTimeNSec)
 
 trim :: String -> String
 trim = f . f where f = reverse . dropWhile isSpace
@@ -121,14 +121,14 @@ solve text =
 
 main :: IO ()
 main = do
-    t0 <- getCPUTime
+    t0 <- getMonotonicTimeNSec
     text <- readFile "input.txt"
     let !(p1, p2) = solve text
-    t1 <- getCPUTime
-    let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+    p1 `seq` p2 `seq` return ()
+    t1 <- getMonotonicTimeNSec
+    let elapsedMs = fromIntegral (t1 - t0) / 1e6 :: Double
     putStrLn $ "repeated-halves-sum=" ++ show p1 ++ " repeated-pattern-sum=" ++ show p2
                ++ " elapsed_ms=" ++ showFF elapsedMs
-
-showFF :: Double -> String
-showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
-           in if '.' `elem` s then s else s ++ ".0"
+  where
+    showFF x = let s = show (fromIntegral (round (x * 1000 :: Double)) / 1000 :: Double)
+               in if '.' `elem` s then s else s ++ ".0"

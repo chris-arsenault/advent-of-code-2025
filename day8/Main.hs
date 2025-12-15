@@ -1,12 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 module Main where
 
-import Data.Graph.Inductive.Graph (mkGraph, labNodes)
-import Data.Graph.Inductive.PatriciaTree (Gr)
-import Data.Graph.Inductive.Query.DFS (components)
 import Data.List (sortBy)
 import qualified Data.IntMap.Strict as IM
-import System.CPUTime (getCPUTime)
+import GHC.Clock (getMonotonicTimeNSec)
 
 type Point = (Int, Int, Int)
 
@@ -85,20 +82,21 @@ part2 pts edges =
                  else go dsu' lastProd rest
   in go (newDSU n) 0 edges
 
-showFF :: Double -> String
-showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
-           in if '.' `elem` s then s else s ++ ".0"
-
 main :: IO ()
 main = do
-    t0 <- getCPUTime
+    t0 <- getMonotonicTimeNSec
     linesIn <- lines <$> readFile "input.txt"
     let pts = loadPoints linesIn
         edges = buildEdges pts
         n = length pts
-    let !p1 = part1 n edges 1000
+        !p1 = part1 n edges 1000
         !p2 = part2 pts edges
-    t1 <- getCPUTime
-    let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+    -- Force results before stopping timer
+    p1 `seq` p2 `seq` return ()
+    t1 <- getMonotonicTimeNSec
+    let elapsedMs = fromIntegral (t1 - t0) / 1e6 :: Double
     putStrLn $ "top3_product=" ++ show p1 ++ " final_join_x_product=" ++ show p2
                ++ " elapsed_ms=" ++ showFF elapsedMs
+  where
+    showFF x = let s = show (fromIntegral (round (x * 1000 :: Double)) / 1000 :: Double)
+               in if '.' `elem` s then s else s ++ ".0"

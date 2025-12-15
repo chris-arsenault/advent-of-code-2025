@@ -5,7 +5,7 @@ import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
 import Data.Sequence (Seq, (|>))
-import System.CPUTime (getCPUTime)
+import GHC.Clock (getMonotonicTimeNSec)
 
 type Pos = (Int, Int)
 
@@ -63,19 +63,19 @@ part2 rolls0 counts0 = go rolls0 counts0 initialQueue S.empty 0
                   queue' = foldl (|>) rest newAccessible
               in go rolls counts' queue' removed' (acc + 1)
 
-showFF :: Double -> String
-showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
-           in if '.' `elem` s then s else s ++ ".0"
-
 main :: IO ()
 main = do
-  t0 <- getCPUTime
+  t0 <- getMonotonicTimeNSec
   ls <- lines <$> readFile "input.txt"
   let rolls = parseGrid ls
       counts = computeCounts rolls
-  let !p1 = part1 counts
-  let !p2 = part2 rolls counts
-  t1 <- getCPUTime
-  let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+      !p1 = part1 counts
+      !p2 = part2 rolls counts
+  p1 `seq` p2 `seq` return ()
+  t1 <- getMonotonicTimeNSec
+  let elapsedMs = fromIntegral (t1 - t0) / 1e6 :: Double
   putStrLn $ "accessible=" ++ show p1 ++ " removable_total=" ++ show p2
              ++ " elapsed_ms=" ++ showFF elapsedMs
+  where
+    showFF x = let s = show (fromIntegral (round (x * 1000 :: Double)) / 1000 :: Double)
+               in if '.' `elem` s then s else s ++ ".0"

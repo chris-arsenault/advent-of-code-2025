@@ -5,7 +5,7 @@ import Data.Maybe (fromJust)
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 import qualified Data.Sequence as Seq
-import System.CPUTime (getCPUTime)
+import GHC.Clock (getMonotonicTimeNSec)
 
 loadGrid :: [String] -> ([String], Int, Int)
 loadGrid ls =
@@ -75,18 +75,18 @@ part2 grid sr sc =
       final = go sr (M.singleton sc 1)
   in sum (M.elems final)
 
-showFF :: Double -> String
-showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
-           in if '.' `elem` s then s else s ++ ".0"
-
 main :: IO ()
 main = do
-  t0 <- getCPUTime
+  t0 <- getMonotonicTimeNSec
   linesIn <- lines <$> readFile "input.txt"
   let (grid, sr, sc) = loadGrid linesIn
-  let !p1 = part1 grid sr sc
+      !p1 = part1 grid sr sc
       !p2 = part2 grid sr sc
-  t1 <- getCPUTime
-  let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+  p1 `seq` p2 `seq` return ()
+  t1 <- getMonotonicTimeNSec
+  let elapsedMs = fromIntegral (t1 - t0) / 1e6 :: Double
   putStrLn $ "splits=" ++ show p1 ++ " timelines=" ++ show p2
              ++ " elapsed_ms=" ++ showFF elapsedMs
+  where
+    showFF x = let s = show (fromIntegral (round (x * 1000 :: Double)) / 1000 :: Double)
+               in if '.' `elem` s then s else s ++ ".0"

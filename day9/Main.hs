@@ -2,7 +2,7 @@
 module Main where
 
 import qualified Data.Vector as V
-import System.CPUTime (getCPUTime)
+import GHC.Clock (getMonotonicTimeNSec)
 
 type Point = (Int, Int)
 
@@ -112,18 +112,19 @@ maxRectInside pts poly =
                     in goJ best' i (j+1)
   in go 0 0
 
-showFF :: Double -> String
-showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
-           in if '.' `elem` s then s else s ++ ".0"
-
 main :: IO ()
 main = do
-    t0 <- getCPUTime
+    t0 <- getMonotonicTimeNSec
     linesIn <- lines <$> readFile "input.txt"
     let pts = loadPoints linesIn
-    let !p1 = maxRectAny pts
+        !p1 = maxRectAny pts
         !p2 = maxRectInside pts pts
-    t1 <- getCPUTime
-    let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+    -- Force results before stopping timer
+    p1 `seq` p2 `seq` return ()
+    t1 <- getMonotonicTimeNSec
+    let elapsedMs = fromIntegral (t1 - t0) / 1e6 :: Double
     putStrLn $ "max_rect_area=" ++ show p1 ++ " max_green_rect_area=" ++ show p2
                ++ " elapsed_ms=" ++ showFF elapsedMs
+  where
+    showFF x = let s = show (fromIntegral (round (x * 1000 :: Double)) / 1000 :: Double)
+               in if '.' `elem` s then s else s ++ ".0"

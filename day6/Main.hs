@@ -3,7 +3,7 @@ module Main where
 
 import Data.Char (isDigit)
 import qualified Data.Vector as V
-import System.CPUTime (getCPUTime)
+import GHC.Clock (getMonotonicTimeNSec)
 
 loadGrid :: String -> V.Vector (V.Vector Char)
 loadGrid text =
@@ -73,17 +73,17 @@ part2 grid blocks =
 
 main :: IO ()
 main = do
-  t0 <- getCPUTime
+  t0 <- getMonotonicTimeNSec
   text <- readFile "input.txt"
   let grid = loadGrid text
       blocks = splitBlocks grid
-  let !p1 = part1 grid blocks
+      !p1 = part1 grid blocks
       !p2 = part2 grid blocks
-  t1 <- getCPUTime
-  let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+  p1 `seq` p2 `seq` return ()
+  t1 <- getMonotonicTimeNSec
+  let elapsedMs = fromIntegral (t1 - t0) / 1e6 :: Double
   putStrLn $ "grand_total=" ++ show p1 ++ " quantum_total=" ++ show p2
              ++ " elapsed_ms=" ++ showFF elapsedMs
-
-showFF :: Double -> String
-showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
-           in if '.' `elem` s then s else s ++ ".0"
+  where
+    showFF x = let s = show (fromIntegral (round (x * 1000 :: Double)) / 1000 :: Double)
+               in if '.' `elem` s then s else s ++ ".0"

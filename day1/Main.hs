@@ -2,7 +2,7 @@
 module Main where
 
 import Data.Char (isSpace)
-import System.CPUTime (getCPUTime)
+import GHC.Clock (getMonotonicTimeNSec)
 
 simulate :: [String] -> (Int, Int, Int)
 simulate = go 50 0 0
@@ -27,14 +27,14 @@ trim = f . f where f = reverse . dropWhile isSpace
 
 main :: IO ()
 main = do
-  t0 <- getCPUTime
+  t0 <- getMonotonicTimeNSec
   input <- lines <$> readFile "input.txt"
   let !(z,c,p) = simulate input
-  t1 <- getCPUTime
-  let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+  z `seq` c `seq` p `seq` return ()
+  t1 <- getMonotonicTimeNSec
+  let elapsedMs = fromIntegral (t1 - t0) / 1e6 :: Double
   putStrLn $ "zero_landings=" ++ show z ++ " crossings=" ++ show c ++ " final_pos=" ++ show p
              ++ " elapsed_ms=" ++ showFF elapsedMs
-
-showFF :: Double -> String
-showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
-           in if '.' `elem` s then s else s ++ ".0"
+  where
+    showFF x = let s = show (fromIntegral (round (x * 1000 :: Double)) / 1000 :: Double)
+               in if '.' `elem` s then s else s ++ ".0"

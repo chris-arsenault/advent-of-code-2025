@@ -19,6 +19,45 @@ This repository contains solutions to [Advent of Code 2025](https://adventofcode
 **Languages in the Workshop:**
 C | Python | Go | Rust | TypeScript | Ruby | Common Lisp | Julia | Haskell | x86-64 Assembly
 
+## Workshop Methodology
+
+*How the Elves actually built all of this:*
+
+The solutions in this workshop didn't appear by magic (despite what some junior Elves claim). Here's how the polyglot collection came together:
+
+### Phase 1: The C Foundation
+
+The senior Elf began with C implementations as the **reference algorithm** for each puzzle. These prioritize clarity over cleverness—few micro-optimizations, occasional brute force where it kept the code readable. The C solutions establish correctness and provide baseline timings against which all other languages are measured.
+
+### Phase 2: The Polyglot Expansion
+
+With C solutions producing verified answers, the other languages were implemented using **C as the test suite**. Each new implementation had to match C's output exactly. This let the Elves focus on expressing each algorithm idiomatically without worrying about correctness—if it matched C, it was right.
+
+### Phase 3: The Language Specialist Review
+
+An independent reviewer (a particularly discerning Elf from the Quality Assurance division) examined each language's solutions and identified **algorithm-language pairings** that deserved more attention. The goal: ensure each language showcased its natural strengths rather than just translating C verbatim.
+
+Examples of this guidance:
+- *Haskell*: Emphasize recursion and lazy evaluation patterns
+- *Julia*: Leverage linear algebra and mathematical expressiveness
+- *Lisp*: Exploit native bignums and macro capabilities
+- *Ruby*: Use metaprogramming and expressive iterators
+
+### Phase 4: Assembly Refinement
+
+The x86-64 Assembly implementations received special treatment. The Elves established **explicit style guidelines** for ASM code: consistent register usage, clear section organization, documented calling conventions. The shared utilities in `shared/utils.asm` emerged from this disciplined approach.
+
+### Phase 5: The AI Council
+
+Finally, the workshop convened a council of artificial advisors:
+
+- **ChatGPT 5.2** performed multi-pass reviews of the Assembly implementations, providing feedback on idiomatic patterns, register allocation, and micro-optimizations
+- **Claude Code** evaluated the suggestions and implemented changes that made sense within each problem's context
+
+Most days received **2 review passes**. Days 8 (3D Circuits) and Day 10 (Light Toggle) received **4 passes** due to their algorithmic complexity—Union-Find/Kruskal MST and GF(2)/ILP respectively demanded extra scrutiny.
+
+*The Elves found this human-AI collaboration quite productive, though they're still debating whether to give the AIs their own workbenches.*
+
 ## Daily Puzzle Archives
 
 The Elves have prepared detailed documentation for each day's challenge. Click a day to learn about the algorithm, performance results, and language-specific insights:
@@ -54,7 +93,7 @@ The Elves have prepared detailed documentation for each day's challenge. Click a
 | **Lisp** | 468.8 | 41 | Native bignums, SBCL startup overhead |
 | **Julia** | 751.5 | 439 | JIT-compiled code is efficient |
 | **Python** | 871.8 | 49 | Interpreted overhead, but readable |
-| **Haskell** | 1094.4 | 2.0 | Lazy evaluation: sometimes magical, sometimes painful |
+| **Haskell** | 1053.6 | 2.5 | Lazy evaluation: sometimes magical, sometimes painful |
 | **Ruby** | 3165.2 | 33 | Expressiveness over speed |
 
 *Internal timing excludes process startup. Startup column shows average initialization overhead in ms.*
@@ -96,6 +135,18 @@ The Elves noticed that cyclomatic complexity doesn't always predict performance:
 - **Day 11** has the lowest complexity (avg: 9) and fastest internal runtime (avg: 4.3ms)
 - **Day 12** shows that algorithm choice (DLX vs backtracking) matters more than code complexity - ASM/Rust are 200x faster than C
 - **Haskell** consistently has the lowest complexity (avg: 14) but middling performance - functional style hides branching in composition
+
+### Notes from the AI Council
+
+*Observations from the human-AI collaboration described in the Methodology section:*
+
+**Day 10 broke the AIs:** The Light Toggle puzzle (GF(2) linear algebra + ILP) was by far the hardest problem for LLMs to conceptualize. Multiple failed attempts across both ChatGPT and Claude, with significant human coaxing required to achieve a correct implementation in *any* language. The AIs could discuss the theory but struggled to translate it into working code.
+
+**Lisp defeated the language models:** Common Lisp was consistently the hardest language for the AI advisors to get right. Most days required manual balancing of parentheses by a human Elf. The models would lose track of nesting depth, drop closing parens, or misplace them entirely. Perhaps the training data underrepresents properly-formatted Lisp?
+
+**Day 12's suspicious shortcut:** For the workshop's puzzle input, Day 12 (Polyomino Packing) can be solved with just a size test—no Dancing Links or backtracking required at all. Only C and ASM implement the full exact-cover algorithm. It remains unclear whether this is a special case unique to this input or an intentional problem space reduction. Other inputs may require the full algorithm.
+
+**First-pass ASM read like compiler output:** Initial Assembly implementations from the AI advisors almost universally resembled compiler-generated code rather than hand-rolled ASM—excessive stack spills, missed register allocation opportunities, no exploitation of x86 idioms. This suggests training data is dominated by disassembled binaries and compiler output rather than human-written Assembly. The style guidelines and multi-pass reviews were essential to achieve idiomatic results.
 
 ## Quick Start
 
