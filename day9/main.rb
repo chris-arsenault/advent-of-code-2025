@@ -1,3 +1,4 @@
+t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 points = File.read('input.txt').split("\n").map do |line|
   x, y = line.split(',').map(&:to_i)
   [x, y]
@@ -97,8 +98,7 @@ def max_rect_inside(pts, poly)
   best
 end
 
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 p1 = max_rect_any(points)
 p2 = max_rect_inside(points, points)
-elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
-puts "max_rect_area=#{p1} max_green_rect_area=#{p2} elapsed_ms=#{format('%.3f', elapsed)}"
+elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
+puts "max_rect_area=#{p1} max_green_rect_area=#{p2} elapsed_ms=#{format('%.3f', elapsed_ms)}"

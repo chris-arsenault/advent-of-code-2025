@@ -9,10 +9,6 @@ typedef struct {
     long long hi;
 } Interval;
 
-static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
-    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
-}
-
 static int cmp_interval(const void *a, const void *b) {
     const Interval *ia = (const Interval *)a;
     const Interval *ib = (const Interval *)b;
@@ -54,7 +50,14 @@ static bool contains(const Interval *intervals, size_t n, long long value) {
     return false;
 }
 
+static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
+    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
+}
+
 int main(int argc, char **argv) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     const char *path = (argc > 1) ? argv[1] : "input.txt";
     FILE *fp = fopen(path, "r");
     if (!fp) {
@@ -133,9 +136,6 @@ int main(int argc, char **argv) {
     }
     fclose(fp);
 
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
-
     size_t merged_len = merge_intervals(ranges, ranges_len);
 
     long long fresh_count = 0;
@@ -152,8 +152,9 @@ int main(int argc, char **argv) {
     }
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
+    double elapsed_ms = ns_since(&t0, &t1) / 1e6;
 
-    printf("available_fresh=%lld total_fresh_ids=%lld elapsed_ms=%.3f\n", fresh_count, fresh_total, ns_since(&t0, &t1) / 1e6);
+    printf("available_fresh=%lld total_fresh_ids=%lld elapsed_ms=%.3f\n", fresh_count, fresh_total, elapsed_ms);
 
     free(ranges);
     free(ids);

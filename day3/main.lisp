@@ -5,9 +5,6 @@
     (loop for line = (read-line in nil nil)
           while line collect line)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defun string-digits (s)
   (loop for ch across s collect (- (char-code ch) (char-code #\0))))
 
@@ -51,14 +48,14 @@
     (values p1 p2)))
 
 (defun main ()
-  (let* ((path (or (probe-file "input_eric.txt") (probe-file "input.txt")))
+  (let* ((start (get-internal-real-time))
+         (path (or (probe-file "input_eric.txt") (probe-file "input.txt")))
          (lines (read-lines path))
-         (t0 (get-internal-run-time))
          (res (multiple-value-list (solve lines :k 12)))
-         (t1 (get-internal-run-time))
-         (elapsed (elapsed-ms t0 t1)))
+         (elapsed-ms (* 1000.0 (/ (- (get-internal-real-time) start)
+                                  internal-time-units-per-second))))
     (destructuring-bind (p1 p2) res
-      (format t "max-2-digit-sum=~A max-12-digit-sum=~A elapsed_ms=~,3f~%"
-              p1 p2 elapsed))))
+      (format t "max-2-digit-sum=~A max-12-digit-sum=~A elapsed_ms=~,3F~%"
+              p1 p2 elapsed-ms))))
 
 (main)

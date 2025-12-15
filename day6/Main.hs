@@ -2,8 +2,8 @@
 module Main where
 
 import Data.Char (isDigit)
-import System.CPUTime (getCPUTime)
 import qualified Data.Vector as V
+import System.CPUTime (getCPUTime)
 
 loadGrid :: String -> V.Vector (V.Vector Char)
 loadGrid text =
@@ -73,16 +73,16 @@ part2 grid blocks =
 
 main :: IO ()
 main = do
+  t0 <- getCPUTime
   text <- readFile "input.txt"
   let grid = loadGrid text
       blocks = splitBlocks grid
-  t0 <- getCPUTime
   let !p1 = part1 grid blocks
       !p2 = part2 grid blocks
   t1 <- getCPUTime
-  let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-  putStrLn $ "grand_total=" ++ show p1 ++ " quantum_total=" ++ show p2 ++
-             " elapsed_ms=" ++ showFF elapsed
+  let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+  putStrLn $ "grand_total=" ++ show p1 ++ " quantum_total=" ++ show p2
+             ++ " elapsed_ms=" ++ showFF elapsedMs
 
 showFF :: Double -> String
 showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)

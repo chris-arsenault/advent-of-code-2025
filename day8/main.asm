@@ -6,14 +6,14 @@
 ; Optimizations: 32-bit distance calc, top-3 selection, hoisted DSU bases
 
 global main
-extern clock_gettime
 extern printf
 extern perror
-extern ns_since
 extern read_file_all
 extern parse_uint64
 extern skip_non_digits
 extern sort_edges_3
+extern clock_gettime
+extern ns_since
 
 ; ============================================================================
 ; Register allocation (callee-saved, preserved across calls):
@@ -31,7 +31,6 @@ extern sort_edges_3
 %define STK_FILE_PTR    0               ; 8 bytes - current file pointer
 %define STK_SIZE        16              ; 8 bytes padding for alignment
 
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE        1048576
 %define MAX_POINTS      1024
 %define MAX_EDGES       600000
@@ -65,6 +64,11 @@ main:
     push    r14
     push    r15
     sub     rsp, STK_SIZE
+
+    ; Start timing
+    mov     edi, 1                      ; CLOCK_MONOTONIC
+    lea     rsi, [rel ts0]
+    call    clock_gettime
 
     ; ========================================================================
     ; Read input file
@@ -144,13 +148,6 @@ main:
 .points_done:
     ; r12d = point_count (now constant)
     ; r14 now free for reuse (will become p1_result)
-
-    ; ========================================================================
-    ; Start timing
-    ; ========================================================================
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts0]
-    call    clock_gettime
 
     ; ========================================================================
     ; Build edges: O(n²) all pairs with squared Euclidean distance
@@ -377,25 +374,30 @@ main:
 
 .p2_done:
     ; ========================================================================
-    ; End timing and print results
+    ; End timing
     ; ========================================================================
-    mov     edi, CLOCK_MONOTONIC
+    mov     edi, 1                      ; CLOCK_MONOTONIC
     lea     rsi, [rel ts1]
     call    clock_gettime
 
+    ; elapsed_ns = ns_since(&ts0, &ts1)
     lea     rdi, [rel ts0]
     lea     rsi, [rel ts1]
     call    ns_since
 
+    ; convert to ms in xmm0
     cvtsi2sd xmm0, rax
     movsd   xmm1, [rel one_million]
     divsd   xmm0, xmm1
 
+    ; ========================================================================
+    ; Print results
+    ; ========================================================================
     ; printf(fmt, top3_product, final_join_x_product, elapsed_ms)
     mov     esi, r14d                   ; p1_result (32-bit suffices)
     mov     rdx, r15                    ; p2_result
     lea     rdi, [rel fmt_out]
-    mov     eax, 1
+    mov     eax, 1                      ; 1 XMM register used
     call    printf
 
     xor     eax, eax

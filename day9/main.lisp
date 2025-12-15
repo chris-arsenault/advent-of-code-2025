@@ -5,9 +5,6 @@
     (loop for line = (read-line in nil nil)
           while line collect line)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defun split-commas (s)
   (let ((parts '())
         (start 0)
@@ -126,15 +123,18 @@
                   (when (> area best) (setf best area)))))))))
     best))
 
+(defun elapsed-ms (start end)
+  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
+
 (defun main ()
-  (let* ((lines (read-lines "input.txt"))
-         (pts (load-points lines))
-         (poly pts)
-         (t0 (get-internal-real-time))
-         (p1 (max-rectangle-any pts))
-         (p2 (max-rectangle-inside pts poly))
-         (t1 (get-internal-real-time))
-         (elapsed (elapsed-ms t0 t1)))
-    (format t "max_rect_area=~A max_green_rect_area=~A elapsed_ms=~,3f~%" p1 p2 elapsed)))
+  (let ((t0 (get-internal-real-time)))
+    (let* ((lines (read-lines "input.txt"))
+           (pts (load-points lines))
+           (poly pts)
+           (p1 (max-rectangle-any pts))
+           (p2 (max-rectangle-inside pts poly))
+           (t1 (get-internal-real-time))
+           (elapsed (elapsed-ms t0 t1)))
+      (format t "max_rect_area=~A max_green_rect_area=~A elapsed_ms=~,3f~%" p1 p2 elapsed))))
 
 (main)

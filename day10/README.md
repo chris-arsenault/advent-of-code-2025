@@ -29,16 +29,40 @@ GF(2) = Galois Field with 2 elements {0, 1}, where addition = XOR, multiplicatio
 
 | Language | Time (ms) | vs C |
 |----------|-----------|------|
-| **ASM** | 182.798 | 0.92x (fastest) |
-| **C** | 198.527 | 1.0x (baseline) |
-| **Go** | 286.949 | 1.44x |
-| **Rust** | 305.243 | 1.54x |
-| **Python** | 483.436 | 2.44x |
-| **TypeScript** | 544.904 | 2.74x |
-| **Lisp** | 2218.197 | 11.2x |
-| **Haskell** | 4481.797 | 22.6x |
-| **Julia** | 7203.888 | 36.3x |
-| **Ruby** | 29670.660 | 149x |
+| **ASM** | 160.740 | 0.80x (fastest) |
+| **C** | 201.466 | 1.0x (baseline) |
+| **Rust** | 311.147 | 1.5x |
+| **Go** | 345.560 | 1.7x |
+| **Python** | 580.836 | 2.9x |
+| **TypeScript** | 1067.511 | 5.3x |
+| **Lisp** | 2339.611 | 11.6x |
+| **Haskell** | 4109.113 | 20.4x |
+| **Julia** | 7912.589 | 39.3x |
+| **Ruby** | 29046.014 | 144.2x |
+
+## Resource Metrics
+
+| Language | Memory (KiB) | Lines | Complexity |
+|----------|-------------|-------|------------|
+| **C** | 4,032 | 408 | 139 |
+| **Python** | 31,680 | 114 | 46 |
+| **Go** | 19,944 | 375 | 101 |
+| **Rust** | 4,032 | 338 | 58 |
+| **TypeScript** | 219,556 | 186 | 58 |
+| **Ruby** | 12,864 | 156 | 35 |
+| **ASM** | 1,344 | 1,085 | 56 |
+| **Lisp** | 88,280 | 260 | 101 |
+| **Julia** | 374,748 | 269 | 88 |
+| **Haskell** | 10,176 | 312 | 45 |
+
+### Anomalies & Analysis
+
+- **C complexity (139):** Highest in the entire suite - GF(2) Gaussian elimination combined with ILP DFS backtracking creates extreme branching. The algorithm is inherently complex.
+- **C line count (408):** Highest for C - manual matrix operations, pivot selection, and backtracking enumeration require extensive code. This is the most complex C implementation.
+- **ASM line count (1,085):** Largest in suite - SIMD row operations, DFS state management, and rational arithmetic all require manual implementation. 2.7x more than C.
+- **Lisp complexity (101):** Matches Go - the macro-heavy implementation with rational arithmetic doesn't reduce branching like other Lisp strengths (recursion, list processing).
+- **Ruby timing (144x):** Second worst performance ratio - the DFS backtracking with interpreted loops is catastrophic. Each backtrack requires thousands of operations.
+- **Lisp memory (88 MB):** High - rational arithmetic creates many intermediate bignum objects. SBCL's GC pressure is significant during the ILP solve.
 
 ## Language Notes
 
@@ -73,9 +97,9 @@ Additional optimizations:
 
 ## Interesting Points
 - This is the most algorithmically complex problem in the suite
-- ASM beats C by 8% through careful register allocation and loop unrolling
-- Ruby is 149x slower - the DFS backtracking is devastating for interpreted languages
-- Julia is surprisingly slow (36x) despite being "fast" - JIT overhead on complex control flow
+- ASM beats C by 20% through careful register allocation and loop unrolling
+- Ruby is 144x slower - the DFS backtracking is devastating for interpreted languages
+- Julia is surprisingly slow (39x) despite being "fast" - JIT overhead on complex control flow
 - The GF(2) and rational RREF are conceptually similar but require different number representations
 - AVX2 provided negligible improvement because matrices are small (MAX_COLS=17)
 - The DFS state collapse optimization was the key insight: cache locality matters more than SIMD for small data

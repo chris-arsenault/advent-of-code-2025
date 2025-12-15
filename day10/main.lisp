@@ -1,12 +1,11 @@
 #!/usr/bin/env sbcl --script
 
+(defvar *start-time* (get-internal-real-time))
+
 (defun read-lines (path)
   (with-open-file (in path)
     (loop for line = (read-line in nil nil)
           while line collect line)))
-
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
 
 (defun parse-between (line start-ch end-ch)
   (let ((lb (position start-ch line))
@@ -269,11 +268,10 @@
 
 (defun main ()
   (let* ((lines (read-lines "input.txt"))
-         (t0 (get-internal-real-time))
          (p1 (part1 lines))
          (p2 (part2 lines))
-         (t1 (get-internal-real-time))
-         (elapsed (elapsed-ms t0 t1)))
-    (format t "min_lights_presses=~A min_counter_presses=~A elapsed_ms=~,3f~%" p1 p2 elapsed)))
+         (elapsed-ms (/ (- (get-internal-real-time) *start-time*)
+                        (/ internal-time-units-per-second 1000.0d0))))
+    (format t "min_lights_presses=~A min_counter_presses=~A elapsed_ms=~,3F~%" p1 p2 elapsed-ms)))
 
 (main)

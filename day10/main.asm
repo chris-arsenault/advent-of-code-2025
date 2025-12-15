@@ -16,13 +16,12 @@
 ;   - Back-substitution with free variable enumeration
 
 global main
-extern clock_gettime
 extern printf
 extern perror
-extern ns_since
 extern read_file_all
+extern clock_gettime
+extern ns_since
 
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE 65536
 %define MAX_N 16
 %define MAX_COLS 17
@@ -1124,6 +1123,11 @@ main:
     ; r15 = scratch frame base (all functions use this for temporary storage)
     lea     r15, [rsp]
 
+    ; Start timing
+    mov     edi, 1
+    lea     rsi, [rel ts0]
+    call    clock_gettime
+
     ; Read input file
     lea     rdi, [rel input_file]
     lea     rsi, [rel file_buf]
@@ -1138,10 +1142,6 @@ main:
 
 .file_ok:
     mov     rbx, rax
-
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts0]
-    call    clock_gettime
 
     lea     r12, [rel file_buf]
     lea     r13, [r12 + rbx]
@@ -1181,13 +1181,17 @@ main:
     jmp     .process_loop
 
 .done:
-    mov     edi, CLOCK_MONOTONIC
+    ; End timing
+    mov     edi, 1
     lea     rsi, [rel ts1]
     call    clock_gettime
 
+    ; elapsed_ns = ns_since(&ts0, &ts1)
     lea     rdi, [rel ts0]
     lea     rsi, [rel ts1]
     call    ns_since
+
+    ; Convert to ms in xmm0
     cvtsi2sd xmm0, rax
     movsd   xmm1, [rel one_million]
     divsd   xmm0, xmm1
@@ -1195,7 +1199,7 @@ main:
     mov     esi, r14d
     mov     edx, ebx
     lea     rdi, [rel fmt_out]
-    mov     eax, 1
+    mov     eax, 1                  ; 1 XMM register used
     call    printf
     xor     eax, eax
 

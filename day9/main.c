@@ -6,10 +6,6 @@
 #define LINE_BUF 256
 #define MAX_POINTS 200000
 
-static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
-    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
-}
-
 static inline int point_on_edge(int px, int py, int x1, int y1, int x2, int y2) {
     if (x1 == x2) {
         if (px != x1) return 0;
@@ -112,7 +108,14 @@ static inline unsigned long long partb(int *xs, int *ys, int count) {
     return best;
 }
 
+static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
+    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
+}
+
 int main(void) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -133,14 +136,13 @@ int main(void) {
         }
     }
 
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
-
     unsigned long long result_a = parta(xs, ys, count);
     unsigned long long result_b = partb(xs, ys, count);
-    clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("max_rect_area=%llu max_green_rect_area=%llu elapsed_ms=%.3f\n", result_a, result_b, ns_since(&t0, &t1) / 1e6);
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    double elapsed_ms = ns_since(&t0, &t1) / 1e6;
+
+    printf("max_rect_area=%llu max_green_rect_area=%llu elapsed_ms=%.3f\n", result_a, result_b, elapsed_ms);
 
     if (ferror(fp)) {
         perror("read error");

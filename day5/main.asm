@@ -16,13 +16,12 @@
 ; - Part 2: Sum (end - start + 1) for all merged ranges
 
 global main
-extern clock_gettime
 extern printf
 extern perror
-extern ns_since
 extern read_file_all
+extern clock_gettime
+extern ns_since
 
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE 1048576
 %define MAX_RANGES 512
 %define MAX_IDS 2048
@@ -36,13 +35,12 @@ one_million:   dq 1000000.0
 section .bss
     align 64
 file_buf:      resb BUF_SIZE
+ts0:           resq 2
+ts1:           resq 2
     align 64
 ranges:        resq MAX_RANGES * 2      ; pairs of (start, end), 16 bytes each
     align 64
 ids:           resq MAX_IDS
-    align 16
-ts0:           resq 2
-ts1:           resq 2
 
 section .text
 
@@ -402,6 +400,11 @@ main:
     push    r15
     sub     rsp, MAIN_FRAME
 
+    ; --- Start timing ---
+    mov     edi, 1
+    lea     rsi, [rel ts0]
+    call    clock_gettime
+
     ; --- Read file ---
     lea     rdi, [rel input_file]
     lea     rsi, [rel file_buf]
@@ -426,11 +429,6 @@ main:
     add     r13, rax
     lea     r14, [rel ranges]
     xor     ebx, ebx                ; range_count = 0
-
-    ; --- Start timing ---
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts0]
-    call    clock_gettime
 
     ; === Parse ranges (until line without '-') ===
     ; Blank line or ID-only line triggers transition to ID parsing
@@ -650,7 +648,7 @@ main:
 
 .sum_done:
     ; --- End timing ---
-    mov     edi, CLOCK_MONOTONIC
+    mov     edi, 1
     lea     rsi, [rel ts1]
     call    clock_gettime
 
@@ -658,13 +656,14 @@ main:
     lea     rsi, [rel ts1]
     call    ns_since
     cvtsi2sd xmm0, rax
-    divsd   xmm0, [rel one_million]
+    movsd   xmm1, [rel one_million]
+    divsd   xmm0, xmm1
 
     ; --- Output ---
     lea     rdi, [rel fmt_out]
     mov     esi, [rsp + MAIN_FRESH_COUNT]
     mov     rdx, r15                ; total_fresh_ids
-    mov     eax, 1                  ; 1 XMM register used
+    mov     eax, 1                  ; one XMM arg
     call    printf
 
     xor     eax, eax

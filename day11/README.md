@@ -25,16 +25,40 @@ Benefits: sequential memory access, naturally parallelizable, no recursion overh
 
 | Language | Time (ms) | vs C |
 |----------|-----------|------|
-| **ASM** | 0.026 | 0.81x (fastest) |
-| **C** | 0.032 | 1.0x (baseline) |
-| **Rust** | 0.208 | 6.5x |
-| **Go** | 0.274 | 8.6x |
-| **Lisp** | 0.777 | 24.3x |
-| **TypeScript** | 0.856 | 26.8x |
-| **Ruby** | 1.010 | 31.6x |
-| **Python** | 1.058 | 33.1x |
-| **Haskell** | 3.741 | 116.9x |
-| **Julia** | 33.130 | 1035x |
+| **ASM** | 1.566 | 0.71x (fastest) |
+| **Rust** | 1.904 | 0.86x |
+| **C** | 2.216 | 1.0x (baseline) |
+| **Haskell** | 5.830 | 2.6x |
+| **Lisp** | 14.310 | 6.5x |
+| **Python** | 17.896 | 8.1x |
+| **Ruby** | 34.748 | 15.7x |
+| **Go** | 46.932 | 21.2x |
+| **Julia** | 259.183 | 117.0x |
+| **TypeScript** | 507.153 | 228.9x |
+
+## Resource Metrics
+
+| Language | Memory (KiB) | Lines | Complexity |
+|----------|-------------|-------|------------|
+| **C** | 1,728 | 101 | 18 |
+| **Python** | 11,328 | 38 | 6 |
+| **Go** | 19,584 | 51 | 6 |
+| **Rust** | 2,112 | 56 | 7 |
+| **TypeScript** | 207,372 | 42 | 6 |
+| **Ruby** | 12,672 | 25 | 4 |
+| **ASM** | 1,344 | 499 | 26 |
+| **Lisp** | 31,488 | 56 | 8 |
+| **Julia** | 288,192 | 41 | 5 |
+| **Haskell** | 8,448 | 55 | 5 |
+
+### Anomalies & Analysis
+
+- **Ruby line count (25):** Shortest implementation in the entire suite - Ruby's `Hash.new { |h,k| ... }` auto-memoization pattern handles the entire DP in minimal code. Yet 15.7x slower than C.
+- **Complexity uniformly low (4-8):** All high-level languages have similar low complexity - the topological DP algorithm has few branches. This is one of the simplest algorithms in the suite.
+- **ASM complexity (26):** Highest - the level-synchronous approach requires explicit queue management and predecessor iteration that high-level languages abstract away.
+- **C memory (1,728 KiB):** Very low - the small graph fits in stack-allocated arrays. No dynamic allocation needed.
+- **TypeScript timing (229x):** Worst ratio in Day 11 - Node.js startup completely dominates this ~2ms problem. The algorithm itself is fast.
+- **Julia timing (117x):** Poor despite simple algorithm - graph building and map lookups incur JIT overhead. Julia excels at numeric computation, not graph traversal.
 
 ## Language Notes
 
@@ -54,9 +78,9 @@ Benefits: sequential memory access, naturally parallelizable, no recursion overh
 - **Prefetch:** Next level's predecessor lists while processing current
 
 ## Interesting Points
-- ASM is only 20% faster than C - the problem is too small for low-level optimization
-- **Julia is 1035x slower** - the worst relative performance in the suite! JIT overhead on graph algorithms
-- Haskell's lazy evaluation should theoretically provide free memoization, but it's still 117x slower
+- ASM and Rust are ~15-30% faster than C - tight loops benefit from optimization
+- Julia is 117x slower - JIT overhead on graph algorithms hurts
+- Haskell performs well (2.6x) - lazy evaluation provides efficient memoization for DAG traversal
 - Ruby's `Hash.new` with block provides elegant auto-memoization
 - The level-synchronous approach enables SIMD parallelism not possible with recursive DFS
-- This is one of the fastest problems overall (<1ms for most languages)
+- TypeScript shows extreme startup overhead (229x) on this fast-running problem

@@ -1,3 +1,4 @@
+t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 input_file = File.exist?('input_eric.txt') ? 'input_eric.txt' : 'input.txt'
 lines = File.read(input_file).split("\n")
 
@@ -32,7 +33,6 @@ def best_k(s, k)
   stack.join.to_i
 end
 
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 p1 = 0
 p2 = 0
 lines.each do |line|

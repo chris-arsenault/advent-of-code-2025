@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { performance } from "perf_hooks";
 
 type Graph = Map<string, string[]>;
 
@@ -32,8 +33,9 @@ function countPaths(
   return total;
 }
 
-const g = loadGraph("input.txt");
 const t0 = performance.now();
+
+const g = loadGraph("input.txt");
 const p1 = countPaths(g, "you", "out", new Map());
 const a1 = countPaths(g, "svr", "dac", new Map());
 const a2 = countPaths(g, "dac", "fft", new Map());
@@ -42,9 +44,8 @@ const b1 = countPaths(g, "svr", "fft", new Map());
 const b2 = countPaths(g, "fft", "dac", new Map());
 const b3 = countPaths(g, "dac", "out", new Map());
 const p2 = a1 * a2 * a3 + b1 * b2 * b3;
-const elapsed = performance.now() - t0;
+
+const elapsedMs = performance.now() - t0;
 console.log(
-  `paths_you_to_out=${p1} paths_svr_via_dac_fft=${p2} elapsed_ms=${elapsed.toFixed(
-    3,
-  )}`,
+  `paths_you_to_out=${p1} paths_svr_via_dac_fft=${p2} elapsed_ms=${elapsedMs.toFixed(3)}`,
 );

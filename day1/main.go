@@ -48,6 +48,7 @@ func simulate(lines []string) (int, int, int) {
 }
 
 func main() {
+	start := time.Now()
 	file, err := os.Open("input.txt")
 	if err != nil {
 		fmt.Println(err)
@@ -61,9 +62,8 @@ func main() {
 		lines = append(lines, scanner.Text())
 	}
 
-	start := time.Now()
 	zeroHits, crossings, pos := simulate(lines)
-	elapsed := time.Since(start).Seconds() * 1000
 
+	elapsed := time.Since(start).Seconds() * 1000
 	fmt.Printf("zero_landings=%d crossings=%d final_pos=%d elapsed_ms=%.3f\n", zeroHits, crossings, pos, elapsed)
 }

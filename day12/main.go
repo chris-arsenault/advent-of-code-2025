@@ -272,9 +272,9 @@ func solve(shapes []Shape, regions [][2]int, counts [][]int) int {
 }
 
 func main() {
-	shapes, regions, counts := parseInput("input.txt")
 	start := time.Now()
+	shapes, regions, counts := parseInput("input.txt")
 	ans := solve(shapes, regions, counts)
-	elapsed := time.Since(start).Seconds() * 1000
-	fmt.Printf("regions_that_fit=%d elapsed_ms=%.3f\n", ans, elapsed)
+	elapsedMs := float64(time.Since(start).Nanoseconds()) / 1e6
+	fmt.Printf("regions_that_fit=%d elapsed_ms=%.3f\n", ans, elapsedMs)
 }

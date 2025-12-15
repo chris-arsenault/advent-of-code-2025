@@ -1,3 +1,5 @@
+START_TIME = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
 line_re = /\[(.*?)\].*?\{([^}]*)\}/
 button_re = /\(([^)]*)\)/
 
@@ -169,8 +171,7 @@ def part2(machines)
   total
 end
 
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 p1 = part1(machines)
 p2 = part2(machines)
-elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
-puts "min_lights_presses=#{p1} min_counter_presses=#{p2} elapsed_ms=#{format('%.3f', elapsed)}"
+elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - START_TIME) * 1000
+puts "min_lights_presses=#{p1} min_counter_presses=#{p2} elapsed_ms=#{'%.3f' % elapsed_ms}"

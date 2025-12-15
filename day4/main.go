@@ -86,6 +86,7 @@ func part2(rolls map[Point]bool, counts map[Point]int) int {
 }
 
 func main() {
+	start := time.Now()
 	file, _ := os.Open("input.txt")
 	defer file.Close()
 	var lines []string
@@ -97,7 +98,6 @@ func main() {
 	rolls := parseGrid(lines)
 	counts := neighborCounts(rolls)
 
-	start := time.Now()
 	a := part1(counts)
 	removed := part2(rolls, counts)
 	elapsed := time.Since(start).Seconds() * 1000

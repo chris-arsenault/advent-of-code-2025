@@ -24,16 +24,39 @@ For 698 IDs and ~100 merged intervals: ~800 comparisons vs ~4600
 
 | Language | Time (ms) | vs C |
 |----------|-----------|------|
-| **Haskell** | 0.003 | 0.09x (fastest!) |
-| **C** | 0.035 | 1.0x (baseline) |
-| **ASM** | 0.082 | 2.3x |
-| **Rust** | 0.118 | 3.4x |
-| **Go** | 0.204 | 5.8x |
-| **Ruby** | 0.244 | 7.0x |
-| **Julia** | 0.252 | 7.2x |
-| **Lisp** | 0.618 | 17.7x |
-| **TypeScript** | 0.850 | 24.3x |
-| **Python** | 3.363 | 96.1x |
+| **ASM** | 1.593 | 0.95x (fastest) |
+| **C** | 1.682 | 1.0x (baseline) |
+| **Rust** | 1.721 | 1.02x |
+| **Haskell** | 5.431 | 3.2x |
+| **Lisp** | 12.565 | 7.5x |
+| **Python** | 24.504 | 14.6x |
+| **Ruby** | 34.876 | 20.7x |
+| **Go** | 43.109 | 25.6x |
+| **Julia** | 420.637 | 250.1x |
+| **TypeScript** | 513.188 | 305.1x |
+
+## Resource Metrics
+
+| Language | Memory (KiB) | Lines | Complexity |
+|----------|-------------|-------|------------|
+| **C** | 1,536 | 137 | 27 |
+| **Python** | 12,480 | 30 | 9 |
+| **Go** | 18,616 | 85 | 17 |
+| **Rust** | 2,112 | 81 | 12 |
+| **TypeScript** | 209,824 | 65 | 8 |
+| **Ruby** | 12,672 | 35 | 10 |
+| **ASM** | 1,344 | 565 | 21 |
+| **Lisp** | 29,952 | 75 | 12 |
+| **Julia** | 320,640 | 63 | 17 |
+| **Haskell** | 8,256 | 59 | 6 |
+
+### Anomalies & Analysis
+
+- **Python line count (30):** Shortest implementation - `sortedcontainers` library handles interval merging, and Python's concise syntax eliminates boilerplate. Yet 14.6x slower than C.
+- **C line count (137):** Longest among high-level languages - manual interval merging with explicit memory management. The verbose code produces fast execution (1.68ms).
+- **C complexity (27):** Highest - the two-pointer merge algorithm requires many boundary checks. Interval problems have inherent branching complexity.
+- **Haskell complexity (6):** Low despite efficient runtime (3.2x C) - functional composition with `Data.Set` reduces explicit branches while maintaining good performance.
+- **TypeScript timing (305x):** Worst in suite - Node.js startup dominates this 1.6ms problem. The actual algorithm is fast once running.
 
 ## Language Notes
 
@@ -51,8 +74,7 @@ For 698 IDs and ~100 merged intervals: ~800 comparisons vs ~4600
 - Potential for AVX-512 masked comparisons for batch interval operations
 
 ## Interesting Points
-- **Haskell wins dramatically** at 0.003ms - 10x faster than C!
-- This is due to lazy evaluation + efficient `Data.Set` operations
-- Haskell's purely functional approach excels at set-based interval problems
-- ASM is actually slower than C here - the problem is memory-bound and high-level optimizations matter more
-- Ruby performs surprisingly well (0.244ms) due to efficient `bsearch_index`
+- ASM, C, and Rust are nearly identical in performance (within 7%) - the algorithm is simple and well-optimized by compilers
+- Haskell performs well (3.2x) with efficient `Data.Set` operations for interval handling
+- Go is surprisingly slow (25.6x) on this interval problem - hash map overhead may be a factor
+- Julia and TypeScript show extreme startup overhead (250x-305x) on this fast-running problem

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-import time
 from intervaltree import IntervalTree
+import time
 
 
 def parse(text: str) -> tuple[list[tuple[int, int]], list[int]]:
@@ -34,9 +34,9 @@ def solve(text: str) -> tuple[int, int]:
 
 
 def main() -> None:
+    t0 = time.perf_counter()
     input_path = Path(__file__).with_name("input.txt")
     text = input_path.read_text()
-    t0 = time.perf_counter()
     p1, p2 = solve(text)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     print(f"available_fresh={p1} total_fresh_ids={p2} elapsed_ms={elapsed_ms:.3f}")

@@ -135,6 +135,9 @@ static inline long long ns_since(const struct timespec *start, const struct time
 }
 
 int main(void) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -161,14 +164,13 @@ int main(void) {
         height++;
     }
 
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
-
     int splits = parta(grid, height, width);
     unsigned long long timelines = partb(grid, height, width);
-    clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("splits=%d timelines=%llu elapsed_ms=%.3f\n", splits, timelines, ns_since(&t0, &t1) / 1e6);
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    double elapsed_ms = ns_since(&t0, &t1) / 1e6;
+
+    printf("splits=%d timelines=%llu elapsed_ms=%.3f\n", splits, timelines, elapsed_ms);
 
     if (ferror(fp)) {
         perror("read error");

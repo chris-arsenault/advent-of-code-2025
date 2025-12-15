@@ -95,12 +95,13 @@ fn solve(text: &str) -> (u128, u128) {
 }
 
 fn main() {
-    let text = read_to_string("input.txt").expect("input");
     let start = Instant::now();
+    let text = read_to_string("input.txt").expect("input");
     let (p1, p2) = solve(&text);
-    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
     println!(
         "repeated-halves-sum={} repeated-pattern-sum={} elapsed_ms={:.3}",
-        p1, p2, elapsed
+        p1,
+        p2,
+        start.elapsed().as_secs_f64() * 1000.0
     );
 }

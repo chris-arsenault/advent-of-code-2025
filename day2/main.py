@@ -80,9 +80,9 @@ def solve(text: str) -> tuple[int, int]:
 
 
 def main() -> None:
+    t0 = time.perf_counter()
     input_path = Path(__file__).with_name("input.txt")
     text = input_path.read_text()
-    t0 = time.perf_counter()
     p1, p2 = solve(text)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     print(f"repeated-halves-sum={p1} repeated-pattern-sum={p2} elapsed_ms={elapsed_ms:.3f}")

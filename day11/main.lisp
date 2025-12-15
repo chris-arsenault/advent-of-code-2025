@@ -5,9 +5,6 @@
     (loop for line = (read-line in nil nil)
           while line collect line)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defun split-spaces (s)
   (let ((parts '())
         (start 0)
@@ -50,8 +47,8 @@
       (dfs start))))
 
 (defun main ()
-  (let* ((lines (read-lines "input.txt"))
-         (t0 (get-internal-run-time))
+  (let* ((start (get-internal-real-time))
+         (lines (read-lines "input.txt"))
          (graph (load-graph lines))
          (p1 (count-paths graph "you" "out"))
          (a1 (count-paths graph "svr" "dac"))
@@ -61,8 +58,8 @@
          (b2 (count-paths graph "fft" "dac"))
          (b3 (count-paths graph "dac" "out"))
          (p2 (+ (* a1 a2 a3) (* b1 b2 b3)))
-         (t1 (get-internal-run-time))
-         (elapsed (elapsed-ms t0 t1)))
-    (format t "paths_you_to_out=~A paths_svr_via_dac_fft=~A elapsed_ms=~,3f~%" p1 p2 elapsed)))
+         (elapsed-ms (* 1000.0 (/ (- (get-internal-real-time) start)
+                                  internal-time-units-per-second))))
+    (format t "paths_you_to_out=~A paths_svr_via_dac_fft=~A elapsed_ms=~,3F~%" p1 p2 elapsed-ms)))
 
 (main)

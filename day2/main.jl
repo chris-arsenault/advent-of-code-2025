@@ -96,10 +96,10 @@ function solve(text)
 end
 
 function main()
-    text = read("input.txt", String)
     t0 = time_ns()
+    text = read("input.txt", String)
     p1, p2 = solve(text)
-    elapsed_ms = (time_ns() - t0) / 1e6
+    elapsed_ms = (time_ns() - t0)/1e6
     println("repeated-halves-sum=$(p1) repeated-pattern-sum=$(p2) elapsed_ms=$(round(elapsed_ms; digits=3))")
 end
 

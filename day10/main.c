@@ -18,10 +18,6 @@ static int g_free_count = 0;
 static unsigned long long g_free_vals[MAX_BUTTONS];
 static unsigned long long g_best = ~0ULL;
 
-static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
-    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
-}
-
 static inline double my_fabs(double v) {
     return (v < 0.0) ? -v : v;
 }
@@ -422,7 +418,14 @@ static inline unsigned long long partb(char lines[MAX_LINES][LINE_BUF], int line
     return total;
 }
 
+static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
+    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
+}
+
 int main(void) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -441,14 +444,13 @@ int main(void) {
         line_count++;
     }
 
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
-
     unsigned long long result_a = parta(lines, line_count);
     unsigned long long result_b = partb(lines, line_count);
-    clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("min_lights_presses=%llu min_counter_presses=%llu elapsed_ms=%.3f\n", result_a, result_b, ns_since(&t0, &t1) / 1e6);
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    double elapsed_ms = ns_since(&t0, &t1) / 1e6;
+
+    printf("min_lights_presses=%llu min_counter_presses=%llu elapsed_ms=%.3f\n", result_a, result_b, elapsed_ms);
 
     if (ferror(fp)) {
         perror("read error");

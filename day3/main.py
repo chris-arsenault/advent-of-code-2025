@@ -52,8 +52,8 @@ def main() -> None:
     input_path = base / "input_eric.txt"
     if not input_path.exists():
         input_path = base / "input.txt"
-    lines = input_path.read_text().splitlines()
     t0 = time.perf_counter()
+    lines = input_path.read_text().splitlines()
     p1, p2 = solve(lines, k=12)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     print(f"max-2-digit-sum={p1} max-12-digit-sum={p2} elapsed_ms={elapsed_ms:.3f}")

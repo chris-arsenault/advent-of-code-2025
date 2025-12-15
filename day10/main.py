@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 import time
+from pathlib import Path
 
 import numpy as np
 import pulp
+
+_start_time = time.perf_counter()
 
 
 def parse_machine(line: str) -> tuple[str, list[list[int]], list[int]]:
@@ -131,10 +133,9 @@ def part2(machines: list[tuple[str, list[list[int]], list[int]]]) -> int:
 def main() -> None:
     lines = Path(__file__).with_name("input.txt").read_text().splitlines()
     machines = load(lines)
-    t0 = time.perf_counter()
     p1 = part1(machines)
     p2 = part2(machines)
-    elapsed_ms = (time.perf_counter() - t0) * 1000
+    elapsed_ms = (time.perf_counter() - _start_time) * 1000
     print(f"min_lights_presses={p1} min_counter_presses={p2} elapsed_ms={elapsed_ms:.3f}")
 
 

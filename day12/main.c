@@ -9,10 +9,6 @@
 #define SEARCH_AREA_LIMIT 64
 #define SEARCH_PIECE_LIMIT 10
 
-static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
-    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
-}
-
 static inline int max_int(int a, int b) { return a > b ? a : b; }
 static inline int min_int(int a, int b) { return a < b ? a : b; }
 
@@ -231,6 +227,9 @@ static inline int partb(void) {
 }
 
 int main(void) {
+    struct timespec start, end;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -307,14 +306,15 @@ int main(void) {
         orient_count[s] = generate_orientations(shape_grid[s], orient_masks[s]);
     }
 
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
-
     int good = parta(region_count, shape_count, widths, heights, region_counts, shape_area, shape_diff, orient_masks, orient_count);
     int b_ans = partb();
+    (void)b_ans;
 
-    clock_gettime(CLOCK_MONOTONIC, &t1);
-    printf("regions_that_fit=%d elapsed_ms=%.3f\n", good, ns_since(&t0, &t1) / 1e6);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    double elapsed_ms = (end.tv_sec - start.tv_sec) * 1000.0 +
+                        (end.tv_nsec - start.tv_nsec) / 1000000.0;
+
+    printf("regions_that_fit=%d elapsed_ms=%.3f\n", good, elapsed_ms);
 
     if (ferror(fp)) {
         perror("read error");

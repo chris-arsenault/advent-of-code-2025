@@ -15,14 +15,12 @@
 ;   - Game engines (per-frame arenas)
 
 global main
-extern clock_gettime
 extern printf
 extern perror
-extern ns_since
 extern read_file_all
 extern sort_u64
+extern clock_gettime
 
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE 65536
 %define MAX_SHAPES 8
 %define MAX_ORIENT 8
@@ -55,7 +53,8 @@ section .data
 input_file:    db "input.txt", 0
 fmt_out:       db "regions_that_fit=%d elapsed_ms=%.3f", 10, 0
 err_open:      db "open", 0
-one_million:   dq 1000000.0
+
+%define CLOCK_MONOTONIC 1
 
 ; Lookup tables for 3x3 grid index -> row/col (eliminates div in hot loop)
 row_table:     db 0,0,0,1,1,1,2,2,2
@@ -71,12 +70,9 @@ align 16
 ;------------------------------------------------------------------------------
 ; This data is either:
 ;   - I/O related (file_buf)
-;   - Timing (ts0, ts1)
 ;   - Computed once at startup and read-only thereafter (shape_*, orient_*)
 ;
 file_buf:      resb BUF_SIZE
-ts0:           resq 2
-ts1:           resq 2
 
 ; Shape data (computed during parsing, read-only during solve)
 shape_count:   resd 1
@@ -1134,13 +1130,16 @@ parse_uint:
 ;------------------------------------------------------------------------------
 ; Stack frame layout (after 6 pushes, rsp is 8-aligned):
 ;   [rsp]                = file position (8 bytes)
-;   [rsp + 8]            = padding (16 bytes total before scratch for alignment)
-;   [rsp + 24]           = scratch frame start (SCRATCH_SIZE bytes, 16-aligned)
-; Total: 24 + SCRATCH_SIZE, must be 8 mod 16 for call alignment
+;   [rsp + 8]            = start timespec (16 bytes: tv_sec + tv_nsec)
+;   [rsp + 24]           = end timespec (16 bytes)
+;   [rsp + 40]           = scratch frame start (SCRATCH_SIZE bytes, 16-aligned)
+; Total: 40 + SCRATCH_SIZE, must be 8 mod 16 for call alignment
 ;------------------------------------------------------------------------------
 %define MAIN_FILE_POS      0
-%define MAIN_SCRATCH       24
-%define MAIN_FRAME_SIZE    (24 + SCRATCH_SIZE)
+%define MAIN_START_TIME    8
+%define MAIN_END_TIME      24
+%define MAIN_SCRATCH       40
+%define MAIN_FRAME_SIZE    (40 + SCRATCH_SIZE)
 
 main:
     push    rbx
@@ -1155,6 +1154,11 @@ main:
 
     ; Set up scratch pointer (r15 = base of scratch frame)
     lea     r15, [rsp + MAIN_SCRATCH]
+
+    ; Get start time
+    mov     edi, CLOCK_MONOTONIC
+    lea     rsi, [rsp + MAIN_START_TIME]
+    call    clock_gettime
 
     ; Read file
     lea     rdi, [rel input_file]
@@ -1361,15 +1365,6 @@ main:
 
 .orients_done:
     ;------------------------------------------------------------------
-    ; Start timing
-    ;------------------------------------------------------------------
-    push    r8
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts0]
-    call    clock_gettime
-    pop     r8
-
-    ;------------------------------------------------------------------
     ; Parse and process regions
     ; r8d = shape_count, ebp = fits_count, r12d/r13d = width/height
     ; Uses rsi as current file position (loaded from/stored to stack)
@@ -1562,24 +1557,37 @@ main:
 
 .regions_done:
     ;------------------------------------------------------------------
-    ; Stop timing and output
+    ; Output results
     ;------------------------------------------------------------------
-    mov     ebx, ebp                     ; save fits_count
+    ; Save result count
+    mov     r12d, ebp
 
+    ; Get end time
     mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts1]
+    lea     rsi, [rsp + MAIN_END_TIME]
     call    clock_gettime
 
-    lea     rdi, [rel ts0]
-    lea     rsi, [rel ts1]
-    call    ns_since
-    cvtsi2sd xmm0, rax
-    movsd   xmm1, [rel one_million]
-    divsd   xmm0, xmm1
+    ; Calculate elapsed_ms = (end.tv_sec - start.tv_sec) * 1000.0 +
+    ;                        (end.tv_nsec - start.tv_nsec) / 1000000.0
+    mov     rax, [rsp + MAIN_END_TIME]        ; end.tv_sec
+    sub     rax, [rsp + MAIN_START_TIME]      ; - start.tv_sec
+    cvtsi2sd xmm0, rax                        ; convert to double
+    mov     rax, 1000
+    cvtsi2sd xmm1, rax
+    mulsd   xmm0, xmm1                        ; * 1000.0
 
-    mov     esi, ebx
+    mov     rax, [rsp + MAIN_END_TIME + 8]    ; end.tv_nsec
+    sub     rax, [rsp + MAIN_START_TIME + 8]  ; - start.tv_nsec
+    cvtsi2sd xmm2, rax                        ; convert to double
+    mov     rax, 1000000
+    cvtsi2sd xmm1, rax
+    divsd   xmm2, xmm1                        ; / 1000000.0
+    addsd   xmm0, xmm2                        ; total elapsed_ms
+
+    ; printf("regions_that_fit=%d elapsed_ms=%.3f\n", count, elapsed_ms)
+    mov     esi, r12d
     lea     rdi, [rel fmt_out]
-    mov     eax, 1
+    mov     eax, 1                            ; 1 xmm register used
     call    printf
 
     xor     eax, eax

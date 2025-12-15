@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Set, Tuple
 
 import dlx
 import sys
-import time
 
 sys.setrecursionlimit(20000)
 
@@ -144,11 +144,11 @@ def solve(lines: List[str]) -> int:
 
 
 def main() -> None:
+    start = time.perf_counter()
     input_path = Path(__file__).with_name("input.txt")
     lines = input_path.read_text().splitlines()
-    t0 = time.perf_counter()
     count = solve(lines)
-    elapsed_ms = (time.perf_counter() - t0) * 1000
+    elapsed_ms = (time.perf_counter() - start) * 1000
     print(f"regions_that_fit={count} elapsed_ms={elapsed_ms:.3f}")
 
 

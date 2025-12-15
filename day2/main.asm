@@ -13,12 +13,12 @@
 ; - Prefix sums: O(1) range sum queries after O(n) preprocessing
 
 global main
-extern clock_gettime
 extern printf
 extern perror
+extern clock_gettime
+extern ns_since
 
 ; Shared utilities
-extern ns_since
 extern read_file_all
 extern parse_uint64
 extern skip_non_digits
@@ -27,7 +27,6 @@ extern lower_bound_u64
 extern upper_bound_u64
 extern sort_u64
 
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE 1048576
 %define MAX_PATTERNS 200000
 %define MAX_RANGES 1000
@@ -469,6 +468,11 @@ main:
     push    r15
     sub     rsp, MAIN_FRAME
 
+    ; start timing
+    mov     edi, 1
+    lea     rsi, [rel ts0]
+    call    clock_gettime
+
     ; --- File read ---
     lea     rdi, [rel input_file]
     lea     rsi, [rel file_buf]
@@ -537,11 +541,6 @@ main:
 .parse_done:
     shr     rbx, 1
     mov     [rel range_count], rbx
-
-    ; --- Timing start ---
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts0]
-    call    clock_gettime
 
     ; --- Generate patterns ---
     mov     rdi, [rel max_value]
@@ -618,8 +617,8 @@ main:
     jmp     .range_loop
 
 .ranges_done:
-    ; --- Timing end ---
-    mov     edi, CLOCK_MONOTONIC
+    ; --- End timing ---
+    mov     edi, 1
     lea     rsi, [rel ts1]
     call    clock_gettime
 
@@ -627,13 +626,14 @@ main:
     lea     rsi, [rel ts1]
     call    ns_since
     cvtsi2sd xmm0, rax
-    divsd   xmm0, [rel one_million]
+    movsd   xmm1, [rel one_million]
+    divsd   xmm0, xmm1
 
     ; --- Output ---
     lea     rdi, [rel fmt_out]
     mov     rsi, r12
     mov     rdx, r13
-    mov     eax, 1
+    mov     eax, 1                  ; one XMM arg
     call    printf
 
     xor     eax, eax

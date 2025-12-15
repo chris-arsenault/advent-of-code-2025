@@ -17,6 +17,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     ghc cabal-install libghc-vector-dev \
     sbcl \
     nasm \
+    time \
     && rm -rf /var/lib/apt/lists/*
 
 # Julia (binary install; package not available in some Ubuntu repos)
@@ -35,10 +36,13 @@ RUN mkdir -p /tmp/requirements /tmp/day10
 COPY day*/requirements.txt /tmp/requirements/
 RUN set -eux; \
     for req in /tmp/requirements/*.txt; do \
-        if [ -s "$req" ]; then pip install --no-cache-dir -r "$req"; fi; \
+        if [ -s "$req" ]; then PIP_BREAK_SYSTEM_PACKAGES=1 pip install --no-cache-dir --break-system-packages -r "$req"; fi; \
     done
+RUN PIP_BREAK_SYSTEM_PACKAGES=1 pip install --no-cache-dir --break-system-packages networkx numpy
 
 RUN npm install -g ts-node typescript
+ENV TS_NODE_TRANSPILE_ONLY=1
+ENV TS_NODE_COMPILER_OPTIONS='{"module":"CommonJS"}'
 
 COPY day10/Cargo.toml day10/Cargo.lock /tmp/day10/
 RUN cargo fetch --locked --manifest-path /tmp/day10/Cargo.toml
@@ -46,7 +50,10 @@ RUN cargo fetch --locked --manifest-path /tmp/day10/Cargo.toml
 COPY day10/go.mod /tmp/day10/
 RUN cd /tmp/day10 && GO111MODULE=on go mod download
 
-RUN cabal update && cabal install --lib vector intervalmap
+RUN cabal update && cabal install --lib vector IntervalMap
+
+# Julia packages needed by solutions
+RUN julia -e 'using Pkg; Pkg.add(["IntervalSets","DataStructures","Graphs"])'
 
 # 4) Application sources
 WORKDIR /app

@@ -137,11 +137,11 @@ function solve(lines)
 end
 
 function main()
+    start = time_ns()
     lines = readlines("input.txt")
-    t0 = time_ns()
     ans = solve(lines)
-    elapsed_ms = (time_ns() - t0)/1e6
-    println("regions_that_fit=$(ans) elapsed_ms=$(round(elapsed_ms; digits=3))")
+    elapsed_ms = (time_ns() - start) / 1e6
+    println("regions_that_fit=$(ans) elapsed_ms=$(round(elapsed_ms, digits=3))")
 end
 
 main()

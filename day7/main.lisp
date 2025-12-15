@@ -5,9 +5,6 @@
     (loop for line = (read-line in nil nil)
           while line collect line)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defun load-grid (lines)
   (let ((grid '())
         (sr -1)
@@ -76,14 +73,17 @@
       (maphash (lambda (_ v) (incf total v)) active)
       total)))
 
+(defun elapsed-ms (start end)
+  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
+
 (defun main ()
-  (let ((lines (read-lines "input.txt")))
-    (multiple-value-bind (grid sr sc) (load-grid lines)
-      (let* ((t0 (get-internal-run-time))
-             (p1 (part1 grid sr sc))
-             (p2 (part2 grid sr sc))
-             (t1 (get-internal-run-time))
-             (elapsed (elapsed-ms t0 t1)))
-        (format t "splits=~A timelines=~A elapsed_ms=~,3f~%" p1 p2 elapsed)))))
+  (let ((t0 (get-internal-real-time)))
+    (let ((lines (read-lines "input.txt")))
+      (multiple-value-bind (grid sr sc) (load-grid lines)
+        (let* ((p1 (part1 grid sr sc))
+               (p2 (part2 grid sr sc))
+               (t1 (get-internal-real-time))
+               (elapsed (elapsed-ms t0 t1)))
+          (format t "splits=~A timelines=~A elapsed_ms=~,3f~%" p1 p2 elapsed))))))
 
 (main)

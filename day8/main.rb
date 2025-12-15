@@ -1,3 +1,4 @@
+t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 lines = File.read('input.txt').split("\n")
 points = lines.map { |l| l.split(',').map(&:to_i) }
 n = points.size
@@ -69,8 +70,7 @@ def part2(xs, edges, n)
   last
 end
 
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 p1 = part1(n, edges)
 p2 = part2(points.map(&:first), edges, n)
-elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
-puts "top3_product=#{p1} final_join_x_product=#{p2} elapsed_ms=#{format('%.3f', elapsed)}"
+elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
+puts "top3_product=#{p1} final_join_x_product=#{p2} elapsed_ms=#{format('%.3f', elapsed_ms)}"

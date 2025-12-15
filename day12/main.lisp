@@ -5,9 +5,6 @@
     (loop for line = (read-line in nil nil)
           while line collect line)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defun normalize-cells (cells)
   (let ((min-x (apply #'min (mapcar #'car cells)))
         (min-y (apply #'min (mapcar #'cdr cells))))
@@ -263,11 +260,11 @@
       fits)))
 
 (defun main ()
-  (let* ((lines (read-lines "input.txt"))
-         (t0 (get-internal-run-time))
+  (let* ((start (get-internal-real-time))
+         (lines (read-lines "input.txt"))
          (ans (solve lines))
-         (t1 (get-internal-run-time))
-         (elapsed (elapsed-ms t0 t1)))
-    (format t "regions_that_fit=~A elapsed_ms=~,3f~%" ans elapsed)))
+         (elapsed-ms (* 1000.0 (/ (- (get-internal-real-time) start)
+                                  internal-time-units-per-second))))
+    (format t "regions_that_fit=~A elapsed_ms=~,3F~%" ans elapsed-ms)))
 
 (main)

@@ -1,5 +1,7 @@
 import { readFileSync } from "fs";
 
+const startTime = process.hrtime.bigint();
+
 type Machine = { pattern: string; buttons: number[][]; targets: number[] };
 
 function parseMachine(line: string): Machine {
@@ -198,12 +200,9 @@ function part2(ms: Machine[]): number {
 }
 
 const machines = loadMachines("input.txt");
-const t0 = performance.now();
 const p1 = part1(machines);
 const p2 = part2(machines);
-const elapsed = performance.now() - t0;
+const elapsedMs = Number(process.hrtime.bigint() - startTime) / 1e6;
 console.log(
-  `min_lights_presses=${p1} min_counter_presses=${p2} elapsed_ms=${elapsed.toFixed(
-    3,
-  )}`,
+  `min_lights_presses=${p1} min_counter_presses=${p2} elapsed_ms=${elapsedMs.toFixed(3)}`,
 );

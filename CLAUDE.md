@@ -36,6 +36,9 @@ advant-code-2025/
 │   ├── main.jl          # Julia
 │   ├── Main.hs          # Haskell
 │   └── main.asm         # x86-64 Assembly (optional)
+├── bin/
+│   ├── config.py        # Language configurations (LANGS, DAYS)
+│   └── build.py         # Build/compilation logic
 ├── shared/
 │   └── utils.asm        # Shared assembly utilities
 ├── run_all.py           # Test runner
@@ -95,8 +98,11 @@ The test runner executes solutions across days and languages and also reports ti
 1. **Build Phase** (with `--install`):
    - Compiles C: `cc -O2 -std=c11 main.c -o day{N}`
    - Compiles Rust: `rustc -O main.rs` or `cargo build --release`
+   - Compiles Go: `go build -o day{N}_go main.go`
    - Compiles Haskell: `ghc -O2 Main.hs`
    - Compiles ASM: `nasm -felf64` + links with shared/utils.o
+   - Compiles Lisp: SBCL `save-lisp-and-die` to standalone executable
+   - Creates Julia wrapper: Script with `--compile=all -O3` optimization flags
    - Installs Python deps from `requirements.txt`
 
 2. **Execution Phase:**
@@ -132,12 +138,12 @@ part1=1234 part2=5678 elapsed_ms=0.456
 |-----------|---------|----------------|
 | `.c` | `./day{N}` | Yes |
 | `.py` | `python main.py` | No |
-| `.go` | `go run main.go` | No |
+| `.go` | `./day{N}_go` | Yes |
 | `.rs` | `./day{N}_rs` | Yes |
 | `.ts` | `ts-node main.ts` | No |
 | `.rb` | `ruby main.rb` | No |
-| `.lisp` | `sbcl --script main.lisp` | No |
-| `.jl` | `julia main.jl` | No |
+| `.lisp` | `./day{N}_lisp` | Yes |
+| `.jl` | `./day{N}_jl` | Yes |
 | `.hs` | `./day{N}_hs` | Yes |
 | `.asm` | `./day{N}_asm` | Yes |
 
@@ -196,14 +202,14 @@ When you identify reusable code in a day's `main.asm`:
 
 1. Create `main.{ext}` in each day directory
 2. Ensure output format matches: `key=value ... elapsed_ms=X.XXX`
-3. Add language config to `run_all.py`:
+3. Add language config to `bin/config.py`:
    ```python
    LANGS = {
        ...
-       "lang": {"exe": "command main.ext", "build": False},
+       "lang": {"exe": "./day{day}_lang", "build": True, "source": "main.ext"},
    }
    ```
-4. Add build logic to `ensure_built()` if compilation required
+4. Add build logic to `ensure_built()` in `bin/build.py` if compilation required
 5. Consider adding idiomatic suggestions to ALGORITHMS.md
 
 ---

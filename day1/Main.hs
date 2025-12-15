@@ -27,8 +27,8 @@ trim = f . f where f = reverse . dropWhile isSpace
 
 main :: IO ()
 main = do
-  input <- lines <$> readFile "input.txt"
   t0 <- getCPUTime
+  input <- lines <$> readFile "input.txt"
   let !(z,c,p) = simulate input
   t1 <- getCPUTime
   let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double

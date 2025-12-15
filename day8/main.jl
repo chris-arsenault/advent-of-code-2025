@@ -64,10 +64,10 @@ function part2(pts, edges_with_weight)
 end
 
 function main()
+    t0 = time_ns()
     lines = readlines("input.txt")
     pts = load_points(lines)
     g, edges_with_weight = build_graph(pts)
-    t0 = time_ns()
     p1 = part1(length(pts), edges_with_weight, k=1000)
     p2 = part2(pts, edges_with_weight)
     elapsed_ms = (time_ns() - t0)/1e6

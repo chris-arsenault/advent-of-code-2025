@@ -7,9 +7,6 @@
       (read-sequence data in)
       data)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defun split-on-chars (str chars)
   (let ((parts '())
         (start 0)
@@ -126,14 +123,17 @@
         (incf p2 (range-sum periodic periodic-pref a b))))
     (values p1 p2)))
 
+(defun elapsed-ms (start end)
+  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
+
 (defun main ()
-  (let* ((text (read-file-string "input.txt"))
-         (t0 (get-internal-real-time))
-         (res (multiple-value-list (solve text)))
-         (t1 (get-internal-real-time))
-         (elapsed (elapsed-ms t0 t1)))
-    (destructuring-bind (p1 p2) res
-      (format t "repeated-halves-sum=~A repeated-pattern-sum=~A elapsed_ms=~,3f~%"
-              p1 p2 elapsed))))
+  (let ((t0 (get-internal-real-time)))
+    (let* ((text (read-file-string "input.txt"))
+           (res (multiple-value-list (solve text)))
+           (t1 (get-internal-real-time))
+           (elapsed (elapsed-ms t0 t1)))
+      (destructuring-bind (p1 p2) res
+        (format t "repeated-halves-sum=~A repeated-pattern-sum=~A elapsed_ms=~,3f~%"
+                p1 p2 elapsed)))))
 
 (main)

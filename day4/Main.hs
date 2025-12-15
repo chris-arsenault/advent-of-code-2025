@@ -63,19 +63,19 @@ part2 rolls0 counts0 = go rolls0 counts0 initialQueue S.empty 0
                   queue' = foldl (|>) rest newAccessible
               in go rolls counts' queue' removed' (acc + 1)
 
-main :: IO ()
-main = do
-  ls <- lines <$> readFile "input.txt"
-  let rolls = parseGrid ls
-      counts = computeCounts rolls
-  t0 <- getCPUTime
-  let !p1 = part1 counts
-  let !p2 = part2 rolls counts
-  t1 <- getCPUTime
-  let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-  putStrLn $ "accessible=" ++ show p1 ++ " removable_total=" ++ show p2 ++
-             " elapsed_ms=" ++ showFF elapsed
-
 showFF :: Double -> String
 showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
            in if '.' `elem` s then s else s ++ ".0"
+
+main :: IO ()
+main = do
+  t0 <- getCPUTime
+  ls <- lines <$> readFile "input.txt"
+  let rolls = parseGrid ls
+      counts = computeCounts rolls
+  let !p1 = part1 counts
+  let !p2 = part2 rolls counts
+  t1 <- getCPUTime
+  let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+  putStrLn $ "accessible=" ++ show p1 ++ " removable_total=" ++ show p2
+             ++ " elapsed_ms=" ++ showFF elapsedMs

@@ -2,10 +2,10 @@
 module Main where
 
 import Data.Char (isSpace)
-import System.CPUTime (getCPUTime)
 import Data.List (sortBy)
 import qualified Data.IntervalMap.Generic.Strict as IM
 import Data.IntervalMap.Interval (Interval(..))
+import System.CPUTime (getCPUTime)
 
 trim :: String -> String
 trim = f . f where f = reverse . dropWhile isSpace
@@ -62,16 +62,16 @@ solve text =
       total = sum [hi - lo + 1 | (lo, hi) <- merged]
   in (fresh, total)
 
-main :: IO ()
-main = do
-  text <- readFile "input.txt"
-  t0 <- getCPUTime
-  let !(p1, p2) = solve text
-  t1 <- getCPUTime
-  let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-  putStrLn $ "available_fresh=" ++ show p1 ++ " total_fresh_ids=" ++ show p2 ++
-             " elapsed_ms=" ++ showFF elapsed
-
 showFF :: Double -> String
 showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
            in if '.' `elem` s then s else s ++ ".0"
+
+main :: IO ()
+main = do
+  t0 <- getCPUTime
+  text <- readFile "input.txt"
+  let !(p1, p2) = solve text
+  t1 <- getCPUTime
+  let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+  putStrLn $ "available_fresh=" ++ show p1 ++ " total_fresh_ids=" ++ show p2
+             ++ " elapsed_ms=" ++ showFF elapsedMs

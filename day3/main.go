@@ -57,6 +57,7 @@ func main() {
 	if _, err := os.Stat(base); os.IsNotExist(err) {
 		base = "input.txt"
 	}
+	start := time.Now()
 	file, _ := os.Open(filepath.Join(base))
 	defer file.Close()
 
@@ -66,13 +67,12 @@ func main() {
 		lines = append(lines, sc.Text())
 	}
 
-	t0 := time.Now()
 	var p1 int64
 	var p2 int64
 	for _, line := range lines {
 		p1 += bestTwo(line)
 		p2 += bestK(line, 12)
 	}
-	elapsed := time.Since(t0).Seconds() * 1000
+	elapsed := time.Since(start).Seconds() * 1000
 	fmt.Printf("max-2-digit-sum=%d max-12-digit-sum=%d elapsed_ms=%.3f\n", p1, p2, elapsed)
 }

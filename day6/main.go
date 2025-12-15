@@ -139,9 +139,9 @@ func part2(grid []string, blocks [][2]int) int64 {
 }
 
 func main() {
+	t0 := time.Now()
 	grid := loadGrid("input.txt")
 	blocks := splitBlocks(grid)
-	t0 := time.Now()
 	p1 := part1(grid, blocks)
 	p2 := part2(grid, blocks)
 	elapsed := time.Since(t0).Seconds() * 1000

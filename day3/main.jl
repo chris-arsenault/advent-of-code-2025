@@ -44,11 +44,11 @@ function solve(lines; k=12)
 end
 
 function main()
+    t0 = time_ns()
     path = isfile("input_eric.txt") ? "input_eric.txt" : "input.txt"
     lines = readlines(path)
-    t0 = time_ns()
     p1, p2 = solve(lines, k=12)
-    elapsed_ms = (time_ns() - t0) / 1e6
+    elapsed_ms = (time_ns() - t0)/1e6
     println("max-2-digit-sum=$(p1) max-12-digit-sum=$(p2) elapsed_ms=$(round(elapsed_ms; digits=3))")
 end
 

@@ -34,9 +34,9 @@ def simulate(lines: list[str]) -> tuple[int, int, int]:
 
 
 def main() -> None:
+    t0 = time.perf_counter()
     input_path = Path(__file__).with_name("input.txt")
     lines = input_path.read_text().splitlines()
-    t0 = time.perf_counter()
     zero_hits, crossings, pos = simulate(lines)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     print(f"zero_landings={zero_hits} crossings={crossings} final_pos={pos} elapsed_ms={elapsed_ms:.3f}")

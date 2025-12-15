@@ -1,3 +1,4 @@
+t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 lines = File.read('input.txt').split("\n")
 
 DIRS = [
@@ -62,7 +63,6 @@ end
 
 rolls = parse_grid(lines)
 counts = neighbor_counts(rolls)
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 a = part1(counts)
 removed = part2(rolls.dup, counts.dup)
 elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0

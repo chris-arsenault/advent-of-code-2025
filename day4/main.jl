@@ -56,9 +56,9 @@ function part2(rolls)
 end
 
 function main()
+    t0 = time_ns()
     lines = readlines("input.txt")
     rolls = parse_grid(lines)
-    t0 = time_ns()
     p1 = part1(rolls)
     p2 = part2(rolls)
     elapsed_ms = (time_ns() - t0)/1e6

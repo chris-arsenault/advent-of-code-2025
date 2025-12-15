@@ -1,4 +1,5 @@
 import { readFileSync, existsSync } from "fs";
+import { performance } from "perf_hooks";
 
 function bestTwo(line: string): bigint {
   const d = line.trim();
@@ -33,8 +34,8 @@ function bestK(line: string, k: number): bigint {
 }
 
 const inputFile = existsSync("input_eric.txt") ? "input_eric.txt" : "input.txt";
-const lines = readFileSync(inputFile, "utf8").trim().split(/\r?\n/);
 const t0 = performance.now();
+const lines = readFileSync(inputFile, "utf8").trim().split(/\r?\n/);
 let p1 = 0n;
 let p2 = 0n;
 for (const line of lines) {

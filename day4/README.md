@@ -28,16 +28,39 @@ The naive approach (rescan entire grid each iteration) is O(iterations * n). BFS
 
 | Language | Time (ms) | vs C |
 |----------|-----------|------|
-| **ASM** | 0.680 | 0.61x (fastest) |
-| **C** | 1.109 | 1.0x (baseline) |
-| **Rust** | 1.772 | 1.60x |
-| **Go** | 4.857 | 4.38x |
-| **Julia** | 5.725 | 5.16x |
-| **TypeScript** | 16.188 | 14.6x |
-| **Lisp** | 19.332 | 17.4x |
-| **Python** | 24.447 | 22.0x |
-| **Haskell** | 26.846 | 24.2x |
-| **Ruby** | 30.515 | 27.5x |
+| **ASM** | 2.330 | 0.89x (fastest) |
+| **C** | 2.631 | 1.0x (baseline) |
+| **Rust** | 5.196 | 2.0x |
+| **Haskell** | 29.573 | 11.2x |
+| **Lisp** | 42.303 | 16.1x |
+| **Python** | 44.449 | 16.9x |
+| **Go** | 54.198 | 20.6x |
+| **Ruby** | 107.137 | 40.7x |
+| **Julia** | 369.073 | 140.3x |
+| **TypeScript** | 552.919 | 210.2x |
+
+## Resource Metrics
+
+| Language | Memory (KiB) | Lines | Complexity |
+|----------|-------------|-------|------------|
+| **C** | 3,264 | 90 | 31 |
+| **Python** | 14,292 | 58 | 19 |
+| **Go** | 19,372 | 92 | 18 |
+| **Rust** | 2,880 | 103 | 16 |
+| **TypeScript** | 215,528 | 83 | 14 |
+| **Ruby** | 16,716 | 60 | 5 |
+| **ASM** | 1,536 | 913 | 74 |
+| **Lisp** | 52,224 | 70 | 13 |
+| **Julia** | 305,604 | 59 | 14 |
+| **Haskell** | 13,056 | 62 | 8 |
+
+### Anomalies & Analysis
+
+- **ASM complexity (74):** Highest in Day 4 and second-highest overall - the SIMD bit manipulation (`pshufb`, `pand`, `pcmpeqb`), BFS queue management, and 8-directional neighbor checking each contribute many branch points. This is the cost of hand-optimized performance.
+- **ASM line count (913):** 10x more than C (90) - bitfield packing, SIMD operations, and manual queue management require extensive code. Yet it's only 11% faster than C, showing diminishing returns.
+- **C complexity (31):** High for C - the 8-directional neighbor counting and BFS wavefront propagation require many conditionals. Grid problems inherently have high branching.
+- **Ruby complexity (5):** Extremely low despite implementing BFS - Ruby's iterator-based approach and implicit conditionals in methods hide the true branching. The 40.7x slower runtime reveals the cost.
+- **Rust lines (103):** More than C (90) - Rust's explicit error handling, iterator chains, and type annotations add verbosity. The safety guarantees come at a readability cost here.
 
 ## Language Notes
 
@@ -73,7 +96,8 @@ The naive approach (rescan entire grid each iteration) is O(iterations * n). BFS
 - **Hoisted `imul`:** Row byte offsets computed once per row via `add`, not per cell
 
 ## Interesting Points
-- ASM achieves 35% improvement over naive optimizations through inlining + full SIMD
+- ASM and C are very close (~11% difference) - the BFS algorithm is well-suited to C's imperative style
 - The bitfield representation reduces memory by 8x, improving cache utilization
 - `popcnt` is key for both neighbor counting and Part 1 SIMD counting
 - The BFS wavefront is algorithmically superior to iteration-based removal
+- Julia and TypeScript show extreme overhead (140x-210x slower) due to startup costs on this fast problem

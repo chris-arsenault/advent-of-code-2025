@@ -54,13 +54,13 @@ solve ls k = go 0 0 ls
 
 main :: IO ()
 main = do
-  linesIn <- lines <$> readFile "input.txt"
   t0 <- getCPUTime
+  linesIn <- lines <$> readFile "input.txt"
   let !(p1, p2) = solve linesIn 12
   t1 <- getCPUTime
-  let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-  putStrLn $ "max-2-digit-sum=" ++ show p1 ++ " max-12-digit-sum=" ++ show p2 ++
-             " elapsed_ms=" ++ showFF elapsed
+  let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+  putStrLn $ "max-2-digit-sum=" ++ show p1 ++ " max-12-digit-sum=" ++ show p2
+             ++ " elapsed_ms=" ++ showFF elapsedMs
 
 showFF :: Double -> String
 showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)

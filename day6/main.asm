@@ -11,15 +11,14 @@
 ;   - LEA-based fast multiply for num*10
 
 global main
-extern clock_gettime
 extern printf
-extern ns_since
 extern read_file_all
+extern clock_gettime
+extern ns_since
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; Constants
 ; ─────────────────────────────────────────────────────────────────────────────
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE        1048576
 %define MAX_ROWS        16
 %define MAX_COLS        8192
@@ -27,13 +26,11 @@ extern read_file_all
 %define MAX_BLOCKS      1024
 
 ; Stack frame layout (RSP-relative)
-; Alignment: ret(8) + pushes(40) + locals(64) = 112 = 0 mod 16
-%define STK_TS0         0           ; struct timespec (16 bytes)
-%define STK_TS1         16          ; struct timespec (16 bytes)
-%define STK_ROWS        32          ; uint32_t (4 bytes)
-%define STK_WIDTH       36          ; uint32_t (4 bytes)
-%define STK_BLKCOUNT    40          ; uint32_t (4 bytes)
-%define STK_SIZE        64          ; total frame size
+; Alignment: ret(8) + pushes(40) + locals(32) = 80 = 0 mod 16
+%define STK_ROWS        0           ; uint32_t (4 bytes)
+%define STK_WIDTH       4           ; uint32_t (4 bytes)
+%define STK_BLKCOUNT    8           ; uint32_t (4 bytes)
+%define STK_SIZE        32          ; total frame size
 
 section .data
     input_file:    db "input.txt", 0
@@ -42,6 +39,8 @@ section .data
 
 section .bss
     file_buf:      resb BUF_SIZE
+    ts0:           resq 2
+    ts1:           resq 2
     grid:          resb MAX_ROWS * MAX_COLS
     block_starts:  resd MAX_BLOCKS
     block_ends:    resd MAX_BLOCKS
@@ -58,6 +57,13 @@ main:
     push    r14
     push    r15
     sub     rsp, STK_SIZE
+
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; Start timing
+    ; ─────────────────────────────────────────────────────────────────────────
+    mov     edi, 1
+    lea     rsi, [rel ts0]
+    call    clock_gettime
 
     ; ─────────────────────────────────────────────────────────────────────────
     ; Read input file into buffer
@@ -150,13 +156,6 @@ main:
     jmp     .copy_loop
 
 .copy_done:
-    ; ─────────────────────────────────────────────────────────────────────────
-    ; Start timing
-    ; ─────────────────────────────────────────────────────────────────────────
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rsp + STK_TS0]
-    call    clock_gettime
-
     ; ─────────────────────────────────────────────────────────────────────────
     ; Find block boundaries (empty column = all spaces in data rows)
     ;
@@ -428,25 +427,30 @@ main:
 
 .blocks_done:
     ; ─────────────────────────────────────────────────────────────────────────
-    ; End timing, print results
-    ; rbx = P1 total, r13 = P2 total
+    ; End timing
     ; ─────────────────────────────────────────────────────────────────────────
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rsp + STK_TS1]
+    ; Save P1/P2 totals before clobbering registers
+    push    rbx
+    push    r13
+
+    mov     edi, 1
+    lea     rsi, [rel ts1]
     call    clock_gettime
 
-    lea     rdi, [rsp + STK_TS0]
-    lea     rsi, [rsp + STK_TS1]
+    lea     rdi, [rel ts0]
+    lea     rsi, [rel ts1]
     call    ns_since
-
     cvtsi2sd xmm0, rax
     movsd   xmm1, [rel one_million]
     divsd   xmm0, xmm1
 
-    mov     rsi, rbx                    ; P1 total from register
-    mov     rdx, r13                    ; P2 total from register
+    ; ─────────────────────────────────────────────────────────────────────────
+    ; Print results
+    ; ─────────────────────────────────────────────────────────────────────────
+    pop     rdx                         ; P2 total
+    pop     rsi                         ; P1 total
     lea     rdi, [rel fmt_out]
-    mov     eax, 1
+    mov     eax, 1                      ; one XMM arg
     call    printf
 
     xor     eax, eax

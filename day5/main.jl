@@ -65,8 +65,8 @@ function solve(text)
 end
 
 function main()
-    text = read("input.txt", String)
     t0 = time_ns()
+    text = read("input.txt", String)
     p1,p2 = solve(text)
     elapsed_ms = (time_ns() - t0)/1e6
     println("available_fresh=$(p1) total_fresh_ids=$(p2) elapsed_ms=$(round(elapsed_ms; digits=3))")

@@ -5,9 +5,6 @@
     (loop for line = (read-line in nil nil)
           while line collect line)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defparameter *neighbors*
   '((-1 . -1) (-1 . 0) (-1 . 1)
     (0 . -1) (0 . 1)
@@ -72,14 +69,17 @@
                     (vector-push-extend nbr queue)))))))))
     (hash-table-count removed)))
 
+(defun elapsed-ms (start end)
+  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
+
 (defun main ()
-  (let* ((lines (read-lines "input.txt"))
-         (rolls (parse-grid lines))
-         (t0 (get-internal-real-time))
-         (p1 (part1 rolls))
-         (p2 (part2 rolls))
-         (t1 (get-internal-real-time))
-         (elapsed (elapsed-ms t0 t1)))
-    (format t "accessible=~A removable_total=~A elapsed_ms=~,3f~%" p1 p2 elapsed)))
+  (let ((t0 (get-internal-real-time)))
+    (let* ((lines (read-lines "input.txt"))
+           (rolls (parse-grid lines))
+           (p1 (part1 rolls))
+           (p2 (part2 rolls))
+           (t1 (get-internal-real-time))
+           (elapsed (elapsed-ms t0 t1)))
+      (format t "accessible=~A removable_total=~A elapsed_ms=~,3f~%" p1 p2 elapsed))))
 
 (main)

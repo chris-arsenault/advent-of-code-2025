@@ -26,10 +26,10 @@ The Elves have prepared detailed documentation for each day's challenge. Click a
 | Day | Puzzle | Highlights |
 |-----|--------|------------|
 | [Day 1](day1/README.md) | Dial Rotation | Branchless ASM with `cmov` |
-| [Day 2](day2/README.md) | Invalid Product IDs | 74x speedup via precomputation |
+| [Day 2](day2/README.md) | Invalid Product IDs | ~33x speedup via precomputation |
 | [Day 3](day3/README.md) | Battery Joltage | Monotonic stack algorithm |
 | [Day 4](day4/README.md) | Paper Rolls Grid | BFS wavefront + SIMD `popcnt` |
-| [Day 5](day5/README.md) | Interval Merging | Haskell wins at 0.003ms! |
+| [Day 5](day5/README.md) | Interval Merging | Two-pointer optimization |
 | [Day 6](day6/README.md) | Vertical Math | Big integer parsing |
 | [Day 7](day7/README.md) | Beam Splitter | Row-by-row simulation |
 | [Day 8](day8/README.md) | 3D Circuits | Union-Find + Kruskal MST |
@@ -46,51 +46,52 @@ The Elves have prepared detailed documentation for each day's challenge. Click a
 
 | Language | Avg Time | Notes |
 |----------|----------|-------|
-| **ASM** | 28.6 | Fastest overall - hand-tuned hot paths |
-| **C** | 39.9 | Solid baseline |
-| **Rust** | 44.2 | Close to C with safety guarantees |
-| **Go** | 97.0 | Fast compilation, predictable performance |
-| **Python** | 961.9 | Interpreted overhead, but readable |
-| **Lisp** | 520.7 | Native bignums help on arithmetic days |
-| **Haskell** | 1130.7 | Lazy evaluation: sometimes magical, sometimes painful |
-| **Julia** | 1228.3 | JIT overhead hurts on short-running puzzles |
-| **TypeScript** | 600.6 | V8 engine does heavy lifting |
-| **Ruby** | 3337.9 | Expressiveness over speed |
+| **ASM** | 26.5 | Fastest overall - hand-tuned hot paths |
+| **C** | 39.1 | Solid baseline |
+| **Rust** | 43.7 | Close to C with safety guarantees |
+| **Go** | 94.8 | Consistent but slower than expected |
+| **Lisp** | 511.2 | Native bignums help on arithmetic days |
+| **TypeScript** | 597.8 | V8 startup overhead dominates short problems |
+| **Python** | 956.2 | Interpreted overhead, but readable |
+| **Haskell** | 1101.5 | Lazy evaluation: sometimes magical, sometimes painful |
+| **Julia** | 1187.0 | JIT overhead hurts on short-running puzzles |
+| **Ruby** | 3296.2 | Expressiveness over speed |
 
-### Surprising Results
+### Notable Observations
 
-The Elves discovered some unexpected twists:
+The Elves discovered some interesting patterns:
 
-**Day 5 (Intervals):** Haskell achieves 0.003ms - *10x faster than C*! Lazy `Data.Set` operations excel at set-based interval problems. The functional approach wins decisively.
+**Algorithm beats optimization:** Day 2's precomputation approach gives ASM a ~33x speedup over C's naive per-number checking. The C reference deliberately uses the slow approach to demonstrate that algorithm choice matters more than language.
 
-**Day 8 (Union-Find):** Go clocks 0.105ms - *314x faster than C*! Go's efficient built-in maps and slices make Union-Find operations blazing fast.
+**Library quality varies:** Day 12 shows Python matching C at 30ms because the `exact_cover` library uses efficient C extensions. Meanwhile, Haskell's lazy backtracking is 238x slower - a poor fit for the search paradigm.
 
-**Day 12 (Exact Cover):** Rust achieves 0.008ms - *3980x faster than C*! The `dlx` crate's Dancing Links implementation vastly outperforms C's naive backtracking.
+**Startup overhead matters:** TypeScript and Julia consistently show 100-300x slowdowns on fast problems (Days 1, 5, 11) due to runtime initialization. On longer problems (Days 9, 10), they perform much better relatively.
 
-**Day 2 (Precomputation):** ASM achieves 1.4ms vs C's 106ms - *74x faster*! Algorithm choice (precomputation vs per-number checking) dominates low-level optimization.
+**Rust matches or beats C:** Across most problems, Rust is within 1.5x of C, and occasionally faster (Days 3, 6, 12). The zero-cost abstractions live up to their name.
 
 ### Memory Usage (KiB Average)
 
 | Language | Avg Memory | Notes |
 |----------|------------|-------|
 | **ASM** | 2,192 | Minimal runtime footprint |
-| **C** | 3,616 | Just the code and data |
-| **Rust** | 4,983 | Small overhead for safety checks |
-| **Ruby** | 16,480 | VM and object system |
-| **Haskell** | 24,633 | GHC runtime |
-| **Lisp** | 48,106 | SBCL with standard library |
-| **Python** | 35,139 | Interpreter + libraries |
-| **Go** | 21,264 | Garbage collector overhead |
-| **TypeScript** | 217,714 | Node.js/V8 engine |
-| **Julia** | 325,626 | JIT compiler in memory |
+| **C** | 3,552 | Just the code and data |
+| **Rust** | 4,956 | Small overhead for safety checks |
+| **Ruby** | 16,499 | VM and object system |
+| **Go** | 21,398 | Garbage collector overhead |
+| **Haskell** | 24,607 | GHC runtime |
+| **Python** | 35,162 | Interpreter + libraries |
+| **Lisp** | 47,708 | SBCL with standard library |
+| **TypeScript** | 216,691 | Node.js/V8 engine |
+| **Julia** | 324,067 | JIT compiler in memory |
 
 ### Complexity vs Performance
 
 The Elves noticed that cyclomatic complexity doesn't always predict performance:
 
-- **Day 10** has the highest complexity (C: 139, avg: 72) and longest runtime (avg: 4746ms)
-- **Day 11** has the lowest complexity (avg: 9) and fastest runtime (avg: 94ms)
+- **Day 10** has the highest complexity (C: 139, avg: 72) and longest runtime (avg: 4607ms)
+- **Day 11** has the lowest complexity (avg: 9) and fastest runtime (avg: 89ms)
 - **Day 12** shows that algorithm choice (DLX vs backtracking) matters more than code complexity
+- **Haskell** consistently has the lowest complexity (avg: 13) but middling performance - functional style hides branching in composition
 
 ## Quick Start
 
@@ -142,6 +143,8 @@ Run a specific subset (e.g., day 1 only) inside the container:
 docker run --rm -it aoc2025 python3 run_all.py --day 1
 ```
 
+**Important:** Docker runs are typically ~2–3× slower than running directly on your host due to container overhead and missing host-level CPU optimizations. Prefer local runs for performance comparisons; use the container for reproducibility.
+
 ## Workshop Documents
 
 The senior Elves have prepared several reference documents:
@@ -171,21 +174,22 @@ Each day folder contains:
 *The Elves have distilled their wisdom into these observations:*
 
 ### On Language Choice
-- **Speed matters:** For computation-heavy puzzles (days 9, 10), language choice can mean 100x difference
-- **Algorithms matter more:** Day 2's 74x speedup came from algorithm change, not language
-- **Libraries matter most:** Day 12's Rust DLX library beats hand-optimized C by 3980x
+- **Speed matters:** For computation-heavy puzzles (days 9, 10), language choice can mean 100x+ difference
+- **Algorithms matter more:** Day 2's ~33x speedup came from algorithm change, not language
+- **Libraries matter:** Day 12's Python `exact_cover` library matches C despite interpreted overhead
 
 ### On Assembly Optimization
 - **Branchless techniques** (`cmov`, `setcc`) reduce branch misprediction
 - **SIMD** helps for batch operations (`popcnt`, `pxor`) but not small matrices
 - **Cache locality** (Day 10's DFS state collapse) often beats vectorization
 - **Shared utilities** (`sort_u64`, `lower_bound`) avoid reinventing wheels
+- **Diminishing returns:** ASM is often only 10-20% faster than C; the effort rarely pays off
 
 ### On Surprises
-- Haskell's lazy evaluation is perfect for some problems, terrible for others
-- Julia's JIT overhead makes it slow on short-running puzzles
-- Ruby's expressiveness comes at 100x performance cost on tight loops
-- Go's simplicity sometimes yields the fastest solution
+- Haskell's lazy evaluation is efficient for DAG traversal (Day 11), terrible for backtracking (Day 12)
+- Julia's JIT overhead makes it slow on short-running puzzles (100x+ on Days 1, 5, 11)
+- Ruby's expressiveness comes at 100x performance cost on tight loops (Days 9, 10)
+- Go is consistently slower than expected - its runtime overhead shows even on simple problems
 
 ## A Note from the Workshop Manager
 

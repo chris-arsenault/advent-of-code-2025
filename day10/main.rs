@@ -349,13 +349,13 @@ fn part2(machines: &[Machine]) -> i32 {
 }
 
 fn main() {
-    let machines = load("input.txt");
     let start = Instant::now();
+    let machines = load("input.txt");
     let p1 = part1(&machines);
     let p2 = part2(&machines);
-    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
+    let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
     println!(
         "min_lights_presses={} min_counter_presses={} elapsed_ms={:.3}",
-        p1, p2, elapsed
+        p1, p2, elapsed_ms
     );
 }

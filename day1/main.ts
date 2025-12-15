@@ -23,12 +23,12 @@ function simulate(lines: string[]): [number, number, number] {
   return [zeroHits, crossings, pos];
 }
 
-const lines = readFileSync("input.txt", "utf8").trim().split(/\r?\n/);
 const t0 = performance.now();
+const lines = readFileSync("input.txt", "utf8").trim().split(/\r?\n/);
 const [zeroHits, crossings, pos] = simulate(lines);
-const elapsedMs = performance.now() - t0;
+const elapsed = performance.now() - t0;
 console.log(
-  `zero_landings=${zeroHits} crossings=${crossings} final_pos=${pos} elapsed_ms=${elapsedMs.toFixed(
+  `zero_landings=${zeroHits} crossings=${crossings} final_pos=${pos} elapsed_ms=${elapsed.toFixed(
     3,
   )}`,
 );

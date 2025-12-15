@@ -1,4 +1,4 @@
-#!/usr/bin/env julia
+module Day1
 
 function simulate(lines)
     pos = 50
@@ -20,12 +20,11 @@ function simulate(lines)
     return zero, crossings, pos
 end
 
-function main()
-    t0 = time_ns()
-    lines = readlines("input.txt")
+function julia_main()::Cint
+    lines = readlines(joinpath(@__DIR__, "..", "input.txt"))
     z, c, pos = simulate(lines)
-    elapsed_ms = (time_ns() - t0)/1e6
-    println("zero_landings=$(z) crossings=$(c) final_pos=$(pos) elapsed_ms=$(round(elapsed_ms; digits=3))")
+    println("zero_landings=$(z) crossings=$(c) final_pos=$(pos)")
+    return 0
 end
 
-main()
+end

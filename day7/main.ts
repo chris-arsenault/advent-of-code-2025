@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { performance } from "perf_hooks";
 
 type Grid = { rows: string[]; sr: number; sc: number };
 
@@ -67,8 +68,8 @@ function part2(g: Grid): bigint {
   return total;
 }
 
-const g = loadGrid("input.txt");
 const t0 = performance.now();
+const g = loadGrid("input.txt");
 const p1 = part1(g);
 const p2 = part2(g);
 const elapsed = performance.now() - t0;

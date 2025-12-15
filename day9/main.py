@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import time
 
 
 def load_points(lines: list[str]) -> list[tuple[int, int]]:
@@ -112,8 +111,9 @@ def max_rectangle_inside(pts: list[tuple[int, int]], poly: list[tuple[int, int]]
 
 
 def main() -> None:
-    lines = Path(__file__).with_name("input.txt").read_text().splitlines()
+    import time
     t0 = time.perf_counter()
+    lines = Path(__file__).with_name("input.txt").read_text().splitlines()
     pts = load_points(lines)
     p1 = max_rectangle_any(pts)
     p2 = max_rectangle_inside(pts, pts)

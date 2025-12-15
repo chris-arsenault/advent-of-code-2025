@@ -1,3 +1,4 @@
+t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 text = File.read('input.txt').gsub(/\r\n?/, "\n")
 ranges_txt, ids_txt = text.split("\n\n", 2)
 ids_txt ||= ""
@@ -36,7 +37,6 @@ def in_any(ranges, x)
   a <= x && x <= b
 end
 
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 fresh = ids.count { |id| in_any(merged, id) }
 total = merged.sum { |a, b| b - a + 1 }
 elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0

@@ -5,9 +5,6 @@
     (loop for line = (read-line in nil nil)
           while line collect line)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defun simulate (lines)
   (let ((pos 50)
         (zero 0)
@@ -25,14 +22,17 @@
             (when (= pos 0) (incf zero))))))
     (values zero cross pos)))
 
+(defun elapsed-ms (start end)
+  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
+
 (defun main ()
-  (let* ((lines (read-lines "input.txt"))
-         (t0 (get-internal-run-time))
-         (sim (multiple-value-list (simulate lines)))
-         (t1 (get-internal-run-time))
-         (elapsed (elapsed-ms t0 t1)))
-    (destructuring-bind (zero crossings final-pos) sim
-      (format t "zero_landings=~A crossings=~A final_pos=~A elapsed_ms=~,3f~%"
-              zero crossings final-pos elapsed))))
+  (let ((t0 (get-internal-real-time)))
+    (let* ((lines (read-lines "input.txt"))
+           (sim (multiple-value-list (simulate lines)))
+           (t1 (get-internal-real-time))
+           (elapsed (elapsed-ms t0 t1)))
+      (destructuring-bind (zero crossings final-pos) sim
+        (format t "zero_landings=~A crossings=~A final_pos=~A elapsed_ms=~,3f~%"
+                zero crossings final-pos elapsed)))))
 
 (main)

@@ -90,6 +90,7 @@ func part2(xs []int, edges []Edge, n int) uint64 {
 }
 
 func main() {
+	start := time.Now()
 	file, _ := os.Open("input.txt")
 	defer file.Close()
 	var xs, ys, zs []int
@@ -113,9 +114,8 @@ func main() {
 		}
 	}
 	sort.Slice(edges, func(i, j int) bool { return edges[i].dist < edges[j].dist })
-	t0 := time.Now()
 	p1 := part1(n, edges)
 	p2 := part2(xs, edges, n)
-	elapsed := time.Since(t0).Seconds() * 1000
+	elapsed := time.Since(start).Seconds() * 1000
 	fmt.Printf("top3_product=%d final_join_x_product=%d elapsed_ms=%.3f\n", p1, p2, elapsed)
 }

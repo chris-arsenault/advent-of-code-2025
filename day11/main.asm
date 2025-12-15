@@ -10,13 +10,12 @@
 ; - test/js for -1 checks (fewer µops than cmp imm)
 
 global main
-extern clock_gettime
 extern printf
 extern perror
-extern ns_since
 extern read_file_all
+extern clock_gettime
+extern ns_since
 
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE 1048576
 %define MAX_NODES 1024
 %define MAX_EDGES 8192
@@ -28,12 +27,12 @@ section .data
 input_file:    db "input.txt", 0
 fmt_out:       db "paths_you_to_out=%llu paths_svr_via_dac_fft=%llu elapsed_ms=%.3f", 10, 0
 err_open:      db "open", 0
-one_million:   dq 1000000.0
 node_you:      db "you", 0
 node_out:      db "out", 0
 node_svr:      db "svr", 0
 node_dac:      db "dac", 0
 node_fft:      db "fft", 0
+one_million:   dq 1000000.0
 
 section .bss
     align 64
@@ -304,6 +303,11 @@ main:
     sub     rsp, 64                 ; [rsp+0]=file_size, [rsp+8-24]=node IDs,
                                     ; [rsp+32]=p1, [rsp+40]=a1*a2*a3
 
+    ; Start timing
+    mov     edi, 1
+    lea     rsi, [rel ts0]
+    call    clock_gettime
+
     ; Read input file
     lea     rdi, [rel input_file]
     lea     rsi, [rel file_buf]
@@ -514,11 +518,6 @@ main:
     lea     rdi, [rel adj_ptr]
     mov     [rdi + rcx*4], eax
 
-    ;=== Start timing ===
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts0]
-    call    clock_gettime
-
     ;=== Find special node IDs ===
     lea     rdi, [rel node_you]
     call    find_node
@@ -585,14 +584,17 @@ main:
     imul    r12, r14
     add     r12, [rsp+40]           ; p2 = a1*a2*a3 + b1*b2*b3
 
-    ;=== End timing ===
-    mov     edi, CLOCK_MONOTONIC
+    ; End timing
+    mov     edi, 1
     lea     rsi, [rel ts1]
     call    clock_gettime
 
+    ; elapsed_ns = ns_since(&ts0, &ts1)
     lea     rdi, [rel ts0]
     lea     rsi, [rel ts1]
     call    ns_since
+
+    ; Convert to ms in xmm0
     cvtsi2sd xmm0, rax
     movsd   xmm1, [rel one_million]
     divsd   xmm0, xmm1
@@ -601,7 +603,7 @@ main:
     mov     rsi, [rsp+32]
     mov     rdx, r12
     lea     rdi, [rel fmt_out]
-    mov     eax, 1
+    mov     eax, 1                  ; 1 float arg in xmm
     call    printf
     xor     eax, eax
 

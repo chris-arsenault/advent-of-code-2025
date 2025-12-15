@@ -84,10 +84,9 @@ fn part2(grid: &[String], sr: usize, sc: usize) -> u64 {
 }
 
 fn main() {
-    let (grid, sr, sc) = load_grid("input.txt");
     let start = Instant::now();
+    let (grid, sr, sc) = load_grid("input.txt");
     let p1 = part1(&grid, sr, sc);
     let p2 = part2(&grid, sr, sc);
-    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
-    println!("splits={} timelines={} elapsed_ms={:.3}", p1, p2, elapsed);
+    println!("splits={} timelines={} elapsed_ms={:.3}", p1, p2, start.elapsed().as_secs_f64() * 1000.0);
 }

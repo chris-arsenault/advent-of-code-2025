@@ -112,18 +112,18 @@ maxRectInside pts poly =
                     in goJ best' i (j+1)
   in go 0 0
 
-main :: IO ()
-main = do
-  linesIn <- lines <$> readFile "input.txt"
-  let pts = loadPoints linesIn
-  t0 <- getCPUTime
-  let !p1 = maxRectAny pts
-      !p2 = maxRectInside pts pts
-  t1 <- getCPUTime
-  let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-  putStrLn $ "max_rect_area=" ++ show p1 ++ " max_green_rect_area=" ++ show p2 ++
-             " elapsed_ms=" ++ showFF elapsed
-
 showFF :: Double -> String
 showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
            in if '.' `elem` s then s else s ++ ".0"
+
+main :: IO ()
+main = do
+    t0 <- getCPUTime
+    linesIn <- lines <$> readFile "input.txt"
+    let pts = loadPoints linesIn
+    let !p1 = maxRectAny pts
+        !p2 = maxRectInside pts pts
+    t1 <- getCPUTime
+    let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+    putStrLn $ "max_rect_area=" ++ show p1 ++ " max_green_rect_area=" ++ show p2
+               ++ " elapsed_ms=" ++ showFF elapsedMs

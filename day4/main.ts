@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { performance } from "perf_hooks";
 
 type Point = { r: number; c: number };
 
@@ -81,10 +82,10 @@ function part2(rolls: Set<string>, counts: Map<string, number>): number {
   return removed;
 }
 
+const t0 = performance.now();
 const lines = readFileSync("input.txt", "utf8").trim().split(/\r?\n/);
 const rolls = parseGrid(lines);
 const counts = neighborCounts(rolls);
-const t0 = performance.now();
 const a = part1(counts);
 const removed = part2(new Set(rolls), new Map(counts));
 const elapsed = performance.now() - t0;

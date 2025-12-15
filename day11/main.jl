@@ -29,8 +29,9 @@ function count_paths(g, start, target)
 end
 
 function main()
-    lines = readlines("input.txt")
     t0 = time_ns()
+
+    lines = readlines("input.txt")
     g = load_graph(lines)
     p1 = count_paths(g, "you", "out")
     a1 = count_paths(g, "svr", "dac")
@@ -40,8 +41,9 @@ function main()
     b2 = count_paths(g, "fft", "dac")
     b3 = count_paths(g, "dac", "out")
     p2 = a1*a2*a3 + b1*b2*b3
-    elapsed_ms = (time_ns() - t0)/1e6
-    println("paths_you_to_out=$(p1) paths_svr_via_dac_fft=$(p2) elapsed_ms=$(round(elapsed_ms; digits=3))")
+
+    elapsed_ms = (time_ns() - t0) / 1e6
+    println("paths_you_to_out=$(p1) paths_svr_via_dac_fft=$(p2) elapsed_ms=$(round(elapsed_ms, digits=3))")
 end
 
 main()

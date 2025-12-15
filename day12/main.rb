@@ -1,3 +1,5 @@
+start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
 Point = Struct.new(:x, :y)
 
 def normalize(cells)
@@ -118,7 +120,6 @@ def can_pack_small(w, h, shapes, cnts)
   true
 end
 
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 good = 0
 regions.each_with_index do |(w, h), idx|
   cnts = counts[idx]
@@ -131,5 +132,5 @@ regions.each_with_index do |(w, h), idx|
     good += 1
   end
 end
-elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
-puts "regions_that_fit=#{good} elapsed_ms=#{format('%.3f', elapsed)}"
+elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) * 1000
+puts "regions_that_fit=#{good} elapsed_ms=#{'%.3f' % elapsed_ms}"

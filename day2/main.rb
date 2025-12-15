@@ -1,3 +1,4 @@
+t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 text = File.read('input.txt')
 
 def generate_even_half(max_n)
@@ -72,7 +73,6 @@ def solve(text)
   [p1, p2]
 end
 
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 p1, p2 = solve(text)
 elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
 puts "repeated-halves-sum=#{p1} repeated-pattern-sum=#{p2} elapsed_ms=#{format('%.3f', elapsed_ms)}"

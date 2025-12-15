@@ -80,10 +80,10 @@ function part2(grid, blocks)
 end
 
 function main()
+    t0 = time_ns()
     text = read("input.txt", String)
     grid = load_grid(text)
     blocks = split_blocks(grid)
-    t0 = time_ns()
     p1 = part1(grid, blocks)
     p2 = part2(grid, blocks)
     elapsed_ms = (time_ns() - t0)/1e6

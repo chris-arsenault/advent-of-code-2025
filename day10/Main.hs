@@ -10,7 +10,8 @@ import qualified Data.Vector.Unboxed as U
 import qualified Data.Vector.Unboxed.Mutable as MU
 import Control.Monad (forM_, when)
 import Control.Monad.ST
-import System.CPUTime (getCPUTime)
+import GHC.Clock (getMonotonicTimeNSec)
+import Text.Printf (printf)
 
 -- Parsing utilities
 splitOn :: Char -> String -> [String]
@@ -130,14 +131,18 @@ rrefGF2 lights buttons mat0 tgt0 = runST $ do
 solveMinPressGF2 :: Int -> V.Vector BitRow -> U.Vector Bool -> U.Vector Int -> Int -> Int
 solveMinPressGF2 buttons mat tgt pivots rank =
   let pivotSet = U.toList (U.take rank pivots)
+      freeCols :: [Int]
       freeCols = [c | c <- [0..buttons-1], c `notElem` pivotSet]
+      freeCount :: Int
       freeCount = length freeCols
   in if freeCount > 20
        then -- Just compute one solution
          let sol = backSub (replicate buttons False)
          in length (filter id sol)
        else -- Enumerate all 2^freeCount combinations
-         minimum [weight (assign mask freeCols) | mask <- [0..(1 `shiftL` freeCount)-1]]
+         let masks :: [Int]
+             masks = [0 .. (1 `shiftL` freeCount) - 1]
+         in minimum [weight (assign mask freeCols) | mask <- masks]
   where
     backSub sol0 = foldl' step sol0 [rank-1, rank-2 .. 0]
       where
@@ -147,9 +152,10 @@ solveMinPressGF2 buttons mat tgt pivots rank =
                                       else if getBit (mat V.! i) c
                                            then acc /= (sol !! c)
                                            else acc)
-                           (tgt U.! i) [0..buttons-1]
+                          (tgt U.! i) [0..buttons-1]
           in take col sol ++ [val] ++ drop (col+1) sol
 
+    assign :: Int -> [Int] -> [Bool]
     assign mask fcols =
       let sol0 = replicate buttons False
           sol1 = foldl' (\s (k,col) -> if testBit mask k
@@ -157,6 +163,7 @@ solveMinPressGF2 buttons mat tgt pivots rank =
                                        else s) sol0 (zip [0..] fcols)
       in backfill sol1 (rank-1)
 
+    backfill :: [Bool] -> Int -> [Bool]
     backfill sol i
       | i < 0 = sol
       | otherwise =
@@ -168,6 +175,7 @@ solveMinPressGF2 buttons mat tgt pivots rank =
                            (tgt U.! i) [0..buttons-1]
           in backfill (take col sol ++ [val] ++ drop (col+1) sol) (i-1)
 
+    weight :: [Bool] -> Int
     weight sol = length (filter id sol)
 
 part1 :: [String] -> Int
@@ -343,15 +351,10 @@ part2 = sum . map solveLine
 
 main :: IO ()
 main = do
+  startTime <- getMonotonicTimeNSec
   ls <- lines <$> readFile "input.txt"
-  t0 <- getCPUTime
   let !p1 = part1 ls
       !p2 = part2 ls
-  t1 <- getCPUTime
-  let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-  putStrLn $ "min_lights_presses=" ++ show p1 ++ " min_counter_presses=" ++ show p2 ++
-             " elapsed_ms=" ++ showFF elapsed
-
-showFF :: Double -> String
-showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
-           in if '.' `elem` s then s else s ++ ".0"
+  endTime <- getMonotonicTimeNSec
+  let elapsedMs = fromIntegral (endTime - startTime) / 1e6 :: Double
+  printf "min_lights_presses=%d min_counter_presses=%d elapsed_ms=%.3f\n" p1 p2 elapsedMs

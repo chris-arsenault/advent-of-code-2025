@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { performance } from "perf_hooks";
 
 function generateEvenHalf(maxN: bigint): bigint[] {
   const vals: bigint[] = [];
@@ -78,8 +79,8 @@ function solve(text: string): [bigint, bigint] {
   return [p1, p2];
 }
 
-const text = readFileSync("input.txt", "utf8");
 const t0 = performance.now();
+const text = readFileSync("input.txt", "utf8");
 const [p1, p2] = solve(text);
 const elapsed = performance.now() - t0;
 console.log(

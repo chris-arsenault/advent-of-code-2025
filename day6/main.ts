@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { performance } from "perf_hooks";
 
 function loadGrid(path: string): string[] {
   const lines = readFileSync(path, "utf8").split(/\r?\n/).filter((l) => l.length);
@@ -77,9 +78,9 @@ function part2(grid: string[], blocks: Array<[number, number]>): bigint {
   return total;
 }
 
+const t0 = performance.now();
 const grid = loadGrid("input.txt");
 const blocks = splitBlocks(grid);
-const t0 = performance.now();
 const p1 = part1(grid, blocks);
 const p2 = part2(grid, blocks);
 const elapsed = performance.now() - t0;

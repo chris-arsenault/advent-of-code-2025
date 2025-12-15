@@ -85,9 +85,8 @@ fn solve(path: &str) -> (i64, i64) {
 fn main() {
     let start = Instant::now();
     let (p1, p2) = solve("input.txt");
-    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
     println!(
         "available_fresh={} total_fresh_ids={} elapsed_ms={:.3}",
-        p1, p2, elapsed
+        p1, p2, start.elapsed().as_secs_f64() * 1000.0
     );
 }

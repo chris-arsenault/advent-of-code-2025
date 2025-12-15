@@ -121,13 +121,13 @@ solve text =
 
 main :: IO ()
 main = do
-    text <- readFile "input.txt"
     t0 <- getCPUTime
+    text <- readFile "input.txt"
     let !(p1, p2) = solve text
     t1 <- getCPUTime
-    let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-    putStrLn $ "repeated-halves-sum=" ++ show p1 ++ " repeated-pattern-sum=" ++ show p2 ++
-               " elapsed_ms=" ++ showFF elapsed
+    let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+    putStrLn $ "repeated-halves-sum=" ++ show p1 ++ " repeated-pattern-sum=" ++ show p2
+               ++ " elapsed_ms=" ++ showFF elapsedMs
 
 showFF :: Double -> String
 showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)

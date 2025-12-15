@@ -85,20 +85,20 @@ part2 pts edges =
                  else go dsu' lastProd rest
   in go (newDSU n) 0 edges
 
+showFF :: Double -> String
+showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
+           in if '.' `elem` s then s else s ++ ".0"
+
 main :: IO ()
 main = do
+    t0 <- getCPUTime
     linesIn <- lines <$> readFile "input.txt"
     let pts = loadPoints linesIn
         edges = buildEdges pts
         n = length pts
-    t0 <- getCPUTime
     let !p1 = part1 n edges 1000
         !p2 = part2 pts edges
     t1 <- getCPUTime
-    let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-    putStrLn $ "top3_product=" ++ show p1 ++ " final_join_x_product=" ++ show p2 ++
-               " elapsed_ms=" ++ showFF elapsed
-
-showFF :: Double -> String
-showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
-           in if '.' `elem` s then s else s ++ ".0"
+    let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+    putStrLn $ "top3_product=" ++ show p1 ++ " final_join_x_product=" ++ show p2
+               ++ " elapsed_ms=" ++ showFF elapsedMs

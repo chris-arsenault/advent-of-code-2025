@@ -70,9 +70,9 @@ def part2(grid: list[str], start_r: int, start_c: int) -> int:
 
 
 def main() -> None:
+    t0 = time.perf_counter()
     lines = Path(__file__).with_name("input.txt").read_text().splitlines()
     grid, sr, sc = load_grid(lines)
-    t0 = time.perf_counter()
     p1 = part1(grid, sr, sc)
     p2 = part2(grid, sr, sc)
     elapsed_ms = (time.perf_counter() - t0) * 1000

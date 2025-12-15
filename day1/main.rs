@@ -31,15 +31,17 @@ fn simulate(lines: &[String]) -> (i32, i32, i32) {
 }
 
 fn main() {
+    let start = Instant::now();
     let input = read_to_string("input.txt").expect("input");
     let lines: Vec<String> = input.lines().map(|s| s.to_string()).collect();
 
-    let start = Instant::now();
     let (zero_hits, crossings, pos) = simulate(&lines);
-    let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
 
     println!(
         "zero_landings={} crossings={} final_pos={} elapsed_ms={:.3}",
-        zero_hits, crossings, pos, elapsed_ms
+        zero_hits,
+        crossings,
+        pos,
+        start.elapsed().as_secs_f64() * 1000.0
     );
 }

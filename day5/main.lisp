@@ -7,9 +7,6 @@
       (read-sequence data in)
       data)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defun parse (text)
   (let ((top '())
         (bottom '())
@@ -77,12 +74,12 @@
       (values fresh total))))
 
 (defun main ()
-  (let* ((text (read-file-string "input.txt"))
-         (t0 (get-internal-run-time))
+  (let* ((start (get-internal-real-time))
+         (text (read-file-string "input.txt"))
          (res (multiple-value-list (solve text)))
-         (t1 (get-internal-run-time))
-         (elapsed (elapsed-ms t0 t1)))
+         (elapsed-ms (* 1000.0 (/ (- (get-internal-real-time) start)
+                                  internal-time-units-per-second))))
     (destructuring-bind (p1 p2) res
-      (format t "available_fresh=~A total_fresh_ids=~A elapsed_ms=~,3f~%" p1 p2 elapsed))))
+      (format t "available_fresh=~A total_fresh_ids=~A elapsed_ms=~,3F~%" p1 p2 elapsed-ms))))
 
 (main)

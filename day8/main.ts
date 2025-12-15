@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { performance } from "perf_hooks";
 
 type Edge = { dist: number; a: number; b: number };
 
@@ -58,6 +59,7 @@ function part2(xs: number[], edges: Edge[], n: number): bigint {
   return last;
 }
 
+const t0 = performance.now();
 const lines = readFileSync("input.txt", "utf8").trim().split(/\r?\n/);
 const xs: number[] = [];
 const ys: number[] = [];
@@ -80,12 +82,9 @@ for (let i = 0; i < n; i++) {
   }
 }
 edges.sort((a, b) => a.dist - b.dist);
-const t0 = performance.now();
 const p1 = part1(n, edges);
 const p2 = part2(xs, edges, n);
 const elapsed = performance.now() - t0;
 console.log(
-  `top3_product=${p1} final_join_x_product=${p2} elapsed_ms=${elapsed.toFixed(
-    3,
-  )}`,
+  `top3_product=${p1} final_join_x_product=${p2} elapsed_ms=${elapsed.toFixed(3)}`,
 );

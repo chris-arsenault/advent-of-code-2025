@@ -12,6 +12,8 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+var startTime = time.Now()
+
 type Machine struct {
 	pattern string
 	buttons [][]int
@@ -405,9 +407,8 @@ func part2(ms []Machine) int {
 
 func main() {
 	ms := loadMachines("input.txt")
-	t0 := time.Now()
 	p1 := part1(ms)
 	p2 := part2(ms)
-	elapsed := time.Since(t0).Seconds() * 1000
-	fmt.Printf("min_lights_presses=%d min_counter_presses=%d elapsed_ms=%.3f\n", p1, p2, elapsed)
+	elapsedMs := float64(time.Since(startTime).Nanoseconds()) / 1e6
+	fmt.Printf("min_lights_presses=%d min_counter_presses=%d elapsed_ms=%.3f\n", p1, p2, elapsedMs)
 }

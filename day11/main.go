@@ -43,8 +43,9 @@ func countPaths(g map[string][]string, start, target string, memo map[string]uin
 }
 
 func main() {
-	g := loadGraph("input.txt")
 	t0 := time.Now()
+
+	g := loadGraph("input.txt")
 	p1 := countPaths(g, "you", "out", make(map[string]uint64))
 	a1 := countPaths(g, "svr", "dac", make(map[string]uint64))
 	a2 := countPaths(g, "dac", "fft", make(map[string]uint64))
@@ -53,6 +54,7 @@ func main() {
 	b2 := countPaths(g, "fft", "dac", make(map[string]uint64))
 	b3 := countPaths(g, "dac", "out", make(map[string]uint64))
 	p2 := a1*a2*a3 + b1*b2*b3
-	elapsed := time.Since(t0).Seconds() * 1000
-	fmt.Printf("paths_you_to_out=%d paths_svr_via_dac_fft=%d elapsed_ms=%.3f\n", p1, p2, elapsed)
+
+	elapsedMs := float64(time.Since(t0).Nanoseconds()) / 1e6
+	fmt.Printf("paths_you_to_out=%d paths_svr_via_dac_fft=%d elapsed_ms=%.3f\n", p1, p2, elapsedMs)
 }

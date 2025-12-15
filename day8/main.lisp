@@ -5,9 +5,6 @@
     (loop for line = (read-line in nil nil)
           while line collect line)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defun split-commas (s)
   (let ((parts '())
         (start 0)
@@ -108,15 +105,18 @@
             (return)))))
     last-prod))
 
+(defun elapsed-ms (start end)
+  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
+
 (defun main ()
-  (let* ((t0 (get-internal-real-time))
-         (lines (read-lines "input.txt"))
-         (pts (load-points lines))
-         (edges (build-edges pts))
-         (p1 (part1 (length pts) edges 1000))
-         (p2 (part2 pts edges))
-         (t1 (get-internal-real-time))
-         (elapsed (elapsed-ms t0 t1)))
-    (format t "top3_product=~A final_join_x_product=~A elapsed_ms=~,3f~%" p1 p2 elapsed)))
+  (let ((t0 (get-internal-real-time)))
+    (let* ((lines (read-lines "input.txt"))
+           (pts (load-points lines))
+           (edges (build-edges pts))
+           (p1 (part1 (length pts) edges 1000))
+           (p2 (part2 pts edges))
+           (t1 (get-internal-real-time))
+           (elapsed (elapsed-ms t0 t1)))
+      (format t "top3_product=~A final_join_x_product=~A elapsed_ms=~,3f~%" p1 p2 elapsed))))
 
 (main)

@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { performance } from "perf_hooks";
 
 type Point = { x: number; y: number };
 
@@ -103,8 +104,8 @@ function maxRectInside(pts: Point[], poly: Point[]): number {
   return best;
 }
 
-const pts = loadPoints("input.txt");
 const t0 = performance.now();
+const pts = loadPoints("input.txt");
 const p1 = maxRectAny(pts);
 const p2 = maxRectInside(pts, pts);
 const elapsed = performance.now() - t0;

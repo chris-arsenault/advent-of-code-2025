@@ -18,16 +18,40 @@
 
 | Language | Time (ms) | vs C |
 |----------|-----------|------|
-| **Go** | 0.105 | 0.003x (fastest!) |
-| **Rust** | 0.351 | 0.01x |
-| **TypeScript** | 1.621 | 0.05x |
-| **Ruby** | 2.689 | 0.08x |
-| **ASM** | 26.434 | 0.80x |
-| **C** | 32.987 | 1.0x (baseline) |
-| **Julia** | 502.076 | 15.2x |
-| **Lisp** | 750.227 | 22.7x |
-| **Haskell** | 1285.632 | 39.0x |
-| **Python** | 1776.771 | 53.9x |
+| **ASM** | 29.608 | 0.83x (fastest) |
+| **Rust** | 32.147 | 0.91x |
+| **C** | 35.470 | 1.0x (baseline) |
+| **Go** | 139.210 | 3.9x |
+| **Ruby** | 189.184 | 5.3x |
+| **TypeScript** | 695.467 | 19.6x |
+| **Lisp** | 743.877 | 21.0x |
+| **Haskell** | 1207.803 | 34.1x |
+| **Julia** | 1919.109 | 54.1x |
+| **Python** | 1944.205 | 54.8x |
+
+## Resource Metrics
+
+| Language | Memory (KiB) | Lines | Complexity |
+|----------|-------------|-------|------------|
+| **C** | 9,216 | 153 | 28 |
+| **Python** | 256,776 | 50 | 11 |
+| **Go** | 46,572 | 109 | 16 |
+| **Rust** | 31,104 | 66 | 9 |
+| **TypeScript** | 257,988 | 82 | 14 |
+| **Ruby** | 47,232 | 66 | 7 |
+| **ASM** | 9,216 | 392 | 14 |
+| **Lisp** | 68,544 | 104 | 19 |
+| **Julia** | 436,724 | 68 | 13 |
+| **Haskell** | 181,440 | 84 | 7 |
+
+### Anomalies & Analysis
+
+- **Python memory (257 MB):** Highest for Python across all days - `networkx` library loads extensive graph infrastructure. The library provides convenience at significant memory cost.
+- **Haskell memory (181 MB):** Unusually high - immutable Union-Find requires copying on each update, and the MST algorithm generates many intermediate structures. This is a pathological case for functional programming.
+- **Rust memory (31 MB):** Higher than usual for Rust - `petgraph` crate or custom Union-Find with all edges stored adds overhead. Still 8x less than Python.
+- **Go memory (46 MB):** Higher than other Go days - storing all edges for Kruskal's and the Union-Find structure requires heap allocation.
+- **Python lines (50):** Very concise - `networkx` handles graph construction, MST, and component counting. The brevity hides 55x slower performance.
+- **Ruby/Haskell complexity (7):** Lowest - both rely on library abstractions (`Set`, `IntMap`) that internalize branching logic.
 
 ## Language Notes
 
@@ -46,10 +70,8 @@
 - Cache-oblivious Union-Find memory layout
 
 ## Interesting Points
-- **Go dominates** at 0.105ms - 314x faster than C! The efficient built-in map and slices shine here.
-- This is the most dramatic language performance inversion in the suite
-- Python with `networkx` is 54x slower - library overhead for small graphs
-- ASM (26ms) is close to C (33ms) - the algorithm is dominated by sorting, not low-level optimization
+- ASM, Rust, and C are within 20% of each other - the algorithm is dominated by sorting, not low-level optimization
+- Python with `networkx` is 55x slower - library overhead for graph operations
 - The Union-Find path compression makes component queries effectively O(1) amortized
 - Haskell's immutable data structures are a poor fit for Union-Find's inherently mutable operations
-- Julia's JIT compilation overhead may explain its poor performance (502ms)
+- Julia and Python are both ~55x slower - JIT compilation overhead and interpreted loops hurt on graph algorithms

@@ -114,14 +114,15 @@ fn part2(grid: &[String], blocks: &[(usize, usize)]) -> i64 {
 }
 
 fn main() {
+    let start = Instant::now();
     let grid = load_grid("input.txt");
     let blocks = split_blocks(&grid);
-    let start = Instant::now();
     let p1 = part1(&grid, &blocks);
     let p2 = part2(&grid, &blocks);
-    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
     println!(
         "grand_total={} quantum_total={} elapsed_ms={:.3}",
-        p1, p2, elapsed
+        p1,
+        p2,
+        start.elapsed().as_secs_f64() * 1000.0
     );
 }

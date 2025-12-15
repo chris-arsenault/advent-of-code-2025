@@ -106,9 +106,9 @@ func solve(text string) (uint64, uint64) {
 }
 
 func main() {
+	start := time.Now()
 	data, _ := os.ReadFile("input.txt")
 	text := string(data)
-	start := time.Now()
 	p1, p2 := solve(text)
 	elapsed := time.Since(start).Seconds() * 1000
 	fmt.Printf("repeated-halves-sum=%d repeated-pattern-sum=%d elapsed_ms=%.3f\n", p1, p2, elapsed)

@@ -13,6 +13,9 @@ static inline long long ns_since(const struct timespec *start, const struct time
 }
 
 int main(void) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -48,9 +51,6 @@ int main(void) {
     // Last row contains operators
     int op_row = height - 1;
     int num_rows = height - 1;
-
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
 
     unsigned long long part1 = 0;
     unsigned long long part2 = 0;
@@ -146,9 +146,10 @@ int main(void) {
     }
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
+    double elapsed_ms = ns_since(&t0, &t1) / 1e6;
 
     printf("grand_total=%llu quantum_total=%llu elapsed_ms=%.3f\n",
-           part1, part2, ns_since(&t0, &t1) / 1e6);
+           part1, part2, elapsed_ms);
 
     return EXIT_SUCCESS;
 }

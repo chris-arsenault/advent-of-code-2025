@@ -107,13 +107,13 @@ function max_rectangle_inside(pts, poly)
 end
 
 function main()
+    t0 = time_ns()
     lines = readlines("input.txt")
     pts = load_points(lines)
 
-    t0 = time_ns()
     p1 = max_rectangle_any(pts)
     p2 = max_rectangle_inside(pts, pts)
-    elapsed_ms = (time_ns() - t0)/1e6
+    elapsed_ms = (time_ns() - t0) / 1e6
     println("max_rect_area=$(p1) max_green_rect_area=$(p2) elapsed_ms=$(round(elapsed_ms; digits=3))")
 end
 

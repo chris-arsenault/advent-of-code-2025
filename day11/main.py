@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import time
 from functools import lru_cache
 from pathlib import Path
-import time
 
 
 def load_graph(lines: list[str]) -> dict[str, list[str]]:
@@ -32,8 +32,9 @@ def count_paths(graph: dict[str, list[str]], start: str, target: str) -> int:
 
 
 def main() -> None:
-    lines = Path(__file__).with_name("input.txt").read_text().splitlines()
     t0 = time.perf_counter()
+
+    lines = Path(__file__).with_name("input.txt").read_text().splitlines()
     graph = load_graph(lines)
     p1 = count_paths(graph, "you", "out")
 
@@ -44,8 +45,8 @@ def main() -> None:
     b2 = count_paths(graph, "fft", "dac")
     b3 = count_paths(graph, "dac", "out")
     p2 = a1 * a2 * a3 + b1 * b2 * b3
-    elapsed_ms = (time.perf_counter() - t0) * 1000
 
+    elapsed_ms = (time.perf_counter() - t0) * 1000
     print(f"paths_you_to_out={p1} paths_svr_via_dac_fft={p2} elapsed_ms={elapsed_ms:.3f}")
 
 

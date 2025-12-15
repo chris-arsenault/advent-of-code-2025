@@ -7,10 +7,6 @@
 #define MAX_POINTS 6000
 #define CONNECT_COUNT 1000
 
-static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
-    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
-}
-
 static inline int find_root(int *parent, int x) {
     while (parent[x] != x) {
         parent[x] = parent[parent[x]];
@@ -131,7 +127,14 @@ static inline unsigned long long partb(int *xs, int count, int *ea, int *eb, int
     return last_prod;
 }
 
+static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
+    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
+}
+
 int main(void) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -154,9 +157,6 @@ int main(void) {
         }
     }
 
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
-
     int edge_count = count * (count - 1) / 2;
     long long *dist = malloc(sizeof(long long) * edge_count);
     int *ea = malloc(sizeof(int) * edge_count);
@@ -167,9 +167,11 @@ int main(void) {
 
     unsigned long long result_a = parta(count, ea, eb, built);
     unsigned long long result_b = partb(xs, count, ea, eb, built);
-    clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    printf("top3_product=%llu final_join_x_product=%llu elapsed_ms=%.3f\n", result_a, result_b, ns_since(&t0, &t1) / 1e6);
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    double elapsed_ms = ns_since(&t0, &t1) / 1e6;
+
+    printf("top3_product=%llu final_join_x_product=%llu elapsed_ms=%.3f\n", result_a, result_b, elapsed_ms);
 
     if (ferror(fp)) {
         perror("read error");

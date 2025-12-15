@@ -1,5 +1,7 @@
 #!/usr/bin/env julia
 
+const START_TIME = time_ns()
+
 using LinearAlgebra
 
 function parse_between(line, a, b)
@@ -307,11 +309,10 @@ end
 
 function main()
     lines = readlines("input.txt")
-    t0 = time_ns()
     p1 = part1(lines)
     p2 = part2(lines)
-    elapsed_ms = (time_ns() - t0) / 1e6
-    println("min_lights_presses=$(p1) min_counter_presses=$(p2) elapsed_ms=$(round(elapsed_ms; digits=3))")
+    elapsed_ms = (time_ns() - START_TIME) / 1e6
+    println("min_lights_presses=$(p1) min_counter_presses=$(p2) elapsed_ms=$(round(elapsed_ms, digits=3))")
 end
 
 main()

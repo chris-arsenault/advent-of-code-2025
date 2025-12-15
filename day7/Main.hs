@@ -75,18 +75,18 @@ part2 grid sr sc =
       final = go sr (M.singleton sc 1)
   in sum (M.elems final)
 
-main :: IO ()
-main = do
-  linesIn <- lines <$> readFile "input.txt"
-  let (grid, sr, sc) = loadGrid linesIn
-  t0 <- getCPUTime
-  let !p1 = part1 grid sr sc
-      !p2 = part2 grid sr sc
-  t1 <- getCPUTime
-  let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-  putStrLn $ "splits=" ++ show p1 ++ " timelines=" ++ show p2 ++
-             " elapsed_ms=" ++ showFF elapsed
-
 showFF :: Double -> String
 showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
            in if '.' `elem` s then s else s ++ ".0"
+
+main :: IO ()
+main = do
+  t0 <- getCPUTime
+  linesIn <- lines <$> readFile "input.txt"
+  let (grid, sr, sc) = loadGrid linesIn
+  let !p1 = part1 grid sr sc
+      !p2 = part2 grid sr sc
+  t1 <- getCPUTime
+  let elapsedMs = fromIntegral (t1 - t0) / 1e9 :: Double
+  putStrLn $ "splits=" ++ show p1 ++ " timelines=" ++ show p2
+             ++ " elapsed_ms=" ++ showFF elapsedMs

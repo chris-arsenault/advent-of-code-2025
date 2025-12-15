@@ -82,10 +82,10 @@ def part2(grid: list[str], blocks: list[tuple[int, int]]) -> int:
 
 
 def main() -> None:
+    t0 = time.perf_counter()
     text = Path(__file__).with_name("input.txt").read_text()
     grid = load_grid(text)
     blocks = split_blocks(grid)
-    t0 = time.perf_counter()
     p1 = part1(grid, blocks)
     p2 = part2(grid, blocks)
     elapsed_ms = (time.perf_counter() - t0) * 1000

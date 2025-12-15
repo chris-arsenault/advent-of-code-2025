@@ -11,7 +11,6 @@ static inline long long ns_since(const struct timespec *start, const struct time
     return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
 }
 
-
 // i/10^(len(i)/2) == i % 10^(len(i)/2)
 static inline bool part1(unsigned long long test_i) {
     const int num_length = (int)floor(log10((long double)test_i)) + 1;
@@ -53,6 +52,9 @@ static inline bool part2(unsigned long long test_i) {
 }
 
 int main(void) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -64,9 +66,6 @@ int main(void) {
 
     unsigned long long part_1_total = 0;
     unsigned long long part_2_total = 0;
-
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
 
     while (fgets(buf, sizeof(buf), fp)) {
 

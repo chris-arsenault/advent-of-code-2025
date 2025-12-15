@@ -4,6 +4,7 @@ use std::fs;
 use std::time::Instant;
 
 fn main() {
+    let start = Instant::now();
     let text = fs::read_to_string("input.txt").expect("input");
     let mut xs = Vec::new();
     let mut ys = Vec::new();
@@ -31,8 +32,6 @@ fn main() {
         }
     }
     edges.sort_by_key(|e| e.0);
-
-    let start = Instant::now();
 
     // Part 1: Product of top 3 component sizes after first 1000 edges
     let mut uf1 = UnionFind::<usize>::new(n);
@@ -68,9 +67,8 @@ fn main() {
     }
     let p2 = last;
 
-    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
     println!(
         "top3_product={} final_join_x_product={} elapsed_ms={:.3}",
-        p1, p2, elapsed
+        p1, p2, start.elapsed().as_secs_f64() * 1000.0
     );
 }

@@ -1,5 +1,6 @@
 require 'set'
 
+t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 lines = File.read('input.txt').split("\n")
 sr = sc = nil
 lines.each_with_index do |line, r|
@@ -60,8 +61,7 @@ def part2(lines, sr, sc)
   active.values.sum
 end
 
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 p1 = part1(lines, sr, sc)
 p2 = part2(lines, sr, sc)
-elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
-puts "splits=#{p1} timelines=#{p2} elapsed_ms=#{format('%.3f', elapsed)}"
+elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
+puts "splits=#{p1} timelines=#{p2} elapsed_ms=#{format('%.3f', elapsed_ms)}"

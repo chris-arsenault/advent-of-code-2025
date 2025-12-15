@@ -9,13 +9,12 @@
 ; Uses C stdio/stdlib for file IO and timing.
 
 global main
-extern clock_gettime
 extern printf
 extern perror
-extern ns_since        ; from shared/utils.asm
 extern read_file_all
+extern clock_gettime
+extern ns_since
 
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE 1048576
 
 section .data
@@ -26,8 +25,8 @@ one_million:   dq 1000000.0
 
 section .bss
 buf:           resb BUF_SIZE
-ts0:           resq 2                ; struct timespec for start time
-ts1:           resq 2                ; struct timespec for end time
+ts0:           resq 2
+ts1:           resq 2
 
 section .text
 
@@ -55,6 +54,11 @@ main:
     ; 5 pushes = 40 bytes, plus 8 for return addr = 48 bytes
     ; RSP is now 0 mod 16 (correct for function calls)
 
+    ; start timing
+    mov     edi, 1
+    lea     rsi, [rel ts0]
+    call    clock_gettime
+
     ; read entire file into buffer
     lea     rdi, [rel input_file]
     lea     rsi, [rel buf]
@@ -69,12 +73,7 @@ main:
     xor     r13d, r13d              ; zero_count = 0
     xor     r14d, r14d              ; cross_count = 0
 
-    ; clock_gettime(CLOCK_MONOTONIC, &ts0)
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts0]
-    call    clock_gettime
-
-    ; Set up pointers now (r15 still has bytes_read, clock_gettime preserves it)
+    ; Set up pointers
     test    r15, r15
     jle     .after_read
     lea     rsi, [rel buf]          ; ptr
@@ -179,15 +178,17 @@ main:
     jmp     .exit
 
 .after_read:
-    ; clock_gettime(CLOCK_MONOTONIC, &ts1)
-    mov     edi, CLOCK_MONOTONIC
+    ; end timing
+    mov     edi, 1
     lea     rsi, [rel ts1]
     call    clock_gettime
 
-    ; elapsed_ms = ns_since(&ts0, &ts1) / 1e6
+    ; elapsed_ns = ns_since(&ts0, &ts1)
     lea     rdi, [rel ts0]
     lea     rsi, [rel ts1]
     call    ns_since
+
+    ; convert to ms in xmm0
     cvtsi2sd xmm0, rax
     movsd   xmm1, [rel one_million]
     divsd   xmm0, xmm1

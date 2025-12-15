@@ -97,18 +97,17 @@ fn part2(mut rolls: HashSet<Point>, mut counts: HashMap<Point, i32>) -> i32 {
 }
 
 fn main() {
+    let start = Instant::now();
     let text = fs::read_to_string("input.txt").expect("input");
     let lines: Vec<&str> = text.lines().collect();
     let rolls = parse_grid(&lines);
     let counts = neighbor_counts(&rolls);
 
-    let start = Instant::now();
     let a = part1(&counts);
     let removed = part2(rolls.clone(), counts.clone());
-    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
 
     println!(
         "accessible={} removable_total={} elapsed_ms={:.3}",
-        a, removed, elapsed
+        a, removed, start.elapsed().as_secs_f64() * 1000.0
     );
 }

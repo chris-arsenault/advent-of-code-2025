@@ -5,7 +5,8 @@ import Control.Monad (guard, msum)
 import Data.Char (isSpace)
 import Data.List (sort)
 import Data.Maybe (isJust)
-import System.CPUTime (getCPUTime)
+import GHC.Clock (getMonotonicTimeNSec)
+import Text.Printf (printf)
 
 type Cell = (Int,Int)
 
@@ -172,13 +173,9 @@ solveAll ls =
 
 main :: IO ()
 main = do
+  startTime <- getMonotonicTimeNSec
   ls <- lines <$> readFile "input.txt"
-  t0 <- getCPUTime
   let !ans = solveAll ls
-  t1 <- getCPUTime
-  let elapsed = fromIntegral (t1 - t0) / 1e9 :: Double
-  putStrLn $ "regions_that_fit=" ++ show ans ++ " elapsed_ms=" ++ showFF elapsed
-
-showFF :: Double -> String
-showFF x = let s = show (fromIntegral (round (x * 1000)) / 1000 :: Double)
-           in if '.' `elem` s then s else s ++ ".0"
+  endTime <- getMonotonicTimeNSec
+  let elapsedMs = fromIntegral (endTime - startTime) / 1e6 :: Double
+  printf "regions_that_fit=%d elapsed_ms=%.3f\n" ans elapsedMs

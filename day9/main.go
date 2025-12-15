@@ -163,11 +163,11 @@ func maxRectInside(pts []Point, poly []Point) int64 {
 }
 
 func main() {
+	start := time.Now()
 	pts := loadPoints("input.txt")
 	poly := pts
-	t0 := time.Now()
 	p1 := maxRectAny(pts)
 	p2 := maxRectInside(pts, poly)
-	elapsed := time.Since(t0).Seconds() * 1000
+	elapsed := time.Since(start).Seconds() * 1000
 	fmt.Printf("max_rect_area=%d max_green_rect_area=%d elapsed_ms=%.3f\n", p1, p2, elapsed)
 }

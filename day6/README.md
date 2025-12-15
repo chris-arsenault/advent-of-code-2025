@@ -21,16 +21,40 @@ Each column's digits (top-to-bottom, most significant at top) form one number. P
 
 | Language | Time (ms) | vs C |
 |----------|-----------|------|
-| **C** | 0.057 | 1.0x (baseline) |
-| **ASM** | 0.062 | 1.1x |
-| **Rust** | 0.114 | 2.0x |
-| **Julia** | 0.470 | 8.2x |
-| **Lisp** | 0.679 | 11.9x |
-| **Go** | 1.138 | 20.0x |
-| **TypeScript** | 2.201 | 38.6x |
-| **Python** | 2.236 | 39.2x |
-| **Haskell** | 5.595 | 98.2x |
-| **Ruby** | 7.765 | 136.2x |
+| **Rust** | 1.633 | 0.40x (fastest) |
+| **ASM** | 1.803 | 0.45x |
+| **C** | 4.052 | 1.0x (baseline) |
+| **Haskell** | 7.984 | 2.0x |
+| **Lisp** | 20.311 | 5.0x |
+| **Python** | 23.769 | 5.9x |
+| **Ruby** | 43.336 | 10.7x |
+| **Go** | 47.200 | 11.6x |
+| **TypeScript** | 516.457 | 127.5x |
+| **Julia** | 586.091 | 144.6x |
+
+## Resource Metrics
+
+| Language | Memory (KiB) | Lines | Complexity |
+|----------|-------------|-------|------------|
+| **C** | 7,680 | 129 | 35 |
+| **Python** | 11,904 | 76 | 28 |
+| **Go** | 18,792 | 139 | 33 |
+| **Rust** | 1,920 | 118 | 30 |
+| **TypeScript** | 213,556 | 79 | 22 |
+| **Ruby** | 13,056 | 76 | 12 |
+| **ASM** | 1,344 | 379 | 12 |
+| **Lisp** | 35,136 | 76 | 24 |
+| **Julia** | 325,632 | 83 | 25 |
+| **Haskell** | 9,024 | 72 | 4 |
+
+### Anomalies & Analysis
+
+- **C memory (7,680 KiB):** Higher than usual for C - big integer arithmetic requires additional buffer space for multi-precision operations.
+- **Rust memory (1,920 KiB):** Lowest compiled language - `num-bigint` crate is efficient, and Rust's ownership model minimizes allocations.
+- **Haskell complexity (4):** Second lowest overall - native `Integer` type and pattern matching on operator characters produce almost branchless code. Haskell excels at parsing problems.
+- **ASM complexity (12):** Surprisingly low - the BMI2 `mulx` and `adc` chain for big integers require few conditional branches. Most work is sequential arithmetic.
+- **C complexity (35):** Highest - manual big integer implementation requires many carry checks and boundary conditions.
+- **Go lines (139):** Most verbose - `math/big` API is explicit, and Go's error handling adds lines. Yet performs well (11.6x C).
 
 ## Language Notes
 
@@ -51,8 +75,8 @@ Each column's digits (top-to-bottom, most significant at top) form one number. P
 - **Unrolled multiplication:** Inner loop unrolling for better pipelining
 
 ## Interesting Points
-- C and ASM are nearly identical (0.057 vs 0.062ms) - parsing overhead dominates
-- Rust is only 2x slower, showing excellent compiler optimization
+- Rust and ASM outperform C by 2.2-2.5x on this parsing-heavy problem - LLVM optimizations excel at string processing
+- Haskell performs reasonably (2x C) despite string parsing not being its strength
 - Languages with native big integers (Python, Ruby, Lisp) don't pay a performance penalty for arithmetic
-- Haskell is unusually slow here (98x) - string parsing is not its strength
 - The Part 2 column parsing (right-to-left, top-to-bottom) is the tricky part of this problem
+- Julia and TypeScript show extreme startup overhead (127x-145x) on this problem

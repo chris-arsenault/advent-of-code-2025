@@ -7,9 +7,6 @@
       (read-sequence data in)
       data)))
 
-(defun elapsed-ms (start end)
-  (* 1000.0 (/ (- end start) internal-time-units-per-second)))
-
 (defun load-grid (text)
   (let* ((lines (with-input-from-string (in text)
                   (loop for line = (read-line in nil nil)
@@ -78,14 +75,14 @@
             (eval-numbers (nreverse nums) op)))))
 
 (defun main ()
-  (let* ((text (read-file-string "input.txt"))
+  (let* ((start (get-internal-real-time))
+         (text (read-file-string "input.txt"))
          (grid (load-grid text))
          (blocks (split-blocks grid))
-         (t0 (get-internal-run-time))
          (p1 (part1 grid blocks))
          (p2 (part2 grid blocks))
-         (t1 (get-internal-run-time))
-         (elapsed (elapsed-ms t0 t1)))
-    (format t "grand_total=~A quantum_total=~A elapsed_ms=~,3f~%" p1 p2 elapsed)))
+         (elapsed-ms (* 1000.0 (/ (- (get-internal-real-time) start)
+                                  internal-time-units-per-second))))
+    (format t "grand_total=~A quantum_total=~A elapsed_ms=~,3F~%" p1 p2 elapsed-ms)))
 
 (main)

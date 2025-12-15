@@ -22,16 +22,39 @@ This row-by-row approach is more cache-friendly than generic BFS.
 
 | Language | Time (ms) | vs C |
 |----------|-----------|------|
-| **ASM** | 0.065 | 0.65x (fastest) |
-| **C** | 0.100 | 1.0x (baseline) |
-| **Rust** | 0.553 | 5.5x |
-| **Python** | 1.314 | 13.1x |
-| **Julia** | 1.654 | 16.5x |
-| **TypeScript** | 2.084 | 20.8x |
-| **Lisp** | 2.529 | 25.3x |
-| **Ruby** | 5.980 | 59.8x |
-| **Haskell** | 6.101 | 61.0x |
-| **Go** | 8.334 | 83.3x |
+| **ASM** | 1.996 | 0.75x (fastest) |
+| **Rust** | 2.062 | 0.78x |
+| **C** | 2.649 | 1.0x (baseline) |
+| **Haskell** | 8.046 | 3.0x |
+| **Python** | 17.956 | 6.8x |
+| **Lisp** | 29.859 | 11.3x |
+| **Ruby** | 38.505 | 14.5x |
+| **Go** | 56.397 | 21.3x |
+| **Julia** | 349.362 | 131.9x |
+| **TypeScript** | 510.946 | 192.9x |
+
+## Resource Metrics
+
+| Language | Memory (KiB) | Lines | Complexity |
+|----------|-------------|-------|------------|
+| **C** | 5,760 | 146 | 34 |
+| **Python** | 11,136 | 69 | 18 |
+| **Go** | 18,996 | 157 | 25 |
+| **Rust** | 2,112 | 86 | 15 |
+| **TypeScript** | 212,068 | 70 | 19 |
+| **Ruby** | 12,672 | 61 | 11 |
+| **ASM** | 1,344 | 357 | 16 |
+| **Lisp** | 41,856 | 77 | 20 |
+| **Julia** | 305,472 | 71 | 18 |
+| **Haskell** | 9,408 | 76 | 11 |
+
+### Anomalies & Analysis
+
+- **Go lines (157):** Most verbose implementation - channel-based parallelism and explicit visited map management add significant code. Yet Go is 21x slower than C.
+- **C complexity (34):** High - the row-by-row simulation with splitter handling requires many direction checks and boundary conditions.
+- **Rust lines (86):** Compact despite safety - `VecDeque` and `HashSet` provide efficient abstractions without verbosity. 22% faster than C.
+- **Ruby/Haskell complexity (11):** Tied for lowest - both use higher-order functions that hide branching in method calls. Ruby pays 14.5x penalty; Haskell only 3x.
+- **C memory (5,760 KiB):** Higher than simpler problems - the grid and visited tracking require 2D arrays. Still much less than interpreted languages.
 
 ## Language Notes
 
@@ -57,8 +80,8 @@ For generic BFS alternative:
 - Use `bt`/`bts` for bitset visited tracking
 
 ## Interesting Points
-- Go is unusually slow (83x) - its generic hash map may be the bottleneck
+- ASM and Rust are 25% faster than C - the tight inner loops benefit from optimization
+- Go is slow (21x) - its generic hash map may be the bottleneck
 - The row-by-row approach is a key algorithmic insight: converts 2D BFS to 1D scan
 - Part 2's "quantum timelines" counting doubles at each splitter - exponential growth handled via counting, not enumeration
-- ASM's 35% speedup over C comes from tight SIMD inner loops
-- Rust at 5.5x is respectable for a safe language with bounds checking
+- Julia and TypeScript show extreme startup overhead (132x-193x) on this problem

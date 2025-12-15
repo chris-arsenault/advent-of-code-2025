@@ -8,10 +8,6 @@
 #define MAX_NAME 8
 #define MAX_EDGES 8192
 
-static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
-    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
-}
-
 static inline int get_id(char names[MAX_NODES][MAX_NAME], int *count, const char *name) {
     for (int i = 0; i < *count; i++) {
         if (strcmp(names[i], name) == 0) return i;
@@ -64,6 +60,9 @@ static inline unsigned long long partb(int svr, int dac, int fft, int out, int h
 }
 
 int main(void) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -106,21 +105,14 @@ int main(void) {
     int dac = get_id(names, &node_count, "dac");
     int fft = get_id(names, &node_count, "fft");
 
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
-
     unsigned long long paths = parta(start, target, head, to, next, node_count);
     unsigned long long paths_b = partb(svr, dac, fft, target, head, to, next, node_count);
-    clock_gettime(CLOCK_MONOTONIC, &t1);
-
-    printf("paths_you_to_out=%llu paths_svr_via_dac_fft=%llu elapsed_ms=%.3f\n", paths, paths_b, ns_since(&t0, &t1) / 1e6);
-
-    if (ferror(fp)) {
-        perror("read error");
-        fclose(fp);
-        return EXIT_FAILURE;
-    }
 
     fclose(fp);
+
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    double elapsed_ms = (t1.tv_sec - t0.tv_sec) * 1000.0 + (t1.tv_nsec - t0.tv_nsec) / 1e6;
+
+    printf("paths_you_to_out=%llu paths_svr_via_dac_fft=%llu elapsed_ms=%.3f\n", paths, paths_b, elapsed_ms);
     return EXIT_SUCCESS;
 }

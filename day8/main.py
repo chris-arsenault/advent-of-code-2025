@@ -53,9 +53,9 @@ def part2(points: list[tuple[int, int, int]], G: nx.Graph) -> int:
 
 
 def main() -> None:
+    t0 = time.perf_counter()
     lines = Path(__file__).with_name("input.txt").read_text().splitlines()
     points = load_points(lines)
-    t0 = time.perf_counter()
     G = build_graph(points)
     p1 = part1(G, k=1000)
     p2 = part2(points, G)

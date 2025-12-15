@@ -9,6 +9,9 @@ static inline long long ns_since(const struct timespec *start, const struct time
 }
 
 int main(void) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -19,9 +22,6 @@ int main(void) {
 	int at = 50;
 	int zero_count = 0;
 	int crossings = 0;
-
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
 
     while (fgets(buf, sizeof(buf), fp)) {
 		int sign = (buf[0]-80 > 0) - (buf[0]-80 < 0);

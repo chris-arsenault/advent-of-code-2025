@@ -169,8 +169,8 @@ func part2(g Grid) uint64 {
 }
 
 func main() {
-	g := loadGrid("input.txt")
 	start := time.Now()
+	g := loadGrid("input.txt")
 	p1 := part1(g)
 	p2 := part2(g)
 	elapsed := time.Since(start).Seconds() * 1000

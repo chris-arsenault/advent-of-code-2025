@@ -1,3 +1,4 @@
+t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 grid = File.read('input.txt').split("\n").reject(&:empty?)
 maxw = grid.map(&:length).max
 grid.map! { |l| l.ljust(maxw, ' ') }
@@ -77,8 +78,7 @@ def part2(grid, blocks)
 end
 
 blocks = split_blocks(grid)
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 p1 = part1(grid, blocks)
 p2 = part2(grid, blocks)
-elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
-puts "grand_total=#{p1} quantum_total=#{p2} elapsed_ms=#{format('%.3f', elapsed)}"
+elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
+puts "grand_total=#{p1} quantum_total=#{p2} elapsed_ms=#{format('%.3f', elapsed_ms)}"

@@ -1,3 +1,4 @@
+t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 lines = File.read('input.txt').split("\n")
 
 def simulate(lines)
@@ -23,7 +24,6 @@ def simulate(lines)
   [zero_hits, crossings, pos]
 end
 
-t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 zero, cross, pos = simulate(lines)
 elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
 puts "zero_landings=#{zero} crossings=#{cross} final_pos=#{pos} elapsed_ms=#{format('%.3f', elapsed_ms)}"

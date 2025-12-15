@@ -5,6 +5,10 @@
 
 #define MAX_SIZE 4096
 
+static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
+    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
+}
+
 char grid[MAX_SIZE][MAX_SIZE];
 int neighbors[MAX_SIZE][MAX_SIZE];
 int rows = 0, cols = 0;
@@ -28,11 +32,10 @@ void enqueue(int r, int c) {
     }
 }
 
-static inline long long ns_since(const struct timespec *start, const struct timespec *end) {
-    return (long long)(end->tv_sec - start->tv_sec) * 1000000000LL + (end->tv_nsec - start->tv_nsec);
-}
-
 int main(void) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -50,9 +53,6 @@ int main(void) {
         rows++;
     }
     fclose(fp);
-
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
 
     // Precompute neighbor counts for all rolls
     for (int r = 0; r < rows; r++) {
@@ -106,9 +106,10 @@ int main(void) {
     }
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
+    double elapsed_ms = ns_since(&t0, &t1) / 1e6;
 
     printf("accessible=%d removable_total=%d elapsed_ms=%.3f\n",
-           part1, part2, ns_since(&t0, &t1) / 1e6);
+           part1, part2, elapsed_ms);
 
     return EXIT_SUCCESS;
 }

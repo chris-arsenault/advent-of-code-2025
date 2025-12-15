@@ -62,10 +62,10 @@ def part2(rolls: set[tuple[int, int]]) -> int:
 
 
 def main() -> None:
+    t0 = time.perf_counter()
     input_path = Path(__file__).with_name("input.txt")
     lines = input_path.read_text().splitlines()
     rolls = parse_grid(lines)
-    t0 = time.perf_counter()
     accessible = part1(rolls)
     removed = part2(rolls)
     elapsed_ms = (time.perf_counter() - t0) * 1000

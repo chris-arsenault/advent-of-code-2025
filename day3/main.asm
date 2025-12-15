@@ -12,13 +12,12 @@
 ; - Part 2: Greedy monotonic stack for k-digit selection
 
 global main
-extern clock_gettime
 extern printf
 extern perror
-extern ns_since
 extern read_file_all
+extern clock_gettime
+extern ns_since
 
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE 1048576
 %define MAX_LINE 256
 %define K_DIGITS 12
@@ -238,6 +237,11 @@ main:
     push    r15
     sub     rsp, MAIN_FRAME
 
+    ; --- Start timing ---
+    mov     edi, 1
+    lea     rsi, [rel ts0]
+    call    clock_gettime
+
     ; --- Read file ---
     lea     rdi, [rel input_file]
     lea     rsi, [rel file_buf]
@@ -261,11 +265,6 @@ main:
     ; Initialize accumulators on stack (cold, only touched per-line)
     mov     qword [rsp + MAIN_P1_SUM], 0
     mov     qword [rsp + MAIN_P2_SUM], 0
-
-    ; --- Start timing ---
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts0]
-    call    clock_gettime
 
 .line_loop:
     cmp     r13, r14
@@ -318,7 +317,7 @@ main:
 
 .after_read:
     ; --- End timing ---
-    mov     edi, CLOCK_MONOTONIC
+    mov     edi, 1
     lea     rsi, [rel ts1]
     call    clock_gettime
 
@@ -326,13 +325,14 @@ main:
     lea     rsi, [rel ts1]
     call    ns_since
     cvtsi2sd xmm0, rax
-    divsd   xmm0, [rel one_million]
+    movsd   xmm1, [rel one_million]
+    divsd   xmm0, xmm1
 
     ; --- Output ---
     lea     rdi, [rel fmt_out]
     mov     rsi, [rsp + MAIN_P1_SUM]
     mov     rdx, [rsp + MAIN_P2_SUM]
-    mov     eax, 1
+    mov     eax, 1                  ; one XMM arg
     call    printf
 
     xor     eax, eax

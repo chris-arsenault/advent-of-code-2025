@@ -67,9 +67,9 @@ function part2(grid, sr, sc)
 end
 
 function main()
+    t0 = time_ns()
     lines = readlines("input.txt")
     grid, sr, sc = load_grid(lines)
-    t0 = time_ns()
     p1 = part1(grid, sr, sc)
     p2 = part2(grid, sr, sc)
     elapsed_ms = (time_ns() - t0)/1e6

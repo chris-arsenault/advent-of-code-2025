@@ -65,6 +65,9 @@ static inline unsigned long long partb(char * buf, int num_jolts) {
 }
 
 int main(void) {
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
     FILE *fp = fopen("input.txt", "r");
     if (!fp) {
         perror("fopen");
@@ -75,17 +78,15 @@ int main(void) {
     long two_jolts = 0;
     unsigned long long twelve_jolts = 0;
 
-    struct timespec t0, t1;
-    clock_gettime(CLOCK_MONOTONIC, &t0);
-
     while (fgets(buf, sizeof(buf), fp)) {
         two_jolts += parta(buf);
         twelve_jolts += partb(buf, 12);
     }
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
+    double elapsed_ms = ns_since(&t0, &t1) / 1e6;
 
-    printf("max-2-digit-sum=%ld max-12-digit-sum=%llu elapsed_ms=%.3f\n", two_jolts, twelve_jolts, ns_since(&t0, &t1) / 1e6);
+    printf("max-2-digit-sum=%ld max-12-digit-sum=%llu elapsed_ms=%.3f\n", two_jolts, twelve_jolts, elapsed_ms);
 
     if (ferror(fp)) {
         perror("read error");

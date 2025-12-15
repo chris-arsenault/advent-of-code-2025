@@ -15,13 +15,13 @@
 ;   - px/py loaded into registers once per corner (avoids repeated memory access)
 
 global main
-extern clock_gettime
 extern printf
 extern perror
-extern ns_since
 extern read_file_all
 extern parse_uint64
 extern skip_non_digits
+extern clock_gettime
+extern ns_since
 
 ; ============================================================================
 ; Register allocation (callee-saved, preserved across calls):
@@ -43,7 +43,6 @@ extern skip_non_digits
 %define STK_COORDS      32              ; 16 bytes - saved coords for rect_in_polygon
 %define STK_SIZE        48              ; total frame size
 
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE        1048576
 %define MAX_POINTS      512
 
@@ -540,6 +539,11 @@ main:
     push    r15
     sub     rsp, STK_SIZE
 
+    ; Start timing
+    mov     edi, 1                      ; CLOCK_MONOTONIC
+    lea     rsi, [rel ts0]
+    call    clock_gettime
+
     ; ========================================================================
     ; Read input file
     ; ========================================================================
@@ -608,13 +612,6 @@ main:
     ; r12d = point_count (constant)
     ; r13 = points_x base (constant)
     ; r14 = points_y base (constant)
-
-    ; ========================================================================
-    ; Start timing
-    ; ========================================================================
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts0]
-    call    clock_gettime
 
     ; ========================================================================
     ; Part 1: Find max rectangle area (O(n²) point pairs)
@@ -763,25 +760,30 @@ main:
 
 .p2_done:
     ; ========================================================================
-    ; End timing and print results
+    ; End timing
     ; ========================================================================
-    mov     edi, CLOCK_MONOTONIC
+    mov     edi, 1                      ; CLOCK_MONOTONIC
     lea     rsi, [rel ts1]
     call    clock_gettime
 
+    ; elapsed_ns = ns_since(&ts0, &ts1)
     lea     rdi, [rel ts0]
     lea     rsi, [rel ts1]
     call    ns_since
 
+    ; convert to ms in xmm0
     cvtsi2sd xmm0, rax
     movsd   xmm1, [rel one_million]
     divsd   xmm0, xmm1
 
+    ; ========================================================================
+    ; Print results
+    ; ========================================================================
     ; printf(fmt, p1_result, p2_result, elapsed_ms)
     mov     rsi, [rsp + STK_P1_RESULT]
     mov     rdx, r15
     lea     rdi, [rel fmt_out]
-    mov     eax, 1
+    mov     eax, 1                      ; 1 XMM register used
     call    printf
 
     xor     eax, eax

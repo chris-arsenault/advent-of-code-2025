@@ -37,6 +37,7 @@ fn best_k(line: &str, k: usize) -> i64 {
 }
 
 fn main() {
+    let start = Instant::now();
     let path = if fs::metadata("input_eric.txt").is_ok() {
         "input_eric.txt"
     } else {
@@ -45,16 +46,16 @@ fn main() {
     let content = fs::read_to_string(path).expect("input");
     let lines: Vec<&str> = content.lines().collect();
 
-    let start = Instant::now();
     let mut p1: i64 = 0;
     let mut p2: i64 = 0;
     for line in lines {
         p1 += best_two(line);
         p2 += best_k(line, 12);
     }
-    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
     println!(
         "max-2-digit-sum={} max-12-digit-sum={} elapsed_ms={:.3}",
-        p1, p2, elapsed
+        p1,
+        p2,
+        start.elapsed().as_secs_f64() * 1000.0
     );
 }

@@ -132,14 +132,13 @@ fn max_rect_inside(pts: &[Point], poly: &[Point]) -> i64 {
 }
 
 fn main() {
+    let start = Instant::now();
     let pts = load_points("input.txt");
 
-    let start = Instant::now();
     let p1 = max_rect_any(&pts);
     let p2 = max_rect_inside(&pts, &pts);
-    let elapsed = start.elapsed().as_secs_f64() * 1000.0;
     println!(
         "max_rect_area={} max_green_rect_area={} elapsed_ms={:.3}",
-        p1, p2, elapsed
+        p1, p2, start.elapsed().as_secs_f64() * 1000.0
     );
 }

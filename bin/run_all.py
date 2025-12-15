@@ -101,17 +101,22 @@ def run_all(
             complexities[lang].append(complexity_val)
 
             cmd = resolve_command(day, lang, cfg, day_dir)
-            code, out, err, mem_kb, elapsed_ms = run_cmd(cmd, day_dir, measure_memory)
+            code, out, err, mem_kb, elapsed_external_ms = run_cmd(cmd, day_dir, measure_memory)
 
             if out:
                 print(f"[{lang}] {out}")
             if err:
                 print(err, file=sys.stderr)
 
-            elapsed = elapsed_ms if elapsed_ms is not None else (extract_elapsed(out) if code == 0 else None)
+            elapsed_internal = extract_elapsed(out) if code == 0 else None
+            # Prefer internal timing, but keep external for comparison
+            elapsed_used = elapsed_internal if elapsed_internal is not None else elapsed_external_ms
+            if elapsed_external_ms is not None and elapsed_internal is not None:
+                print(f"[{lang}] timing_diff_ms (internal - external): {elapsed_internal - elapsed_external_ms:.3f}")
+
             ok_exec = code == 0
-            day_results[lang] = {"elapsed": elapsed, "ok": ok_exec, "out": out, "mem_kb": mem_kb if ok_exec else None}
-            timings[lang].append(elapsed if ok_exec else None)
+            day_results[lang] = {"elapsed": elapsed_used, "ok": ok_exec, "out": out, "mem_kb": mem_kb if ok_exec else None}
+            timings[lang].append(elapsed_used if ok_exec else None)
             memory[lang].append(mem_kb if ok_exec else None)
             ok_flags[lang].append(ok_exec)
 

@@ -4,11 +4,11 @@
 ; Requires: BMI1 (tzcnt, blsr), BMI2 (shlx), AVX2 (vpxor, vmovdqu)
 
 global main
-extern clock_gettime
 extern printf
 extern perror
-extern ns_since
 extern read_file_all
+extern clock_gettime
+extern ns_since
 
 ; ============================================================================
 ; Register allocation (callee-saved, preserved across calls):
@@ -25,7 +25,6 @@ extern read_file_all
 %define STK_START_C     4               ; 4 bytes - starting column
 %define STK_SIZE        16              ; total frame size (8 bytes padding)
 
-%define CLOCK_MONOTONIC 1
 %define BUF_SIZE        1048576
 %define MAX_ROWS        256
 %define MAX_COLS        256
@@ -62,6 +61,13 @@ main:
     push    r14
     push    r15
     sub     rsp, STK_SIZE
+
+    ; ========================================================================
+    ; Start timing
+    ; ========================================================================
+    mov     edi, 1
+    lea     rsi, [rel ts0]
+    call    clock_gettime
 
     ; ========================================================================
     ; Read input file
@@ -143,13 +149,6 @@ main:
 .no_last_row:
     mov     r13d, ebx                   ; r13d = height (in register!)
     ; r12d = width (already set)
-
-    ; ========================================================================
-    ; Start timing
-    ; ========================================================================
-    mov     edi, CLOCK_MONOTONIC
-    lea     rsi, [rel ts0]
-    call    clock_gettime
 
     ; ========================================================================
     ; Part 1: Count splits using bitmask simulation
@@ -419,26 +418,31 @@ main:
     vzeroupper
 
     ; ========================================================================
-    ; End timing and print results
+    ; End timing
     ; ========================================================================
-    mov     edi, CLOCK_MONOTONIC
+    ; Save results before clobbering registers
+    push    r14
+    push    r15
+
+    mov     edi, 1
     lea     rsi, [rel ts1]
     call    clock_gettime
 
     lea     rdi, [rel ts0]
     lea     rsi, [rel ts1]
     call    ns_since
-
     cvtsi2sd xmm0, rax
     movsd   xmm1, [rel one_million]
     divsd   xmm0, xmm1
 
-    ; printf(fmt, splits, timelines, elapsed_ms)
-    ; r14d = splits (still in register!), r15 = timelines
-    mov     esi, r14d
-    mov     rdx, r15
+    ; ========================================================================
+    ; Print results
+    ; ========================================================================
+    pop     rdx                         ; timelines
+    pop     rsi                         ; splits (need to extend from r14d)
+    movsxd  rsi, esi                    ; sign-extend for printf
     lea     rdi, [rel fmt_out]
-    mov     eax, 1
+    mov     eax, 1                      ; one XMM arg
     call    printf
 
     xor     eax, eax
