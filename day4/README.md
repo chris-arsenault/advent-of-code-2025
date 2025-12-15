@@ -24,20 +24,22 @@ Grid of paper rolls (`@`).
 ### Key Insight
 The naive approach (rescan entire grid each iteration) is O(iterations * n). BFS ensures O(n) by only processing cells when they become newly accessible.
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **ASM** | 2.330 | 0.89x (fastest) |
-| **C** | 2.631 | 1.0x (baseline) |
-| **Rust** | 5.196 | 2.0x |
-| **Haskell** | 29.573 | 11.2x |
-| **Lisp** | 42.303 | 16.1x |
-| **Python** | 44.449 | 16.9x |
-| **Go** | 54.198 | 20.6x |
-| **Ruby** | 107.137 | 40.7x |
-| **Julia** | 369.073 | 140.3x |
-| **TypeScript** | 552.919 | 210.2x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **ASM** | 0.753 | 0.68x (fastest) | 1.4 |
+| **C** | 1.111 | 1.0x (baseline) | 1.3 |
+| **Rust** | 3.448 | 3.1x | 1.6 |
+| **Julia** | 5.994 | 5.4x | 382.5 |
+| **Go** | 9.357 | 8.4x | 2.5 |
+| **Lisp** | 18.646 | 16.8x | 41.6 |
+| **Python** | 25.966 | 23.4x | 17.7 |
+| **Haskell** | 28.661 | 25.8x | 0.6 |
+| **TypeScript** | 32.707 | 29.4x | 499.9 |
+| **Ruby** | 72.318 | 65.1x | 32.3 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
 ## Resource Metrics
 
@@ -56,11 +58,12 @@ The naive approach (rescan entire grid each iteration) is O(iterations * n). BFS
 
 ### Anomalies & Analysis
 
-- **ASM complexity (74):** Highest in Day 4 and second-highest overall - the SIMD bit manipulation (`pshufb`, `pand`, `pcmpeqb`), BFS queue management, and 8-directional neighbor checking each contribute many branch points. This is the cost of hand-optimized performance.
-- **ASM line count (913):** 10x more than C (90) - bitfield packing, SIMD operations, and manual queue management require extensive code. Yet it's only 11% faster than C, showing diminishing returns.
-- **C complexity (31):** High for C - the 8-directional neighbor counting and BFS wavefront propagation require many conditionals. Grid problems inherently have high branching.
-- **Ruby complexity (5):** Extremely low despite implementing BFS - Ruby's iterator-based approach and implicit conditionals in methods hide the true branching. The 40.7x slower runtime reveals the cost.
-- **Rust lines (103):** More than C (90) - Rust's explicit error handling, iterator chains, and type annotations add verbosity. The safety guarantees come at a readability cost here.
+- **Julia is competitive internally:** 5.994ms (5.4x C) is reasonable. The 383ms startup made it appear 140x slower in external timing.
+- **TypeScript internal (32.7ms):** Actually slower than most languages internally. V8 doesn't optimize BFS/grid operations as well as numeric workloads.
+- **Haskell has lowest startup (0.6ms):** The GHC-compiled binary has minimal runtime initialization, but the algorithm runs 26x slower than C.
+- **ASM complexity (74):** Highest in Day 4 - the SIMD bit manipulation (`pshufb`, `pand`, `pcmpeqb`), BFS queue management, and 8-directional neighbor checking each contribute many branch points.
+- **ASM line count (913):** 10x more than C (90) - bitfield packing, SIMD operations, and manual queue management require extensive code. Only 32% faster than C internally.
+- **Ruby complexity (5):** Extremely low despite implementing BFS - Ruby's iterator-based approach hides branching. The 65x slower runtime reveals the abstraction cost.
 
 ## Language Notes
 
@@ -96,8 +99,9 @@ The naive approach (rescan entire grid each iteration) is O(iterations * n). BFS
 - **Hoisted `imul`:** Row byte offsets computed once per row via `add`, not per cell
 
 ## Interesting Points
-- ASM and C are very close (~11% difference) - the BFS algorithm is well-suited to C's imperative style
+- **ASM is only 32% faster than C internally:** 0.753ms vs 1.111ms. The BFS algorithm is well-suited to C's imperative style.
+- **Julia startup misleads:** 5.4x C internally, but appeared 140x slower due to 383ms startup overhead.
+- **TypeScript is genuinely slow here:** 32.7ms (29x C) internally - V8 doesn't optimize grid/BFS operations well.
 - The bitfield representation reduces memory by 8x, improving cache utilization
 - `popcnt` is key for both neighbor counting and Part 1 SIMD counting
 - The BFS wavefront is algorithmically superior to iteration-based removal
-- Julia and TypeScript show extreme overhead (140x-210x slower) due to startup costs on this fast problem

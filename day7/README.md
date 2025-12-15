@@ -18,20 +18,22 @@ Instead of generic BFS, the C implementation uses:
 
 This row-by-row approach is more cache-friendly than generic BFS.
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **ASM** | 1.996 | 0.75x (fastest) |
-| **Rust** | 2.062 | 0.78x |
-| **C** | 2.649 | 1.0x (baseline) |
-| **Haskell** | 8.046 | 3.0x |
-| **Python** | 17.956 | 6.8x |
-| **Lisp** | 29.859 | 11.3x |
-| **Ruby** | 38.505 | 14.5x |
-| **Go** | 56.397 | 21.3x |
-| **Julia** | 349.362 | 131.9x |
-| **TypeScript** | 510.946 | 192.9x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **ASM** | 0.098 | 0.69x (fastest) | 1.3 |
+| **C** | 0.142 | 1.0x (baseline) | 2.8 |
+| **Rust** | 0.528 | 3.7x | 1.7 |
+| **Python** | 1.522 | 10.7x | 17.3 |
+| **Julia** | 1.680 | 11.8x | 362.2 |
+| **TypeScript** | 2.130 | 15.0x | 500.6 |
+| **Lisp** | 3.718 | 26.2x | 41.9 |
+| **Ruby** | 4.981 | 35.1x | 33.1 |
+| **Haskell** | 6.396 | 45.0x | 1.7 |
+| **Go** | 9.117 | 64.2x | 3.0 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
 ## Resource Metrics
 
@@ -50,11 +52,12 @@ This row-by-row approach is more cache-friendly than generic BFS.
 
 ### Anomalies & Analysis
 
-- **Go lines (157):** Most verbose implementation - channel-based parallelism and explicit visited map management add significant code. Yet Go is 21x slower than C.
-- **C complexity (34):** High - the row-by-row simulation with splitter handling requires many direction checks and boundary conditions.
-- **Rust lines (86):** Compact despite safety - `VecDeque` and `HashSet` provide efficient abstractions without verbosity. 22% faster than C.
-- **Ruby/Haskell complexity (11):** Tied for lowest - both use higher-order functions that hide branching in method calls. Ruby pays 14.5x penalty; Haskell only 3x.
-- **C memory (5,760 KiB):** Higher than simpler problems - the grid and visited tracking require 2D arrays. Still much less than interpreted languages.
+- **Go is surprisingly slow internally (64x):** 9.117ms vs C's 0.142ms. Go's hash map overhead is visible on this grid simulation problem.
+- **Julia is competitive internally:** 1.680ms (11.8x) is reasonable. The 362ms startup made it appear 132x slower in external timing.
+- **Haskell internal (45x):** Slower than Python (10.7x) on this problem. Lazy evaluation doesn't help for strict grid simulation.
+- **TypeScript internal (15x):** Better than external timing suggested. V8 handles this beam simulation reasonably well.
+- **Rust is 3.7x C internally:** Less impressive than expected - the row-by-row simulation may have overhead from `VecDeque`/`HashSet`.
+- **C memory (5,760 KiB):** Higher than simpler problems - the grid and visited tracking require 2D arrays.
 
 ## Language Notes
 
@@ -80,8 +83,9 @@ For generic BFS alternative:
 - Use `bt`/`bts` for bitset visited tracking
 
 ## Interesting Points
-- ASM and Rust are 25% faster than C - the tight inner loops benefit from optimization
-- Go is slow (21x) - its generic hash map may be the bottleneck
-- The row-by-row approach is a key algorithmic insight: converts 2D BFS to 1D scan
-- Part 2's "quantum timelines" counting doubles at each splitter - exponential growth handled via counting, not enumeration
-- Julia and TypeScript show extreme startup overhead (132x-193x) on this problem
+- **ASM is only 31% faster than C internally:** 0.098ms vs 0.142ms. The row-by-row algorithm is simple enough that C optimizes well.
+- **Go internal (64x) is genuinely slow:** Not just startup - hash map overhead on grid operations is significant.
+- **Julia startup distorts perception:** 11.8x C internally vs 132x externally. The 362ms startup dominates.
+- **Python beats Go internally:** 1.522ms (10.7x) vs Go's 9.117ms (64x). Go's overhead is problem-specific, not general.
+- The row-by-row approach is a key algorithmic insight: converts 2D BFS to 1D scan.
+- Part 2's "quantum timelines" counting doubles at each splitter - exponential growth handled via counting, not enumeration.

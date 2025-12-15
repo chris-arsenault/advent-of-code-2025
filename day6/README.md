@@ -17,20 +17,22 @@ Apply operator (+/*) and sum all problem results.
 ### Part 2 Column Parsing
 Each column's digits (top-to-bottom, most significant at top) form one number. Process columns right-to-left within each problem.
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **Rust** | 1.633 | 0.40x (fastest) |
-| **ASM** | 1.803 | 0.45x |
-| **C** | 4.052 | 1.0x (baseline) |
-| **Haskell** | 7.984 | 2.0x |
-| **Lisp** | 20.311 | 5.0x |
-| **Python** | 23.769 | 5.9x |
-| **Ruby** | 43.336 | 10.7x |
-| **Go** | 47.200 | 11.6x |
-| **TypeScript** | 516.457 | 127.5x |
-| **Julia** | 586.091 | 144.6x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **C** | 0.121 | 1.0x (baseline) | 4.0 |
+| **ASM** | 0.125 | 1.03x | 1.5 |
+| **Rust** | 0.164 | 1.36x | 1.4 |
+| **Julia** | 0.614 | 5.07x | 600.6 |
+| **Go** | 1.376 | 11.4x | 2.2 |
+| **TypeScript** | 2.605 | 21.5x | 492.9 |
+| **Python** | 4.155 | 34.3x | 19.2 |
+| **Haskell** | 5.849 | 48.3x | 1.9 |
+| **Lisp** | 7.436 | 61.5x | 37.7 |
+| **Ruby** | 11.163 | 92.3x | 32.4 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
 ## Resource Metrics
 
@@ -49,12 +51,12 @@ Each column's digits (top-to-bottom, most significant at top) form one number. P
 
 ### Anomalies & Analysis
 
+- **C, ASM, Rust are nearly identical:** 0.121ms, 0.125ms, 0.164ms - all within 36% of each other. The big integer parsing is well-optimized across compiled languages.
+- **Julia internal (0.614ms):** Only 5x C internally, not 145x. The 601ms startup (largest in suite for Day 6) dominated external timing.
+- **Haskell is surprisingly slow internally:** 5.849ms (48x C) despite native `Integer` type. String parsing overhead hurts here.
 - **C memory (7,680 KiB):** Higher than usual for C - big integer arithmetic requires additional buffer space for multi-precision operations.
 - **Rust memory (1,920 KiB):** Lowest compiled language - `num-bigint` crate is efficient, and Rust's ownership model minimizes allocations.
-- **Haskell complexity (4):** Second lowest overall - native `Integer` type and pattern matching on operator characters produce almost branchless code. Haskell excels at parsing problems.
-- **ASM complexity (12):** Surprisingly low - the BMI2 `mulx` and `adc` chain for big integers require few conditional branches. Most work is sequential arithmetic.
-- **C complexity (35):** Highest - manual big integer implementation requires many carry checks and boundary conditions.
-- **Go lines (139):** Most verbose - `math/big` API is explicit, and Go's error handling adds lines. Yet performs well (11.6x C).
+- **Go lines (139):** Most verbose - `math/big` API is explicit. Internal timing of 1.4ms (11x C) is reasonable.
 
 ## Language Notes
 
@@ -75,8 +77,9 @@ Each column's digits (top-to-bottom, most significant at top) form one number. P
 - **Unrolled multiplication:** Inner loop unrolling for better pipelining
 
 ## Interesting Points
-- Rust and ASM outperform C by 2.2-2.5x on this parsing-heavy problem - LLVM optimizations excel at string processing
-- Haskell performs reasonably (2x C) despite string parsing not being its strength
-- Languages with native big integers (Python, Ruby, Lisp) don't pay a performance penalty for arithmetic
-- The Part 2 column parsing (right-to-left, top-to-bottom) is the tricky part of this problem
-- Julia and TypeScript show extreme startup overhead (127x-145x) on this problem
+- **C, ASM, Rust are within 36%:** 0.121ms, 0.125ms, 0.164ms - big integer parsing is uniformly fast across compiled languages.
+- **Julia internal (0.614ms):** Only 5x C, not 145x. The 601ms startup dominated external measurements.
+- **Haskell internal (5.8ms):** Surprisingly slow (48x C) despite native `Integer`. String parsing overhead is significant.
+- **TypeScript internal (2.6ms):** 21x C is moderate. The 493ms startup inflated external timing to 127x.
+- Languages with native big integers (Python, Ruby, Lisp) still pay performance penalties for parsing, not arithmetic.
+- The Part 2 column parsing (right-to-left, top-to-bottom) is the tricky part of this problem.

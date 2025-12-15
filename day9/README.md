@@ -20,20 +20,23 @@ Find largest axis-aligned rectangle with red corners.
 ### Point-on-Edge Handling
 Critical for correct results - points exactly on polygon edges must be included.
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **C** | 75.198 | 1.0x (baseline) |
-| **ASM** | 110.609 | 1.5x |
-| **Rust** | 154.582 | 2.1x |
-| **Go** | 197.146 | 2.6x |
-| **Julia** | 428.581 | 5.7x |
-| **Haskell** | 725.463 | 9.7x |
-| **TypeScript** | 751.864 | 10.0x |
-| **Lisp** | 2780.020 | 37.0x |
-| **Python** | 8674.707 | 115.4x |
-| **Ruby** | 9871.194 | 131.3x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **C** | 70.736 | 1.0x (baseline) | 2.1 |
+| **ASM** | 103.609 | 1.46x | 1.9 |
+| **Go** | 144.570 | 2.0x | 2.3 |
+| **Rust** | 147.416 | 2.1x | 2.1 |
+| **Julia** | 156.678 | 2.2x | 278.1 |
+| **TypeScript** | 237.308 | 3.4x | 493.4 |
+| **Haskell** | 817.828 | 11.6x | -55.9* |
+| **Lisp** | 2676.302 | 37.8x | 47.1 |
+| **Python** | 8160.864 | 115.4x | 17.3 |
+| **Ruby** | 9570.992 | 135.3x | 35.2 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
+*\*Haskell shows negative startup due to lazy evaluation deferring work past timer end.*
 
 ## Resource Metrics
 
@@ -52,11 +55,12 @@ Critical for correct results - points exactly on polygon edges must be included.
 
 ### Anomalies & Analysis
 
-- **C complexity (49):** Highest among high-level languages - the O(n^2) point enumeration with ray casting requires many boundary and intersection checks. Geometric algorithms have inherent branching.
-- **ASM line count (661):** 5x more than C (128) - integer ray casting, point-on-edge handling, and coordinate sorting require explicit implementation of every geometric primitive.
-- **Rust memory (1,728 KiB):** Lowest - no heap allocation needed for the fixed-size point arrays. Rust's zero-cost abstractions shine on geometric problems.
-- **Ruby complexity (28):** Lowest high-level language - Ruby's implicit iterators and method chaining hide the branching. Yet 131x slower than C.
-- **Python/Ruby timing (100x+):** The O(n^2) algorithm with interpreted loop overhead creates the worst performance gap in the suite. Each iteration is tiny but there are millions of them.
+- **C is fastest (baseline):** The straightforward O(n^2) algorithm benefits from simple compiled code. ASM is 46% slower due to optimization complexity.
+- **Julia internal (2.2x):** Only 156.7ms internally, not 428ms externally. The 278ms startup was hiding competitive performance.
+- **Haskell lazy evaluation anomaly:** -56ms "startup" means external < internal. Deferred work past timer end distorts measurement.
+- **TypeScript internal (3.4x):** 237ms internally vs 752ms externally. V8 handles geometric computations reasonably.
+- **Python/Ruby 100x+ slower internally:** The O(n^2) algorithm with interpreted loop overhead is genuinely slow, not startup-related.
+- **Rust memory (1,728 KiB):** Lowest - no heap allocation needed for fixed-size point arrays.
 
 ## Language Notes
 
@@ -84,9 +88,10 @@ Manual ray casting provides consistent, fast implementations.
 - **`pdep`/`pext` (BMI2):** Coordinate packing
 
 ## Interesting Points
-- C is fastest here - the straightforward O(n^2) algorithm benefits from simple compiled code
-- ASM is 50% slower than C - hand optimization doesn't help when the algorithm is memory-bound
-- Python and Ruby are 100x+ slower - interpreted loop overhead on O(n^2)
-- The Part 2 polygon constraint adds significant complexity
-- Integer arithmetic is essential for exact geometric comparisons (no floating-point errors)
-- This is the most computation-heavy problem in the suite for scripting languages
+- **C is fastest:** Straightforward O(n^2) algorithm compiles efficiently. ASM is 46% slower due to complexity.
+- **Julia internal (2.2x) is competitive:** The 278ms startup made it appear 5.7x slower externally.
+- **Haskell lazy evaluation backfires again:** External time < internal due to deferred computation.
+- **Python/Ruby are genuinely slow (115x-135x):** Interpreted loop overhead on O(n^2) is unavoidable.
+- **TypeScript internal (3.4x):** V8 handles geometric computations reasonably well.
+- Integer arithmetic is essential for exact geometric comparisons (no floating-point errors).
+- This is the most computation-heavy problem in the suite for scripting languages.

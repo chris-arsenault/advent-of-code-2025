@@ -13,20 +13,22 @@ A dial points at numbers 0-99 in a circle. Follow rotation instructions (L/R wit
 ### Key Insight
 The sequential dependency (each position depends on the previous) makes pure functional patterns (`accumulate`, `scan`, `reduce`) awkward. All implementations use explicit loops, which is appropriate.
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **ASM** | 1.481 | 0.87x (fastest) |
-| **C** | 1.699 | 1.0x (baseline) |
-| **Rust** | 1.772 | 1.04x |
-| **Haskell** | 5.665 | 3.3x |
-| **Lisp** | 10.341 | 6.1x |
-| **Python** | 17.565 | 10.3x |
-| **Ruby** | 35.999 | 21.2x |
-| **Go** | 46.173 | 27.2x |
-| **Julia** | 196.864 | 115.9x |
-| **TypeScript** | 478.824 | 281.8x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **ASM** | 0.064 | 0.48x (fastest) | 1.6 |
+| **C** | 0.132 | 1.0x (baseline) | 1.5 |
+| **Rust** | 0.237 | 1.8x | 1.8 |
+| **Julia** | 0.647 | 4.9x | 212.5 |
+| **TypeScript** | 1.036 | 7.8x | 484.0 |
+| **Go** | 1.105 | 8.4x | 2.9 |
+| **Python** | 1.169 | 8.9x | 16.9 |
+| **Ruby** | 2.685 | 20.3x | 32.6 |
+| **Haskell** | 3.579 | 27.1x | 2.3 |
+| **Lisp** | <0.001 | ~0x | 44.4 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
 ## Resource Metrics
 
@@ -45,11 +47,13 @@ The sequential dependency (each position depends on the previous) makes pure fun
 
 ### Anomalies & Analysis
 
+- **TypeScript startup (484ms):** Node.js/V8 engine initialization dominates. The algorithm itself runs in 1.0ms (7.8x C), but total process time is 485ms (3,670x C). This is the clearest example of JIT startup cost in the suite.
+- **Julia startup (213ms):** JIT compilation overhead. Internal timing of 0.647ms (4.9x C) is competitive, but 213ms startup makes it appear 1,620x slower in total process time.
+- **Lisp sub-millisecond:** The 0.000ms reading indicates timing precision limits. The algorithm runs faster than the timer resolution, but 44ms SBCL startup dominates.
 - **TypeScript memory (207 MB):** Node.js/V8 engine overhead - the runtime itself dwarfs the actual solution memory. This is ~154x more than C for a trivial problem.
 - **Julia memory (278 MB):** JIT compiler remains resident in memory. Julia's "time-to-first-plot" problem manifests as both memory and startup overhead.
 - **ASM line count (164):** 8x more lines than Ruby (21) for the same algorithm. Assembly requires explicit register management, stack handling, and syscalls that high-level languages abstract away.
-- **ASM complexity (17):** Highest complexity despite simplest algorithm - the metric counts conditional jumps (`cmov`, `jmp`), which branchless techniques ironically increase.
-- **Go timing anomaly (27x slower):** Go's runtime initialization and garbage collector setup dominate on this sub-2ms problem. On longer-running problems, Go performs much better relative to C.
+- **Go internal timing (8.4x):** Unlike the old external timing that showed 27x, internal timing reveals Go is reasonably competitive once its 2.9ms runtime initializes.
 
 ## Language Notes
 
@@ -73,7 +77,9 @@ SIMD parallelism is limited because each position depends on the previous. The i
 - Division for crossing count kept as branch (division is expensive; skip when possible)
 
 ## Interesting Points
-- ASM, C, and Rust are nearly identical in performance (within 20%) - the algorithm is simple enough that compiler optimization matches hand-tuned assembly
-- The branchless ASM techniques reduce branch misprediction but can't overcome the sequential dependency
-- Haskell's lazy evaluation requires careful strictness annotations to avoid space leaks in accumulating loops
-- TypeScript and Julia show significant startup overhead on this short-running problem
+- **ASM is 2x faster than C internally** (0.064ms vs 0.132ms) - branchless techniques provide real speedup on this tight loop
+- **Rust is competitive** at 1.8x C, showing zero-cost abstractions work well for simple algorithms
+- **Haskell is surprisingly slow** (27x C) despite being compiled - lazy evaluation overhead on strict accumulating loops
+- **Startup dominates for JIT languages:** TypeScript (484ms) and Julia (213ms) startup makes them appear 1000x+ slower, but internally they're only 5-8x slower than C
+- **The internal/external timing split** reveals that TypeScript's V8 and Julia's JIT are actually efficient once running - their reputation for slowness on short problems is purely startup cost
+- **Compiled languages cluster:** C, Rust, ASM, Go, Haskell all have <3ms startup; interpreted/JIT languages have 17-484ms startup

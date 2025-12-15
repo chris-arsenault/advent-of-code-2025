@@ -21,20 +21,22 @@ Instead of recursive memoized DFS:
 
 Benefits: sequential memory access, naturally parallelizable, no recursion overhead.
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **ASM** | 1.566 | 0.71x (fastest) |
-| **Rust** | 1.904 | 0.86x |
-| **C** | 2.216 | 1.0x (baseline) |
-| **Haskell** | 5.830 | 2.6x |
-| **Lisp** | 14.310 | 6.5x |
-| **Python** | 17.896 | 8.1x |
-| **Ruby** | 34.748 | 15.7x |
-| **Go** | 46.932 | 21.2x |
-| **Julia** | 259.183 | 117.0x |
-| **TypeScript** | 507.153 | 228.9x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **ASM** | 0.086 | 0.12x (fastest) | 1.5 |
+| **Go** | 0.462 | 0.64x | 2.1 |
+| **Rust** | 0.487 | 0.68x | 1.5 |
+| **C** | 0.717 | 1.0x (baseline) | 1.5 |
+| **TypeScript** | 0.993 | 1.4x | 465.5 |
+| **Python** | 1.246 | 1.7x | 15.7 |
+| **Ruby** | 2.350 | 3.3x | 30.9 |
+| **Lisp** | 3.600 | 5.0x | 38.8 |
+| **Haskell** | 3.712 | 5.2x | 2.3 |
+| **Julia** | 29.678 | 41.4x | 240.9 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
 ## Resource Metrics
 
@@ -53,12 +55,12 @@ Benefits: sequential memory access, naturally parallelizable, no recursion overh
 
 ### Anomalies & Analysis
 
-- **Ruby line count (25):** Shortest implementation in the entire suite - Ruby's `Hash.new { |h,k| ... }` auto-memoization pattern handles the entire DP in minimal code. Yet 15.7x slower than C.
-- **Complexity uniformly low (4-8):** All high-level languages have similar low complexity - the topological DP algorithm has few branches. This is one of the simplest algorithms in the suite.
-- **ASM complexity (26):** Highest - the level-synchronous approach requires explicit queue management and predecessor iteration that high-level languages abstract away.
-- **C memory (1,728 KiB):** Very low - the small graph fits in stack-allocated arrays. No dynamic allocation needed.
-- **TypeScript timing (229x):** Worst ratio in Day 11 - Node.js startup completely dominates this ~2ms problem. The algorithm itself is fast.
-- **Julia timing (117x):** Poor despite simple algorithm - graph building and map lookups incur JIT overhead. Julia excels at numeric computation, not graph traversal.
+- **ASM is 8x faster than C internally:** 0.086ms vs 0.717ms. The level-synchronous approach with tight loops provides dramatic speedup.
+- **Go/Rust beat C internally:** 0.462ms and 0.487ms vs 0.717ms. All three are faster than C for this DAG traversal.
+- **TypeScript internal (1.4x):** Only 0.993ms internally, not 507ms externally. The 466ms startup created the illusion of 229x slowness.
+- **Julia internal (41x):** Still slow even internally - JIT doesn't help graph traversal with many map lookups.
+- **Ruby line count (25):** Shortest implementation - `Hash.new { |h,k| ... }` auto-memoization handles DP in minimal code.
+- **Complexity uniformly low (4-8):** The topological DP algorithm has few branches. This is one of the simplest algorithms.
 
 ## Language Notes
 
@@ -78,9 +80,9 @@ Benefits: sequential memory access, naturally parallelizable, no recursion overh
 - **Prefetch:** Next level's predecessor lists while processing current
 
 ## Interesting Points
-- ASM and Rust are ~15-30% faster than C - tight loops benefit from optimization
-- Julia is 117x slower - JIT overhead on graph algorithms hurts
-- Haskell performs well (2.6x) - lazy evaluation provides efficient memoization for DAG traversal
-- Ruby's `Hash.new` with block provides elegant auto-memoization
-- The level-synchronous approach enables SIMD parallelism not possible with recursive DFS
-- TypeScript shows extreme startup overhead (229x) on this fast-running problem
+- **ASM is 8x faster than C internally:** 0.086ms vs 0.717ms. Level-synchronous approach with tight loops is dramatically faster.
+- **Go/Rust beat C:** 0.462ms and 0.487ms vs 0.717ms. Graph traversal favors modern language implementations.
+- **TypeScript internal (1.4x) is competitive:** V8 handles DAG traversal well. The 466ms startup distorted perception.
+- **Julia internal (41x) is genuinely slow:** JIT doesn't help graph traversal with many map lookups. Not a startup issue.
+- **Haskell internal (5.2x):** Reasonable - lazy evaluation provides efficient memoization for DAG traversal.
+- Ruby's `Hash.new` with block provides elegant auto-memoization despite 3.3x slower performance.

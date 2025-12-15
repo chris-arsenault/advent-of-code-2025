@@ -21,20 +21,22 @@ Most implementations use precomputation:
 3. For each range, binary search to count matches
 4. O(patterns) + O(queries * log(patterns)) - much faster
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C | Notes |
-|----------|-----------|------|-------|
-| **ASM** | 3.239 | 0.03x | 33x faster - precomputation |
-| **Rust** | 8.364 | 0.08x | precomputation |
-| **Haskell** | 35.155 | 0.33x | precomputation |
-| **Lisp** | 60.064 | 0.57x | precomputation |
-| **Ruby** | 70.564 | 0.67x | precomputation |
-| **Go** | 71.724 | 0.68x | precomputation |
-| **Python** | 74.159 | 0.70x | precomputation |
-| **C** | 105.829 | 1.0x | per-number checking |
-| **Julia** | 351.906 | 3.32x | precomputation |
-| **TypeScript** | 548.647 | 5.18x | precomputation |
+| Language | Time (ms) | vs C | Startup (ms) | Notes |
+|----------|-----------|------|--------------|-------|
+| **ASM** | 1.343 | 0.01x | 1.7 | 76x faster - precomputation |
+| **Rust** | 6.496 | 0.06x | 1.7 | precomputation |
+| **Julia** | 11.393 | 0.11x | 344.1 | precomputation |
+| **Go** | 20.088 | 0.20x | 3.0 | precomputation |
+| **Haskell** | 33.547 | 0.33x | 1.2 | precomputation |
+| **Lisp** | 33.563 | 0.33x | 42.5 | precomputation |
+| **Ruby** | 35.882 | 0.35x | 32.4 | precomputation |
+| **TypeScript** | 37.891 | 0.37x | 505.5 | precomputation |
+| **Python** | 55.773 | 0.55x | 16.9 | precomputation |
+| **C** | 101.924 | 1.0x | 1.7 | per-number checking |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
 ## Resource Metrics
 
@@ -53,11 +55,12 @@ Most implementations use precomputation:
 
 ### Anomalies & Analysis
 
+- **TypeScript startup (506ms):** Massive JIT overhead, but internal timing of 37.9ms (0.37x C) is competitive. TypeScript with precomputation beats C's per-number approach once running.
+- **Julia internal (11.4ms):** With precomputation, Julia is 9x faster than C internally (0.11x). The 344ms startup makes it appear slow, but the JIT-compiled algorithm is efficient.
+- **ASM speedup (76x):** Precomputation + tight binary search gives ASM a massive advantage over C's naive per-number checking. Algorithm choice dominates.
 - **ASM line count (537):** 6.5x more than C (83) - precomputation with sorting, binary search, and prefix sums requires extensive manual implementation. The shared utility functions help but still require setup code.
-- **Haskell complexity (5):** Lowest despite 109 lines - Haskell's declarative style with list comprehensions and pure functions produces code with few branch points. The complexity metric undercounts functional composition.
-- **Ruby complexity (7):** Second lowest - Ruby's iterator-based approach (`each`, `map`, `select`) hides complexity in method calls rather than explicit branches.
+- **Haskell complexity (5):** Lowest despite 109 lines - Haskell's declarative style with list comprehensions and pure functions produces code with few branch points.
 - **Lisp memory (59 MB):** SBCL's runtime and standard library are substantial. The image-based model loads more than strictly necessary for this problem.
-- **Julia memory (318 MB):** Highest overall - the full JIT compiler and numeric libraries remain resident even for simple string/integer work.
 
 ## Language Notes
 
@@ -84,8 +87,8 @@ The ASM uses the precomputation strategy with:
 **Shared utilities used:** `pow10`, `lower_bound_u64`, `upper_bound_u64`, `sort_u64`
 
 ## Interesting Points
-- Significant algorithmic improvement: ~33x speedup from precomputation (ASM vs C)
-- The C reference deliberately uses the naive approach to demonstrate the contrast
-- ASM benefits from tight control over sorting and binary search hot paths
-- Ruby's `bsearch_index` provides efficient built-in binary search
-- Julia and TypeScript show high overhead despite using precomputation - startup costs dominate
+- **Algorithm dominates:** 76x speedup from precomputation (ASM vs C's naive approach). The C reference deliberately uses per-number checking to demonstrate algorithm choice matters more than language.
+- **All precomputation languages beat C internally:** Even Python (55.8ms) and Ruby (35.9ms) are faster than C (101.9ms) with the right algorithm.
+- **TypeScript is actually fast:** 37.9ms internal time is competitive with Ruby/Haskell. The 506ms startup creates the illusion of slowness.
+- **Julia shines with precomputation:** 11.4ms internal time makes it the 3rd fastest, demonstrating JIT's strength for repeated operations once warmed up.
+- **Startup overhead comparison:** TypeScript (506ms) and Julia (344ms) have 150-300x more startup than compiled languages (1-3ms). On this 100ms+ problem, it's less impactful than Day 1.

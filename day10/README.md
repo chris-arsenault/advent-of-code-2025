@@ -25,20 +25,22 @@ GF(2) = Galois Field with 2 elements {0, 1}, where addition = XOR, multiplicatio
 - Bitsets store button columns in chunks of 64 for GF(2) matrix
 - Part 2 uses doubles for a tiny matrix with free variable count <= 3
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **ASM** | 160.740 | 0.80x (fastest) |
-| **C** | 201.466 | 1.0x (baseline) |
-| **Rust** | 311.147 | 1.5x |
-| **Go** | 345.560 | 1.7x |
-| **Python** | 580.836 | 2.9x |
-| **TypeScript** | 1067.511 | 5.3x |
-| **Lisp** | 2339.611 | 11.6x |
-| **Haskell** | 4109.113 | 20.4x |
-| **Julia** | 7912.589 | 39.3x |
-| **Ruby** | 29046.014 | 144.2x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **ASM** | 167.412 | 0.90x (fastest) | 1.9 |
+| **C** | 186.462 | 1.0x (baseline) | 2.4 |
+| **Go** | 264.359 | 1.4x | 2.7 |
+| **Rust** | 302.398 | 1.6x | 2.1 |
+| **Python** | 465.135 | 2.5x | 125.8 |
+| **TypeScript** | 512.687 | 2.7x | 523.3 |
+| **Lisp** | 2153.409 | 11.5x | 8.2 |
+| **Haskell** | 3967.037 | 21.3x | 2.4 |
+| **Julia** | 7723.529 | 41.4x | 156.7 |
+| **Ruby** | 28120.626 | 150.8x | 36.4 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
 ## Resource Metrics
 
@@ -57,12 +59,12 @@ GF(2) = Galois Field with 2 elements {0, 1}, where addition = XOR, multiplicatio
 
 ### Anomalies & Analysis
 
-- **C complexity (139):** Highest in the entire suite - GF(2) Gaussian elimination combined with ILP DFS backtracking creates extreme branching. The algorithm is inherently complex.
-- **C line count (408):** Highest for C - manual matrix operations, pivot selection, and backtracking enumeration require extensive code. This is the most complex C implementation.
-- **ASM line count (1,085):** Largest in suite - SIMD row operations, DFS state management, and rational arithmetic all require manual implementation. 2.7x more than C.
-- **Lisp complexity (101):** Matches Go - the macro-heavy implementation with rational arithmetic doesn't reduce branching like other Lisp strengths (recursion, list processing).
-- **Ruby timing (144x):** Second worst performance ratio - the DFS backtracking with interpreted loops is catastrophic. Each backtrack requires thousands of operations.
-- **Lisp memory (88 MB):** High - rational arithmetic creates many intermediate bignum objects. SBCL's GC pressure is significant during the ILP solve.
+- **TypeScript internal (2.7x):** Only 512.7ms internally, not 1067ms externally. The 523ms startup was half the external time.
+- **Python internal (2.5x):** 465ms internally is competitive. The 126ms startup is higher than usual due to numpy/scipy imports.
+- **Julia internal (41.4x):** 7.7 seconds is genuinely slow, not startup-related. JIT doesn't help complex DFS backtracking.
+- **Ruby internal (151x):** 28 seconds is truly catastrophic. The DFS backtracking with interpreted loops is devastating.
+- **C complexity (139):** Highest in the entire suite - GF(2) elimination + ILP DFS creates extreme branching.
+- **ASM line count (1,085):** Largest in suite - SIMD row operations, DFS state management require manual implementation.
 
 ## Language Notes
 
@@ -96,10 +98,10 @@ Additional optimizations:
 - AVX2 for row operations (swap, normalize, eliminate) - negligible improvement due to small matrices
 
 ## Interesting Points
-- This is the most algorithmically complex problem in the suite
-- ASM beats C by 20% through careful register allocation and loop unrolling
-- Ruby is 144x slower - the DFS backtracking is devastating for interpreted languages
-- Julia is surprisingly slow (39x) despite being "fast" - JIT overhead on complex control flow
-- The GF(2) and rational RREF are conceptually similar but require different number representations
-- AVX2 provided negligible improvement because matrices are small (MAX_COLS=17)
-- The DFS state collapse optimization was the key insight: cache locality matters more than SIMD for small data
+- **ASM is only 10% faster than C internally:** 167ms vs 186ms. The DFS state collapse optimization helped, but diminishing returns.
+- **TypeScript internal (2.7x) is competitive:** V8 handles the DFS reasonably. The 523ms startup was misleading.
+- **Python internal (2.5x) is surprisingly good:** numpy vectorization helps with the GF(2) operations.
+- **Ruby is genuinely 151x slower internally:** The DFS backtracking is catastrophic for interpreted loops. Not a startup issue.
+- **Julia is genuinely slow (41x) internally:** JIT doesn't help complex branching control flow. Not a startup issue.
+- The GF(2) and rational RREF are conceptually similar but require different number representations.
+- The DFS state collapse optimization was key: cache locality matters more than SIMD for small data.

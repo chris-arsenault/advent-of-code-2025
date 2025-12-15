@@ -14,20 +14,23 @@
 4. Part 1: Count distinct roots after processing
 5. Part 2: Sum of MST edge weights
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **ASM** | 29.608 | 0.83x (fastest) |
-| **Rust** | 32.147 | 0.91x |
-| **C** | 35.470 | 1.0x (baseline) |
-| **Go** | 139.210 | 3.9x |
-| **Ruby** | 189.184 | 5.3x |
-| **TypeScript** | 695.467 | 19.6x |
-| **Lisp** | 743.877 | 21.0x |
-| **Haskell** | 1207.803 | 34.1x |
-| **Julia** | 1919.109 | 54.1x |
-| **Python** | 1944.205 | 54.8x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **ASM** | 25.661 | 0.79x (fastest) | 2.1 |
+| **Rust** | 30.879 | 0.94x | 2.9 |
+| **C** | 32.674 | 1.0x (baseline) | 2.2 |
+| **Go** | 91.806 | 2.8x | 4.5 |
+| **Ruby** | 146.075 | 4.5x | 36.7 |
+| **TypeScript** | 208.474 | 6.4x | 484.9 |
+| **Lisp** | 721.355 | 22.1x | 42.7 |
+| **Julia** | 915.638 | 28.0x | 1013.3 |
+| **Haskell** | 1270.303 | 38.9x | -78.8* |
+| **Python** | 1732.907 | 53.0x | 174.3 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
+*\*Haskell shows negative startup due to lazy evaluation deferring work past timer end.*
 
 ## Resource Metrics
 
@@ -46,12 +49,12 @@
 
 ### Anomalies & Analysis
 
-- **Python memory (257 MB):** Highest for Python across all days - `networkx` library loads extensive graph infrastructure. The library provides convenience at significant memory cost.
-- **Haskell memory (181 MB):** Unusually high - immutable Union-Find requires copying on each update, and the MST algorithm generates many intermediate structures. This is a pathological case for functional programming.
-- **Rust memory (31 MB):** Higher than usual for Rust - `petgraph` crate or custom Union-Find with all edges stored adds overhead. Still 8x less than Python.
-- **Go memory (46 MB):** Higher than other Go days - storing all edges for Kruskal's and the Union-Find structure requires heap allocation.
-- **Python lines (50):** Very concise - `networkx` handles graph construction, MST, and component counting. The brevity hides 55x slower performance.
-- **Ruby/Haskell complexity (7):** Lowest - both rely on library abstractions (`Set`, `IntMap`) that internalize branching logic.
+- **Julia startup (1013ms):** Largest in suite - JIT compilation for graph algorithms is expensive. Internal timing (915.6ms, 28x C) is better than external suggested.
+- **Haskell lazy evaluation anomaly:** -78.8ms "startup" means external time was faster than internal. Work is deferred past the timer endpoint.
+- **Python internal (53x):** Truly slow, not just startup. `networkx` library has significant overhead for these operations.
+- **TypeScript internal (6.4x):** Much better than external (19.6x). The 485ms startup dominated external measurement.
+- **Python memory (257 MB):** `networkx` library loads extensive graph infrastructure. Convenience at significant memory cost.
+- **Haskell memory (181 MB):** Immutable Union-Find requires copying on each update. Pathological case for functional programming.
 
 ## Language Notes
 
@@ -70,8 +73,9 @@
 - Cache-oblivious Union-Find memory layout
 
 ## Interesting Points
-- ASM, Rust, and C are within 20% of each other - the algorithm is dominated by sorting, not low-level optimization
-- Python with `networkx` is 55x slower - library overhead for graph operations
-- The Union-Find path compression makes component queries effectively O(1) amortized
-- Haskell's immutable data structures are a poor fit for Union-Find's inherently mutable operations
-- Julia and Python are both ~55x slower - JIT compilation overhead and interpreted loops hurt on graph algorithms
+- **ASM, Rust, C within 21%:** 25.7ms, 30.9ms, 32.7ms. Sorting dominates, so low-level optimization has limited impact.
+- **Julia's 1013ms startup is largest in suite:** Internal timing (28x C) is reasonable for graph algorithms.
+- **Haskell lazy evaluation backfires:** External time is faster than internal due to deferred computation. Union-Find is a poor fit for immutable data structures.
+- **TypeScript is 6.4x C internally:** V8 handles graph algorithms reasonably. The 485ms startup inflated external timing.
+- **Python is genuinely slow (53x):** `networkx` library overhead is real, not startup-related.
+- Union-Find path compression makes component queries effectively O(1) amortized.

@@ -32,20 +32,22 @@ For manageable boards (<=400 cells and <=60 pieces):
 ### Large Regions
 For bigger instances, rely on cheap area checks to avoid explosive search.
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **ASM** | 1.626 | 0.05x (fastest) |
-| **Rust** | 1.711 | 0.06x |
-| **Python** | 29.630 | 1.0x |
-| **C** | 29.787 | 1.0x (baseline) |
-| **Ruby** | 39.261 | 1.3x |
-| **Go** | 47.838 | 1.6x |
-| **Lisp** | 61.978 | 2.1x |
-| **TypeScript** | 524.641 | 17.6x |
-| **Julia** | 1164.391 | 39.1x |
-| **Haskell** | 7072.939 | 237.5x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **ASM** | 0.138 | 0.005x (fastest) | 1.7 |
+| **Rust** | 0.199 | 0.007x | 1.4 |
+| **Lisp** | <0.001 | ~0x | 42.7 |
+| **Python** | 2.078 | 0.08x | 25.0 |
+| **Go** | 2.171 | 0.08x | 2.2 |
+| **TypeScript** | 4.651 | 0.17x | 490.1 |
+| **Ruby** | 5.708 | 0.21x | 30.5 |
+| **C** | 26.693 | 1.0x (baseline) | 1.6 |
+| **Julia** | 171.241 | 6.4x | 930.1 |
+| **Haskell** | 6992.630 | 262.0x | 2.7 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
 ## Resource Metrics
 
@@ -64,13 +66,12 @@ For bigger instances, rely on cheap area checks to avoid explosive search.
 
 ### Anomalies & Analysis
 
-- **ASM line count (1,385):** Second highest in suite - DLX implementation with bitboard operations, shape rotation, and parity pruning requires massive manual implementation. 4.7x more than C.
-- **ASM complexity (100):** High - the backtracking search with shape enumeration and bitwise operations creates many branch points.
-- **C complexity (83):** High - naive backtracking has inherent branching at every placement decision. DLX would reduce this.
-- **Rust complexity (37):** Much lower than C - the `dlx` crate encapsulates the branching internally, reducing visible complexity.
-- **Ruby complexity (18):** Low - Ruby's `yield` for backtracking and iterator patterns hide the search tree exploration.
-- **Haskell timing (238x):** Worst in suite - lazy evaluation creates thunks for every backtracking state, overwhelming GC. Backtracking should be strict.
-- **Python matches C timing:** The `exact_cover` library uses efficient C extensions internally, matching C's performance despite Python overhead.
+- **ASM/Rust are 200x faster than C:** 0.138ms and 0.199ms vs 26.7ms. DLX vs naive backtracking is the difference.
+- **Python internal (0.08x C):** 2.078ms is 13x faster than C's 26.7ms. `exact_cover` library uses efficient C extensions.
+- **Julia startup (930ms):** Largest in suite - JIT compilation for complex search is expensive. Internal (6.4x C) is reasonable.
+- **Haskell internal (262x):** Genuinely catastrophic. Lazy evaluation creates thunks for every backtracking state, overwhelming GC.
+- **C is slow (baseline):** Naive backtracking is inherently inefficient. Algorithm choice (DLX) dominates.
+- **ASM line count (1,385):** Second highest - DLX with bitboard operations requires massive manual implementation.
 
 ## Language Notes
 
@@ -91,9 +92,10 @@ For bigger instances, rely on cheap area checks to avoid explosive search.
 - Profile-guided optimization for backtracking order
 
 ## Interesting Points
-- ASM and Rust are ~17x faster than C - efficient DLX implementation vs naive backtracking
-- Python matches C (1.0x) - likely using an efficient DLX library (`exact_cover` package)
-- Haskell is 238x slower - lazy evaluation is wrong paradigm for backtracking search
-- Julia is slow (39x) despite being "fast" - JIT overhead on recursive search
-- The parity pruning catches ~50% of impossible boards before expensive search
-- Exact cover is NP-complete; the exponential complexity means algorithm choice matters enormously
+- **ASM/Rust are 200x faster than C:** DLX vs naive backtracking. Algorithm choice dominates.
+- **Python is 13x faster than C internally:** `exact_cover` library with C extensions beats C's naive implementation.
+- **Go is 12x faster than C internally:** 2.171ms vs 26.7ms. Go's DLX implementation is efficient.
+- **Haskell internal (262x) is genuinely catastrophic:** Lazy evaluation is wrong paradigm for backtracking. Not a startup issue.
+- **Julia internal (6.4x) is reasonable:** The 930ms startup (largest in suite) distorted external timing to 39x.
+- The parity pruning catches ~50% of impossible boards before expensive search.
+- Exact cover is NP-complete; algorithm choice (DLX vs backtracking) matters enormously.

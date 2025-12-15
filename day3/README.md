@@ -18,20 +18,22 @@ The greedy approach works because:
 - Popping smaller digits is safe only if enough remain to fill k positions
 - The constraint "enough digits remain" prevents removing too many
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **ASM** | 1.624 | 0.26x (fastest) |
-| **Rust** | 1.825 | 0.29x |
-| **Haskell** | 4.882 | 0.77x |
-| **C** | 6.336 | 1.0x (baseline) |
-| **Lisp** | 19.135 | 3.0x |
-| **Python** | 24.386 | 3.9x |
-| **Go** | 41.758 | 6.6x |
-| **Ruby** | 43.230 | 6.8x |
-| **Julia** | 285.762 | 45.1x |
-| **TypeScript** | 506.226 | 79.9x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **ASM** | 0.186 | 0.04x (fastest) | 1.4 |
+| **Rust** | 0.193 | 0.04x | 1.5 |
+| **Go** | 0.217 | 0.05x | 2.2 |
+| **Julia** | 0.618 | 0.13x | 304.6 |
+| **Haskell** | 2.901 | 0.61x | 2.1 |
+| **TypeScript** | 3.756 | 0.79x | 491.2 |
+| **C** | 4.783 | 1.0x (baseline) | 1.7 |
+| **Python** | 7.287 | 1.52x | 17.3 |
+| **Lisp** | 7.458 | 1.56x | 39.2 |
+| **Ruby** | 8.483 | 1.77x | 32.7 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
 ## Resource Metrics
 
@@ -50,11 +52,12 @@ The greedy approach works because:
 
 ### Anomalies & Analysis
 
-- **Haskell complexity (3):** Lowest in the entire suite - the fold-based stack implementation with pattern matching produces almost no explicit branches. Haskell's expressiveness shines for this kind of recursive data structure manipulation.
-- **Python complexity (17):** Highest among high-level languages - likely due to explicit index management and multiple conditional checks in the greedy algorithm.
-- **Rust memory (1,920 KiB):** Nearly matches C (1,536 KiB) - Rust's zero-cost abstractions and lack of runtime overhead shows here. The `Vec` operations compile to essentially the same code as C arrays.
-- **Ruby line count (38):** Most concise implementation - Ruby's iterator methods and implicit returns eliminate boilerplate. Yet runtime is 6.8x slower than C, showing the cost of that abstraction.
-- **ASM vs C memory:** Identical (1,344 vs 1,536 KiB) - both use minimal stack-based allocation with no heap. The tiny difference is likely padding/alignment.
+- **ASM/Rust/Go are 25x faster than C:** Internal timing reveals C's implementation is suboptimal for this stack algorithm. ASM (0.186ms), Rust (0.193ms), Go (0.217ms) all outperform C (4.783ms) dramatically.
+- **Julia is 8x faster than C internally:** At 0.618ms, Julia's JIT-compiled code is highly efficient. The 305ms startup makes it appear 45x slower in total time.
+- **TypeScript beats C internally:** 3.756ms vs 4.783ms - V8's JIT produces better code than C here, but 491ms startup hides this.
+- **Haskell complexity (3):** Lowest in the entire suite - the fold-based stack implementation with pattern matching produces almost no explicit branches.
+- **Rust memory (1,920 KiB):** Nearly matches C (1,536 KiB) - Rust's zero-cost abstractions and lack of runtime overhead shows here.
+- **Ruby line count (38):** Most concise implementation - Ruby's iterator methods eliminate boilerplate. Internal timing (8.5ms) is only 1.77x slower than C.
 
 ## Language Notes
 
@@ -75,8 +78,9 @@ The greedy approach works because:
 - **Greedy monotonic stack:** Standard loop with conditional pop
 
 ## Interesting Points
-- ASM and Rust are significantly faster than C (3-4x), showing compiler-generated code isn't optimal for this stack-based algorithm
-- Haskell performs well here (0.77x C) - functional languages handle stack operations efficiently
-- Go and Ruby are surprisingly slow compared to Python on this problem
-- The suffix max optimization for Part 1 (k=2) allows O(n) solution vs O(n) stack anyway
-- TypeScript and Julia suffer from startup overhead on this fast-running problem
+- **ASM and Rust are 25x faster than C:** This stack-based algorithm reveals C's implementation is suboptimal. The tight pop/push loops benefit from modern compiler/hand optimization.
+- **Go outperforms C by 22x:** Go's implementation is surprisingly efficient at 0.217ms, rivaling ASM and Rust.
+- **Julia and TypeScript beat C internally:** Once JIT-compiled, both produce faster code (0.618ms and 3.756ms) than C (4.783ms). Startup overhead (305ms and 491ms) hides this.
+- **Haskell is competitive:** 2.9ms (0.61x C) shows functional languages handle stack operations efficiently with proper strictness.
+- **Scripting languages are reasonable:** Python (1.52x), Lisp (1.56x), Ruby (1.77x) are all within 2x of C. The algorithm is simple enough that interpreter overhead is manageable.
+- **The suffix max optimization** for Part 1 (k=2) allows O(n) solution, matching the stack's O(n) complexity.

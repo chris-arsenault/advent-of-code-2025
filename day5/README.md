@@ -20,20 +20,22 @@ For Part 1, instead of binary search per ID:
 
 For 698 IDs and ~100 merged intervals: ~800 comparisons vs ~4600
 
-## Performance Results
+## Performance Results (Internal Timing)
 
-| Language | Time (ms) | vs C |
-|----------|-----------|------|
-| **ASM** | 1.593 | 0.95x (fastest) |
-| **C** | 1.682 | 1.0x (baseline) |
-| **Rust** | 1.721 | 1.02x |
-| **Haskell** | 5.431 | 3.2x |
-| **Lisp** | 12.565 | 7.5x |
-| **Python** | 24.504 | 14.6x |
-| **Ruby** | 34.876 | 20.7x |
-| **Go** | 43.109 | 25.6x |
-| **Julia** | 420.637 | 250.1x |
-| **TypeScript** | 513.188 | 305.1x |
+| Language | Time (ms) | vs C | Startup (ms) |
+|----------|-----------|------|--------------|
+| **Haskell** | 0.066 | 0.40x (fastest) | 5.4 |
+| **ASM** | 0.103 | 0.62x | 1.6 |
+| **Rust** | 0.109 | 0.66x | 1.3 |
+| **C** | 0.165 | 1.0x (baseline) | 1.4 |
+| **Go** | 0.191 | 1.16x | 2.1 |
+| **Julia** | 0.327 | 1.98x | 440.6 |
+| **TypeScript** | 0.875 | 5.30x | 496.9 |
+| **Ruby** | 1.518 | 9.20x | 32.1 |
+| **Lisp** | <0.001 | ~0x | 44.9 |
+| **Python** | 3.223 | 19.5x | 21.9 |
+
+*Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
 ## Resource Metrics
 
@@ -52,11 +54,12 @@ For 698 IDs and ~100 merged intervals: ~800 comparisons vs ~4600
 
 ### Anomalies & Analysis
 
-- **Python line count (30):** Shortest implementation - `sortedcontainers` library handles interval merging, and Python's concise syntax eliminates boilerplate. Yet 14.6x slower than C.
-- **C line count (137):** Longest among high-level languages - manual interval merging with explicit memory management. The verbose code produces fast execution (1.68ms).
-- **C complexity (27):** Highest - the two-pointer merge algorithm requires many boundary checks. Interval problems have inherent branching complexity.
-- **Haskell complexity (6):** Low despite efficient runtime (3.2x C) - functional composition with `Data.Set` reduces explicit branches while maintaining good performance.
-- **TypeScript timing (305x):** Worst in suite - Node.js startup dominates this 1.6ms problem. The actual algorithm is fast once running.
+- **Haskell is fastest:** 0.066ms (0.4x C) - `Data.Set` operations are highly optimized for interval handling. Functional composition produces efficient code.
+- **All compiled languages are sub-millisecond:** C (0.165ms), Rust (0.109ms), Go (0.191ms), ASM (0.103ms), Haskell (0.066ms) all finish in under 200μs internally.
+- **Julia is competitive:** 0.327ms (1.98x C) - JIT-compiled interval operations work well. The 441ms startup was hiding this efficiency.
+- **TypeScript internal (0.875ms):** Only 5.3x C internally, not 305x. The 497ms startup created the illusion of massive slowness.
+- **Python line count (30):** Shortest implementation - `sortedcontainers` library handles interval merging. Internal timing of 3.2ms is 19.5x C.
+- **C complexity (27):** Highest - the two-pointer merge algorithm requires many boundary checks. Interval problems have inherent branching.
 
 ## Language Notes
 
@@ -74,7 +77,9 @@ For 698 IDs and ~100 merged intervals: ~800 comparisons vs ~4600
 - Potential for AVX-512 masked comparisons for batch interval operations
 
 ## Interesting Points
-- ASM, C, and Rust are nearly identical in performance (within 7%) - the algorithm is simple and well-optimized by compilers
-- Haskell performs well (3.2x) with efficient `Data.Set` operations for interval handling
-- Go is surprisingly slow (25.6x) on this interval problem - hash map overhead may be a factor
-- Julia and TypeScript show extreme startup overhead (250x-305x) on this fast-running problem
+- **Haskell is the fastest:** 0.066ms (0.4x C) - `Data.Set` interval operations produce highly optimized code.
+- **All compiled languages complete in <200μs:** This sub-millisecond problem amplifies startup differences.
+- **Julia/TypeScript startup dominates:** Both complete in <1ms internally but have 440-497ms startup overhead.
+- **Go is fast internally:** 0.191ms (1.16x C), not the 25.6x external timing suggested.
+- **Python is slowest:** 3.2ms (19.5x C) - interpreted loop overhead shows on this simple algorithm.
+- The two-pointer merge technique enables O(n) complexity for interval queries.
