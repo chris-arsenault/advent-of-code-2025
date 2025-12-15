@@ -36,7 +36,7 @@ GF(2) = Galois Field with 2 elements {0, 1}, where addition = XOR, multiplicatio
 | **Python** | 465.135 | 2.5x | 125.8 |
 | **TypeScript** | 512.687 | 2.7x | 523.3 |
 | **Lisp** | 2153.409 | 11.5x | 8.2 |
-| **Haskell** | 3967.037 | 21.3x | 2.4 |
+| **Haskell** | 3926.412 | 21.7x | 2.3 |
 | **Julia** | 7723.529 | 41.4x | 156.7 |
 | **Ruby** | 28120.626 | 150.8x | 36.4 |
 

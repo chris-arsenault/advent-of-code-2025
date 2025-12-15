@@ -29,7 +29,7 @@ Most implementations use precomputation:
 | **Rust** | 6.496 | 0.06x | 1.7 | precomputation |
 | **Julia** | 11.393 | 0.11x | 344.1 | precomputation |
 | **Go** | 20.088 | 0.20x | 3.0 | precomputation |
-| **Haskell** | 33.547 | 0.33x | 1.2 | precomputation |
+| **Haskell** | 32.527 | 0.32x | 2.9 | precomputation |
 | **Lisp** | 33.563 | 0.33x | 42.5 | precomputation |
 | **Ruby** | 35.882 | 0.35x | 32.4 | precomputation |
 | **TypeScript** | 37.891 | 0.37x | 505.5 | precomputation |

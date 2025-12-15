@@ -108,7 +108,7 @@ The Elves discovered some interesting patterns:
 
 **Library quality varies:** Day 12 shows Python is 13x *faster* than C because `exact_cover` uses efficient C extensions. Day 8 shows Python with `networkx` is 53x slower - library overhead matters.
 
-**Haskell lazy evaluation has edge cases:** Days 8 and 9 show negative "startup" because lazy evaluation defers work past the internal timer. Backtracking (Day 12, 262x slower) is a pathological case.
+**Haskell lazy evaluation has edge cases:** Union-Find (Day 8, 36x slower) requires immutable copying. Backtracking (Day 12, 241x slower) is a pathological case for lazy evaluation.
 
 **Rust matches or beats C:** Across most problems, Rust averages 1.16x of C internally. Days 3, 5, 11 show Rust outperforming C. Zero-cost abstractions live up to their name.
 

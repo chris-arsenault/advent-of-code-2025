@@ -25,7 +25,7 @@ The sequential dependency (each position depends on the previous) makes pure fun
 | **Go** | 1.105 | 8.4x | 2.9 |
 | **Python** | 1.169 | 8.9x | 16.9 |
 | **Ruby** | 2.685 | 20.3x | 32.6 |
-| **Haskell** | 3.579 | 27.1x | 2.3 |
+| **Haskell** | 3.88 | 34.9x | 1.9 |
 | **Lisp** | <0.001 | ~0x | 44.4 |
 
 *Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
@@ -79,7 +79,7 @@ SIMD parallelism is limited because each position depends on the previous. The i
 ## Interesting Points
 - **ASM is 2x faster than C internally** (0.064ms vs 0.132ms) - branchless techniques provide real speedup on this tight loop
 - **Rust is competitive** at 1.8x C, showing zero-cost abstractions work well for simple algorithms
-- **Haskell is surprisingly slow** (27x C) despite being compiled - lazy evaluation overhead on strict accumulating loops
+- **Haskell is surprisingly slow** (35x C) despite being compiled - lazy evaluation overhead on strict accumulating loops
 - **Startup dominates for JIT languages:** TypeScript (484ms) and Julia (213ms) startup makes them appear 1000x+ slower, but internally they're only 5-8x slower than C
 - **The internal/external timing split** reveals that TypeScript's V8 and Julia's JIT are actually efficient once running - their reputation for slowness on short problems is purely startup cost
 - **Compiled languages cluster:** C, Rust, ASM, Go, Haskell all have <3ms startup; interpreted/JIT languages have 17-484ms startup

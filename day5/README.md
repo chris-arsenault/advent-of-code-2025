@@ -24,7 +24,7 @@ For 698 IDs and ~100 merged intervals: ~800 comparisons vs ~4600
 
 | Language | Time (ms) | vs C | Startup (ms) |
 |----------|-----------|------|--------------|
-| **Haskell** | 0.066 | 0.40x (fastest) | 5.4 |
+| **Haskell** | 3.197 | 20.8x | 2.3 |
 | **ASM** | 0.103 | 0.62x | 1.6 |
 | **Rust** | 0.109 | 0.66x | 1.3 |
 | **C** | 0.165 | 1.0x (baseline) | 1.4 |
@@ -54,8 +54,8 @@ For 698 IDs and ~100 merged intervals: ~800 comparisons vs ~4600
 
 ### Anomalies & Analysis
 
-- **Haskell is fastest:** 0.066ms (0.4x C) - `Data.Set` operations are highly optimized for interval handling. Functional composition produces efficient code.
-- **All compiled languages are sub-millisecond:** C (0.165ms), Rust (0.109ms), Go (0.191ms), ASM (0.103ms), Haskell (0.066ms) all finish in under 200μs internally.
+- **ASM/Rust are fastest:** 0.103ms and 0.109ms (0.62-0.66x C) - tight interval merging loops benefit from low-level optimization.
+- **Most compiled languages are sub-millisecond:** C (0.165ms), Rust (0.109ms), Go (0.191ms), ASM (0.103ms) all finish in under 200μs internally.
 - **Julia is competitive:** 0.327ms (1.98x C) - JIT-compiled interval operations work well. The 441ms startup was hiding this efficiency.
 - **TypeScript internal (0.875ms):** Only 5.3x C internally, not 305x. The 497ms startup created the illusion of massive slowness.
 - **Python line count (30):** Shortest implementation - `sortedcontainers` library handles interval merging. Internal timing of 3.2ms is 19.5x C.
@@ -77,8 +77,8 @@ For 698 IDs and ~100 merged intervals: ~800 comparisons vs ~4600
 - Potential for AVX-512 masked comparisons for batch interval operations
 
 ## Interesting Points
-- **Haskell is the fastest:** 0.066ms (0.4x C) - `Data.Set` interval operations produce highly optimized code.
-- **All compiled languages complete in <200μs:** This sub-millisecond problem amplifies startup differences.
+- **ASM/Rust are fastest:** 0.103ms and 0.109ms (0.62-0.66x C) - tight loops benefit from low-level optimization.
+- **Most compiled languages complete in <200μs:** This sub-millisecond problem amplifies startup differences.
 - **Julia/TypeScript startup dominates:** Both complete in <1ms internally but have 440-497ms startup overhead.
 - **Go is fast internally:** 0.191ms (1.16x C), not the 25.6x external timing suggested.
 - **Python is slowest:** 3.2ms (19.5x C) - interpreted loop overhead shows on this simple algorithm.

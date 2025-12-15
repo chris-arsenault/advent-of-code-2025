@@ -33,7 +33,7 @@ Benefits: sequential memory access, naturally parallelizable, no recursion overh
 | **Python** | 1.246 | 1.7x | 15.7 |
 | **Ruby** | 2.350 | 3.3x | 30.9 |
 | **Lisp** | 3.600 | 5.0x | 38.8 |
-| **Haskell** | 3.712 | 5.2x | 2.3 |
+| **Haskell** | 3.441 | 4.3x | 2.4 |
 | **Julia** | 29.678 | 41.4x | 240.9 |
 
 *Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
@@ -84,5 +84,5 @@ Benefits: sequential memory access, naturally parallelizable, no recursion overh
 - **Go/Rust beat C:** 0.462ms and 0.487ms vs 0.717ms. Graph traversal favors modern language implementations.
 - **TypeScript internal (1.4x) is competitive:** V8 handles DAG traversal well. The 466ms startup distorted perception.
 - **Julia internal (41x) is genuinely slow:** JIT doesn't help graph traversal with many map lookups. Not a startup issue.
-- **Haskell internal (5.2x):** Reasonable - lazy evaluation provides efficient memoization for DAG traversal.
+- **Haskell internal (4.3x):** Reasonable - lazy evaluation provides efficient memoization for DAG traversal.
 - Ruby's `Hash.new` with block provides elegant auto-memoization despite 3.3x slower performance.

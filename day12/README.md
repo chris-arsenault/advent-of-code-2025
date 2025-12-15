@@ -45,7 +45,7 @@ For bigger instances, rely on cheap area checks to avoid explosive search.
 | **Ruby** | 5.708 | 0.21x | 30.5 |
 | **C** | 26.693 | 1.0x (baseline) | 1.6 |
 | **Julia** | 171.241 | 6.4x | 930.1 |
-| **Haskell** | 6992.630 | 262.0x | 2.7 |
+| **Haskell** | 6843.871 | 240.8x | 2.6 |
 
 *Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
 
@@ -69,7 +69,7 @@ For bigger instances, rely on cheap area checks to avoid explosive search.
 - **ASM/Rust are 200x faster than C:** 0.138ms and 0.199ms vs 26.7ms. DLX vs naive backtracking is the difference.
 - **Python internal (0.08x C):** 2.078ms is 13x faster than C's 26.7ms. `exact_cover` library uses efficient C extensions.
 - **Julia startup (930ms):** Largest in suite - JIT compilation for complex search is expensive. Internal (6.4x C) is reasonable.
-- **Haskell internal (262x):** Genuinely catastrophic. Lazy evaluation creates thunks for every backtracking state, overwhelming GC.
+- **Haskell internal (241x):** Genuinely catastrophic. Lazy evaluation creates thunks for every backtracking state, overwhelming GC.
 - **C is slow (baseline):** Naive backtracking is inherently inefficient. Algorithm choice (DLX) dominates.
 - **ASM line count (1,385):** Second highest - DLX with bitboard operations requires massive manual implementation.
 
@@ -95,7 +95,7 @@ For bigger instances, rely on cheap area checks to avoid explosive search.
 - **ASM/Rust are 200x faster than C:** DLX vs naive backtracking. Algorithm choice dominates.
 - **Python is 13x faster than C internally:** `exact_cover` library with C extensions beats C's naive implementation.
 - **Go is 12x faster than C internally:** 2.171ms vs 26.7ms. Go's DLX implementation is efficient.
-- **Haskell internal (262x) is genuinely catastrophic:** Lazy evaluation is wrong paradigm for backtracking. Not a startup issue.
+- **Haskell internal (241x) is genuinely catastrophic:** Lazy evaluation is wrong paradigm for backtracking. Not a startup issue.
 - **Julia internal (6.4x) is reasonable:** The 930ms startup (largest in suite) distorted external timing to 39x.
 - The parity pruning catches ~50% of impossible boards before expensive search.
 - Exact cover is NP-complete; algorithm choice (DLX vs backtracking) matters enormously.

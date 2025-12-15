@@ -26,7 +26,7 @@ The greedy approach works because:
 | **Rust** | 0.193 | 0.04x | 1.5 |
 | **Go** | 0.217 | 0.05x | 2.2 |
 | **Julia** | 0.618 | 0.13x | 304.6 |
-| **Haskell** | 2.901 | 0.61x | 2.1 |
+| **Haskell** | 2.513 | 0.56x | 1.9 |
 | **TypeScript** | 3.756 | 0.79x | 491.2 |
 | **C** | 4.783 | 1.0x (baseline) | 1.7 |
 | **Python** | 7.287 | 1.52x | 17.3 |
@@ -81,6 +81,6 @@ The greedy approach works because:
 - **ASM and Rust are 25x faster than C:** This stack-based algorithm reveals C's implementation is suboptimal. The tight pop/push loops benefit from modern compiler/hand optimization.
 - **Go outperforms C by 22x:** Go's implementation is surprisingly efficient at 0.217ms, rivaling ASM and Rust.
 - **Julia and TypeScript beat C internally:** Once JIT-compiled, both produce faster code (0.618ms and 3.756ms) than C (4.783ms). Startup overhead (305ms and 491ms) hides this.
-- **Haskell is competitive:** 2.9ms (0.61x C) shows functional languages handle stack operations efficiently with proper strictness.
+- **Haskell is competitive:** 2.5ms (0.56x C) shows functional languages handle stack operations efficiently with proper strictness.
 - **Scripting languages are reasonable:** Python (1.52x), Lisp (1.56x), Ruby (1.77x) are all within 2x of C. The algorithm is simple enough that interpreter overhead is manageable.
 - **The suffix max optimization** for Part 1 (k=2) allows O(n) solution, matching the stack's O(n) complexity.

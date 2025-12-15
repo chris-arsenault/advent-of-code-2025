@@ -26,11 +26,10 @@
 | **TypeScript** | 208.474 | 6.4x | 484.9 |
 | **Lisp** | 721.355 | 22.1x | 42.7 |
 | **Julia** | 915.638 | 28.0x | 1013.3 |
-| **Haskell** | 1270.303 | 38.9x | -78.8* |
+| **Haskell** | 1123.198 | 35.8x | 11.2 |
 | **Python** | 1732.907 | 53.0x | 174.3 |
 
 *Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
-*\*Haskell shows negative startup due to lazy evaluation deferring work past timer end.*
 
 ## Resource Metrics
 
@@ -50,7 +49,7 @@
 ### Anomalies & Analysis
 
 - **Julia startup (1013ms):** Largest in suite - JIT compilation for graph algorithms is expensive. Internal timing (915.6ms, 28x C) is better than external suggested.
-- **Haskell lazy evaluation anomaly:** -78.8ms "startup" means external time was faster than internal. Work is deferred past the timer endpoint.
+- **Haskell internal (35.8x):** Union-Find with immutable data structures requires copying on updates, creating significant overhead.
 - **Python internal (53x):** Truly slow, not just startup. `networkx` library has significant overhead for these operations.
 - **TypeScript internal (6.4x):** Much better than external (19.6x). The 485ms startup dominated external measurement.
 - **Python memory (257 MB):** `networkx` library loads extensive graph infrastructure. Convenience at significant memory cost.
@@ -75,7 +74,7 @@
 ## Interesting Points
 - **ASM, Rust, C within 21%:** 25.7ms, 30.9ms, 32.7ms. Sorting dominates, so low-level optimization has limited impact.
 - **Julia's 1013ms startup is largest in suite:** Internal timing (28x C) is reasonable for graph algorithms.
-- **Haskell lazy evaluation backfires:** External time is faster than internal due to deferred computation. Union-Find is a poor fit for immutable data structures.
+- **Haskell is slow (35.8x):** Union-Find with immutable data structures requires copying on updates. Pathological case for functional programming.
 - **TypeScript is 6.4x C internally:** V8 handles graph algorithms reasonably. The 485ms startup inflated external timing.
 - **Python is genuinely slow (53x):** `networkx` library overhead is real, not startup-related.
 - Union-Find path compression makes component queries effectively O(1) amortized.

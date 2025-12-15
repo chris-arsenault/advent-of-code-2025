@@ -35,7 +35,7 @@ The naive approach (rescan entire grid each iteration) is O(iterations * n). BFS
 | **Go** | 9.357 | 8.4x | 2.5 |
 | **Lisp** | 18.646 | 16.8x | 41.6 |
 | **Python** | 25.966 | 23.4x | 17.7 |
-| **Haskell** | 28.661 | 25.8x | 0.6 |
+| **Haskell** | 24.706 | 22.0x | 2.6 |
 | **TypeScript** | 32.707 | 29.4x | 499.9 |
 | **Ruby** | 72.318 | 65.1x | 32.3 |
 
@@ -60,7 +60,7 @@ The naive approach (rescan entire grid each iteration) is O(iterations * n). BFS
 
 - **Julia is competitive internally:** 5.994ms (5.4x C) is reasonable. The 383ms startup made it appear 140x slower in external timing.
 - **TypeScript internal (32.7ms):** Actually slower than most languages internally. V8 doesn't optimize BFS/grid operations as well as numeric workloads.
-- **Haskell has lowest startup (0.6ms):** The GHC-compiled binary has minimal runtime initialization, but the algorithm runs 26x slower than C.
+- **Haskell internal (22x):** BFS with `Data.Sequence` and `Data.Map.Strict` has overhead compared to mutable data structures.
 - **ASM complexity (74):** Highest in Day 4 - the SIMD bit manipulation (`pshufb`, `pand`, `pcmpeqb`), BFS queue management, and 8-directional neighbor checking each contribute many branch points.
 - **ASM line count (913):** 10x more than C (90) - bitfield packing, SIMD operations, and manual queue management require extensive code. Only 32% faster than C internally.
 - **Ruby complexity (5):** Extremely low despite implementing BFS - Ruby's iterator-based approach hides branching. The 65x slower runtime reveals the abstraction cost.

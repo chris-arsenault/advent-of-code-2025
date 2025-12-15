@@ -28,7 +28,7 @@ Each column's digits (top-to-bottom, most significant at top) form one number. P
 | **Go** | 1.376 | 11.4x | 2.2 |
 | **TypeScript** | 2.605 | 21.5x | 492.9 |
 | **Python** | 4.155 | 34.3x | 19.2 |
-| **Haskell** | 5.849 | 48.3x | 1.9 |
+| **Haskell** | 5.193 | 60.4x | 2.1 |
 | **Lisp** | 7.436 | 61.5x | 37.7 |
 | **Ruby** | 11.163 | 92.3x | 32.4 |
 
@@ -79,7 +79,7 @@ Each column's digits (top-to-bottom, most significant at top) form one number. P
 ## Interesting Points
 - **C, ASM, Rust are within 36%:** 0.121ms, 0.125ms, 0.164ms - big integer parsing is uniformly fast across compiled languages.
 - **Julia internal (0.614ms):** Only 5x C, not 145x. The 601ms startup dominated external measurements.
-- **Haskell internal (5.8ms):** Surprisingly slow (48x C) despite native `Integer`. String parsing overhead is significant.
+- **Haskell internal (5.2ms):** Slow (60x C) despite native `Integer`. String parsing overhead is significant.
 - **TypeScript internal (2.6ms):** 21x C is moderate. The 493ms startup inflated external timing to 127x.
 - Languages with native big integers (Python, Ruby, Lisp) still pay performance penalties for parsing, not arithmetic.
 - The Part 2 column parsing (right-to-left, top-to-bottom) is the tricky part of this problem.

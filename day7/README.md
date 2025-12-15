@@ -30,7 +30,7 @@ This row-by-row approach is more cache-friendly than generic BFS.
 | **TypeScript** | 2.130 | 15.0x | 500.6 |
 | **Lisp** | 3.718 | 26.2x | 41.9 |
 | **Ruby** | 4.981 | 35.1x | 33.1 |
-| **Haskell** | 6.396 | 45.0x | 1.7 |
+| **Haskell** | 5.856 | 41.2x | 2.1 |
 | **Go** | 9.117 | 64.2x | 3.0 |
 
 *Internal timing measures algorithm execution only; Startup measures process/runtime initialization.*
@@ -54,7 +54,7 @@ This row-by-row approach is more cache-friendly than generic BFS.
 
 - **Go is surprisingly slow internally (64x):** 9.117ms vs C's 0.142ms. Go's hash map overhead is visible on this grid simulation problem.
 - **Julia is competitive internally:** 1.680ms (11.8x) is reasonable. The 362ms startup made it appear 132x slower in external timing.
-- **Haskell internal (45x):** Slower than Python (10.7x) on this problem. Lazy evaluation doesn't help for strict grid simulation.
+- **Haskell internal (41x):** Slower than Python (10.7x) on this problem. Lazy evaluation doesn't help for strict grid simulation.
 - **TypeScript internal (15x):** Better than external timing suggested. V8 handles this beam simulation reasonably well.
 - **Rust is 3.7x C internally:** Less impressive than expected - the row-by-row simulation may have overhead from `VecDeque`/`HashSet`.
 - **C memory (5,760 KiB):** Higher than simpler problems - the grid and visited tracking require 2D arrays.
